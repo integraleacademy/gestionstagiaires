@@ -1241,7 +1241,7 @@
 
 
 </script>
-  {% if is_admin_logged_in %}<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='js/navigation-counts.js', v='20261105') }}" defer></script>{% endif %}
+  {% if is_admin_logged_in %}<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='js/navigation-counts.js', v='20261115') }}"{% if initial_navigation_counts is defined and initial_navigation_counts is not none %} data-counts='{{ initial_navigation_counts|tojson }}'{% endif %} defer></script>{% endif %}
   <script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='app.js') }}"></script>
   {% block scripts %}{% endblock %}
   {% include "_mail_sent_badge.html" %}

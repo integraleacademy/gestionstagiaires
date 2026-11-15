@@ -3273,11 +3273,14 @@ def protect_sensitive_routes():
 
 @app.context_processor
 def inject_read_only():
+    if request.endpoint == "admin_ended_session_cards":
+        return {"is_read_only": session.get("admin_role") == "viewer"}
     if request.endpoint in {"home", "admin_trainee_email_history"} or (request.endpoint or "").startswith("manuals_shop."):
         return {}
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
     sales_today_notification_count = 0
+    initial_navigation_counts = None
     admin_logged_in = bool(session.get("admin_logged_in"))
     can_view_notifications = admin_logged_in and _admin_can_view_notifications()
     ctx_data: Optional[Dict[str, Any]] = None
@@ -3290,7 +3293,10 @@ def inject_read_only():
             ctx_data = None
         if ctx_data is not None:
             try:
-                if request.endpoint not in {"admin_trainee_page", "admin_trainees"}:
+                if request.endpoint == "admin_sessions":
+                    initial_navigation_counts = _admin_navigation_counts(data=ctx_data)
+                    sales_today_notification_count = initial_navigation_counts["sales"]
+                elif request.endpoint not in {"admin_trainee_page", "admin_trainees"}:
                     sales_today_notification_count = _sales_today_count(ctx_data)
             except Exception:
                 sales_today_notification_count = 0
@@ -3339,6 +3345,7 @@ def inject_read_only():
         "admin_unresolved_total": admin_notifications["unresolved_total"],
         "wedof_new_requests_count": wedof_new_requests_count,
         "sales_today_notification_count": sales_today_notification_count,
+        "initial_navigation_counts": initial_navigation_counts,
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
@@ -17751,15 +17758,18 @@ def activate_account():
     return render_template("activate_account.html", token=token, error=error)
 
 
+@app.get("/admin/sessions/ended-cards", endpoint="admin_ended_session_cards")
 @app.get("/admin/sessions")
 @admin_login_required
 def admin_sessions():
     admin_sessions_started_at = time.monotonic()
-    _log_memory_stage("ADMIN_SESSIONS_BEGIN", admin_sessions_started_at, "/admin/sessions")
+    _log_memory_stage("ADMIN_SESSIONS_BEGIN", admin_sessions_started_at, request.path)
+    ended_cards_only = request.endpoint == "admin_ended_session_cards"
     data = load_data()
+    loaded_at = time.monotonic()
     crm_prefill_id = (request.args.get("crm_prefill") or "").strip()
     crm_prefill = None
-    if crm_prefill_id:
+    if crm_prefill_id and not ended_cards_only:
         now = datetime.datetime.now(datetime.timezone.utc)
         transfers = data.setdefault("crm_prefill_transfers", [])
         retained = []
@@ -17777,10 +17787,12 @@ def admin_sessions():
         if len(retained) != len(transfers):
             data["crm_prefill_transfers"] = retained
             save_data(data)
-    _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
+    _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, request.path)
     out_sessions = []
     collection_overview_for = None
-    current_year = datetime.date.today().year
+    session_choices = []
+    today = datetime.date.today()
+    current_year = today.year
     dashboard_start = datetime.date(current_year, 1, 1)
     dashboard_end = datetime.date(current_year, 12, 31)
     yearly_training_counts = {
@@ -17791,7 +17803,7 @@ def admin_sessions():
         "A3P": 0,
         "SSIAP": 0,
     }
-    dashboard_training_labels = _partner_allowed_dashboard_training_labels()
+    dashboard_training_labels = [] if ended_cards_only else _partner_allowed_dashboard_training_labels()
     dashboard_training_label_set = set(dashboard_training_labels)
 
     def _parse_iso_date(raw_value: Any) -> Optional[datetime.date]:
@@ -17825,16 +17837,17 @@ def admin_sessions():
     visible_session_keys = set()
 
     for s in data.get("sessions", []):
-        if isinstance(s, dict) and s.get("partner_id") != visible_partner_id:
+        if not isinstance(s, dict) or s.get("partner_id") != visible_partner_id:
             continue
         if _is_wedof_leads_session(s):
             continue
 
         session_start = _parse_iso_date(_session_get(s, "date_start", ""))
-        dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
+        training_type = _session_get(s, "training_type", "")
+        trainees = _registered_trainees(s)
+        dashboard_label = _dashboard_training_label(training_type)
         if dashboard_label and dashboard_label in dashboard_training_label_set:
-            trainees_for_dashboard = _registered_trainees(s)
-            for trainee in trainees_for_dashboard:
+            for trainee in trainees:
                 trainee_created_at = _parse_iso_date(trainee.get("created_at"))
                 in_dashboard_year = False
                 if trainee_created_at:
@@ -17861,24 +17874,35 @@ def admin_sessions():
             continue
         visible_session_keys.add(duplicate_key)
 
-        trainees = _registered_trainees(s)
-        st = compute_stats(s)
+        session_end = _parse_iso_date(_session_get(s, "date_end", ""))
+        if session_end and session_end < today:
+            status_key = "ended"
+        elif session_start and session_start <= today:
+            status_key = "ongoing"
+        else:
+            status_key = "upcoming"
 
-        # ✅ docs fin de formation : nb de stagiaires COMPLETS / nb stagiaires
-        done_total = 0
-        for t in trainees:
-            _, _, ok = deliverables_progress(t)
-            if ok:
-                done_total += 1
+        if ended_cards_only and status_key != "ended":
+            continue
+        if training_type.upper().startswith("APS"):
+            _sync_aps_period_dates(s)
+        if not ended_cards_only:
+            # Registration and CRM prefill can still select a past VTC/VAE session.
+            pathways = s.get("ssiap_pathways")
+            session_choices.append({
+                "id": s.get("id"), "name": _session_get(s, "name", ""),
+                "training_type": training_type, "status_key": status_key,
+                "date_start": _session_get(s, "date_start", ""),
+                "date_end": _session_get(s, "date_end", ""),
+                "afc_enabled": afc_schedule.enabled(s),
+                "has_ssiap_pathways": isinstance(pathways, dict),
+                "has_sst_dates": isinstance(pathways, dict) and bool(pathways.get("sst_dates")),
+            })
+            if status_key == "ended":
+                out_sessions.append({"id": s.get("id"), "deferred": True})
+                continue
 
-        public_logged_in_total = sum(
-            1 for t in trainees if bool(t.get("public_has_logged_in"))
-        )
-        # Le compteur "Inscriptions CMAR" doit suivre l'état affiché dans la colonne
-        # "Inscription CMAR" de la liste stagiaires VTC (basé sur exam_fees_paid).
-        cmar_registered_total = sum(
-            1 for t in trainees if bool(t.get("exam_fees_paid"))
-        )
+        public_logged_in_total = sum(1 for t in trainees if t.get("public_has_logged_in"))
         cash_payment_total = 0.0
         cash_payment_trainees = 0
         cash_payment_items = []
@@ -17900,7 +17924,6 @@ def admin_sessions():
                 "amount": round(trainee_cash_amount, 2),
             })
             cash_payment_total += trainee_cash_amount
-        cash_payment_alert_key = f"{cash_payment_trainees}:{round(cash_payment_total, 2):.2f}"
         show_cash_payment_alert = (
             cash_payment_trainees > 0
             and cash_payment_total > 0
@@ -17912,36 +17935,6 @@ def admin_sessions():
             if dossier_is_complete_total(t, _session_get(s, "training_type", ""), _session_get(s, "date_start", "")):
                 dossier_complete_total += 1
         session_dossier_complete = (total_total > 0 and dossier_complete_total == total_total)
-
-        jury_entries = _session_jury_entries(s)
-        jury_notified = bool(s.get("juries_notified_at") or s.get("jury_notified_at"))
-        jury_counts = {"pending": 0, "present": 0, "absent": 0}
-        for jury in jury_entries:
-            status_raw = jury.get("status") or jury.get("state") or jury.get("response")
-            status_key = _normalize_jury_status(status_raw)
-            if status_key:
-                jury_counts[status_key] += 1
-                jury_notified = True
-            if jury.get("notified_at") or jury.get("notified"):
-                jury_notified = True
-
-        date_start_raw = _session_get(s, "date_start", "")
-        date_end_raw = _session_get(s, "date_end", "")
-        today = datetime.date.today()
-        status_key = "upcoming"
-        try:
-            dt_start = datetime.datetime.strptime(date_start_raw[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            dt_start = None
-        try:
-            dt_end = datetime.datetime.strptime(date_end_raw[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            dt_end = None
-
-        if dt_end and dt_end < today:
-            status_key = "ended"
-        elif dt_start and dt_start <= today:
-            status_key = "ongoing"
 
         status_label = {
             "ongoing": "Formation en cours",
@@ -17957,7 +17950,6 @@ def admin_sessions():
 
         training_type_raw = (_session_get(s, "training_type", "") or "").strip().upper()
         if training_type_raw.startswith("APS"):
-            _sync_aps_period_dates(s)
             training_type_class = "aps"
         elif training_type_raw.startswith("A3P"):
             training_type_class = "a3p"
@@ -17991,50 +17983,43 @@ def admin_sessions():
             "dirigeant_remote_end": _session_get(s, "dirigeant_remote_end", ""),
             "dirigeant_in_person_start": _session_get(s, "dirigeant_in_person_start", ""),
             "dirigeant_in_person_end": _session_get(s, "dirigeant_in_person_end", ""),
-            "total": st["total"],
-            "session_is_conform": st["session_is_conform"],
+            "total": total_total,
             "session_dossier_complete": session_dossier_complete,
 
-            # ✅ new
-            "deliverables_done": done_total,
-            "deliverables_total": total_total,
             "dossier_complete_total": dossier_complete_total,
-            "cnaps_accepted_count": st["cnaps_accepted_count"],
+            "cnaps_accepted_count": sum(1 for t in trainees if _cnaps_is_accepted(t.get("cnaps"))),
             "public_logged_in_total": public_logged_in_total,
-            "cmar_registered_total": cmar_registered_total,
             "cash_payment_total": round(cash_payment_total, 2),
             "cash_payment_trainees": cash_payment_trainees,
             "cash_payment_items": cash_payment_items,
             "show_cash_payment_alert": show_cash_payment_alert,
-            "cash_payment_alert_key": cash_payment_alert_key,
             "status_label": status_label,
             "status_key": status_key,
             "financial_overview": financial_overview,
             "training_type_class": training_type_class,
-            "ssiap_pathways": s.get("ssiap_pathways"),
-            "jury_notified": jury_notified,
-            "jury_pending": jury_counts["pending"],
-            "jury_present": jury_counts["present"],
-            "jury_absent": jury_counts["absent"],
             "exam_jury": exam_jury_summary(sys.modules[__name__], s),
             "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
             "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
 
-    _log_memory_stage("ADMIN_SESSIONS_BEFORE_RENDER", admin_sessions_started_at, "/admin/sessions")
-    response = make_response(render_template(
-        "admin_sessions.html",
+    _log_memory_stage("ADMIN_SESSIONS_BEFORE_RENDER", admin_sessions_started_at, request.path)
+    prepared_at = time.monotonic()
+    template = "partials/admin_session_cards.html" if ended_cards_only else "admin_sessions.html"
+    html = render_template(
+        template,
+        session_choices=session_choices,
         sessions=out_sessions,
-        formation_types=_partner_allowed_formation_types(),
+        formation_types=[] if ended_cards_only else _partner_allowed_formation_types(),
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
         dashboard_training_labels=dashboard_training_labels,
         crm_prefill=crm_prefill,
         crm_prefill_requested=bool(crm_prefill_id),
-    ))
+    )
+    response = _timed_admin_response(html, admin_sessions_started_at, loaded_at, prepared_at)
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    _log_memory_stage("ADMIN_SESSIONS_AFTER_RENDER", getattr(request, _REQUEST_STARTED_AT_KEY, None), "/admin/sessions")
-    app.logger.info("LOAD_DATA_CALLS route=/admin/sessions count=%s", getattr(g, "load_data_call_count", 0))
+    _log_memory_stage("ADMIN_SESSIONS_AFTER_RENDER", getattr(request, _REQUEST_STARTED_AT_KEY, None), request.path)
+    app.logger.info("LOAD_DATA_CALLS route=%s count=%s", request.path, getattr(g, "load_data_call_count", 0))
     response.headers["Pragma"] = "no-cache"
     return response
 
@@ -25986,7 +25971,7 @@ def admin_trainees(session_id: str):
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
     )
-    return _timed_trainee_response(html_page, started, loaded, prepared)
+    return _timed_admin_response(html_page, started, loaded, prepared)
 
 
 @app.get("/admin/trainees/vtc")
@@ -40903,10 +40888,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         native_elearning_followup=trainee_elearning_reporting.has_summary(s, t),
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
     )
-    return _timed_trainee_response(html_page, started, loaded, prepared)
+    return _timed_admin_response(html_page, started, loaded, prepared)
 
 
-def _timed_trainee_response(html_page, started, loaded, prepared):
+def _timed_admin_response(html_page, started, loaded, prepared):
     response = make_response(html_page)
     rendered = time.monotonic()
     response.headers["Server-Timing"] = (
@@ -54400,15 +54385,20 @@ _navigation_counts_lock = threading.Lock()
 @app.get("/api/admin/navigation-counts")
 @admin_login_required
 def admin_navigation_counts():
+    return jsonify(ok=True, **_admin_navigation_counts(fresh=bool(request.args.get("fresh"))))
+
+
+def _admin_navigation_counts(*, data=None, fresh=False):
     automations, cnaps, sales = (partner_has_module(name) for name in ("automations", "cnaps", "sales"))
     scope = (automations, cnaps, sales, _current_partner_id(), session.get("assist_partner_id"), _current_session_role(),
              _is_super_admin_session(), session.get("admin_username"), session.get("admin_email"))
     stamp = time.monotonic()
     with _navigation_counts_lock:
         cached = _navigation_counts_cache.get(scope)
-    if cached and stamp - cached[0] < 10 and not request.args.get("fresh"):
-        return jsonify(ok=True, **cached[1])
-    data = load_data()
+    if cached and stamp - cached[0] < 10 and not fresh:
+        return cached[1]
+    if data is None:
+        data = load_data()
     counts = {
         "documents": sum(row["pending_count"] for row in _docs_to_control_items(data)),
         "conventions": len(_signed_conventions_unseen_items(data)) if automations else 0,
@@ -54420,7 +54410,7 @@ def admin_navigation_counts():
         _navigation_counts_cache.move_to_end(scope)
         if len(_navigation_counts_cache) > 128:
             _navigation_counts_cache.popitem(last=False)
-    return jsonify(ok=True, **counts)
+    return counts
 
 
 from flask import make_response

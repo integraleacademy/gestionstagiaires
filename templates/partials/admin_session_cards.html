@@ -1,0 +1,193 @@
+  {% for s in sessions %}
+  {% if s.deferred %}
+  <template data-ended-session="{{ s.id }}"></template>
+  {% else %}
+  {% set training_upper = (s.training_type or "")|upper %}
+  {% set is_aps = training_upper.startswith("APS") %}
+  {% set is_desp = "DIRIGEANT" in training_upper or "DESP" in training_upper %}
+  {% set is_vtc = "VTC" in training_upper %}
+  {% set is_vae = "VAE" in training_upper %}
+  {% set is_ssiap = "SSIAP" in training_upper %}
+  {% set is_dirigeant = is_desp %}
+  {% set show_cnaps_metric = not (is_vtc or is_vae or is_ssiap or is_dirigeant) %}
+  {% set elearning_done = s.public_logged_in_total or 0 %}
+  {% set elearning_total = s.total or 0 %}
+  {% set docs_done = s.dossier_complete_total or 0 %}
+  {% set docs_total = s.total or 0 %}
+  {% set cnaps_done = s.cnaps_accepted_count or 0 %}
+  {% set cnaps_total = s.total or 0 %}
+  <article class="card session-card session-card--{{ s.status_key }}{% if s.status_key == "ended" and s.financial_overview %} session-card--financial-{{ "closed" if s.financial_overview.closed else "open" }}{% endif %} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-id="{{ s.id }}" data-session-training-type="{{ training_upper }}">
+    <div class="session-card__header">
+      <div class="session-card__identity">
+        <h2 class="session-card__title {% if not is_read_only %}session-name-editable{% endif %}"
+             {% if not is_read_only %}
+             data-inline-session-name="{{ s.id }}"
+             data-session-name="{{ s.name }}"
+             title="Cliquer pour modifier le nom"
+             {% endif %}>{{ s.name }}</h2>
+        <div class="session-tags" aria-label="Type et statut de session">
+          <span class="pill pill-training">{{ "AFC APS + SSIAP 1" if s.afc_enabled else ("CHAUFFEUR VTC" if training_upper == "VTC" else s.training_type) }}</span>
+          <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
+          {% if s.status_key == 'ended' and s.financial_overview %}
+          <a class="pill pill-financial-{{ 'closed' if s.financial_overview.closed else 'open' }}" href="{{ url_for('admin_session_financial_report', session_id=s.id) }}" title="Reste à encaisser hors CPF : {{ '%.2f'|format(s.financial_overview.remaining) }} €{% if s.financial_overview.unverified %} · {{ '%.2f'|format(s.financial_overview.unverified) }} € à vérifier{% endif %}">{{ 'Clôturée' if s.financial_overview.closed else ('Paiements à vérifier' if s.financial_overview.unverified else 'Non clôturée') }}</a>
+          {% endif %}
+          {% if s.session_dossier_complete %}<span class="pill pill-complete">Dossier complet</span>{% endif %}
+        </div>
+      </div>
+      <div class="session-kpi session-kpi--trainees" aria-label="Nombre de stagiaires">
+        <span class="session-kpi__value">{{ s.total }}</span>
+        <span class="session-kpi__label">stagiaires</span>
+      </div>
+    </div>
+
+    <div class="session-dates" aria-label="Dates clés de la session">
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">📅</span>
+        <span class="session-date-row__label">Formation</span>
+        <strong>{{ s.date_start|frdate }} → {{ s.date_end|frdate }}</strong>
+      </div>
+      {% if s.afc_enabled %}
+      <div class="session-date-row"><span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span><span class="session-date-row__label">Examen APS</span><strong>{{ s.exam_date|frdate or 'À renseigner' }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span><span class="session-date-row__label">Examen SSIAP 1</span><strong>{{ s.ssiap_exam_date|frdate or 'À renseigner' }}</strong></div>
+      {% else %}
+      {% if is_aps %}
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">💻</span>
+        <span class="session-date-row__label">Distanciel</span>
+        <strong>{{ s.aps_remote_start|frdate }} → {{ s.aps_remote_end|frdate }}</strong>
+      </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">🏫</span>
+        <span class="session-date-row__label">Présentiel</span>
+        <strong>{{ s.aps_in_person_start|frdate }} → {{ s.aps_in_person_end|frdate }}</strong>
+      </div>
+      {% endif %}
+      {% if is_desp %}
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">💻</span>
+        <span class="session-date-row__label">Distanciel</span>
+        <strong>{{ s.dirigeant_remote_start|frdate }} → {{ s.dirigeant_remote_end|frdate }}</strong>
+      </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">🏫</span>
+        <span class="session-date-row__label">Présentiel</span>
+        <strong>{{ s.dirigeant_in_person_start|frdate }} → {{ s.dirigeant_in_person_end|frdate }}</strong>
+      </div>
+      {% endif %}
+      {% if is_vtc %}
+        {% set theory_date = s.exam_theory_date or s.exam_date %}
+        {% set practice_date = s.exam_practice_date or s.exam_date %}
+        {% set practice_training_date = s.practice_training_date %}
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">📝</span><span class="session-date-row__label">Examen théorique</span><strong>{{ theory_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🚘</span><span class="session-date-row__label">Examen pratique</span><strong>{{ practice_date|frdate }}</strong></div>
+      {% for slot in s.vtc_practice_slots %}
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🧭</span><span class="session-date-row__label">Pratique · Groupe {{ loop.index }}</span><strong>{{ (slot.date or practice_training_date)|frdate }} · {{ slot.start|replace(':', 'h') }} – {{ slot.end|replace(':', 'h') }}</strong></div>
+      {% else %}
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🧭</span><span class="session-date-row__label">Formation pratique</span><strong>{{ practice_training_date|frdate }}</strong></div>
+      {% endfor %}
+      {% else %}
+      <div class="session-date-row">
+        <span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span>
+        <span class="session-date-row__label">Examen</span>
+        <strong>{{ s.exam_date|frdate }}</strong>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    {% if s.exam_jury is defined and s.exam_jury is not none %}
+    <section class="session-jury" aria-label="Organisation et jury">
+      <div class="session-jury__header">
+        <strong>Organisation et jury</strong>
+        {% if s.exam_jury.members %}<span class="session-jury__count">{{ s.exam_jury.members|length }} membre{{ 's' if s.exam_jury.members|length > 1 else '' }}</span>{% endif %}
+      </div>
+      {% if s.exam_jury.members %}
+      <ul class="session-jury__members">
+        {% for member in s.exam_jury.members %}
+        <li class="session-jury__member">
+          <div class="session-jury__identity">{{ member.name }}{% if member.president %}<span class="session-jury__role">Président du jury</span>{% endif %}</div>
+          <div class="session-jury__badges">
+            {% if member.email_missing %}
+            <span class="session-jury__badge session-jury__badge--incomplete">⚠️ E-mail à renseigner</span>
+            {% else %}
+              {% for badge in member.badges %}
+              <span class="session-jury__badge session-jury__badge--{{ badge.state }}" title="{{ badge.detail }}" aria-label="{{ badge.detail }}" tabindex="0"><span aria-hidden="true">{{ badge.icon }}</span>{{ badge.label }}</span>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="session-jury__empty">Jury à renseigner</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if s.show_cash_payment_alert %}
+    <div class="session-alert">
+      <strong>⚠️ Espèces à récupérer</strong>
+      <span>{{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
+      {% if s.cash_payment_items %}
+      <div class="session-alert__links">
+        {% for item in s.cash_payment_items %}
+        <a href="{{ url_for('admin_trainee_page', session_id=s.id, trainee_id=item.trainee_id) }}">{{ item.trainee_name }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="session-metrics" aria-label="Indicateurs de session">
+      {% if show_cnaps_metric %}
+      <div class="session-metric{% if cnaps_total and cnaps_done >= cnaps_total %} is-ok{% elif cnaps_total and cnaps_done < cnaps_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">👮</span><span class="session-metric__label">CNAPS validé</span><strong>{{ cnaps_done }}/{{ cnaps_total }}</strong></div>
+      {% endif %}
+      <div class="session-metric is-elearning"><span class="session-metric__icon">🛜</span><span class="session-metric__label">Connexion Espace Stagiaire</span><strong>{{ elearning_done }}/{{ elearning_total }}</strong></div>
+      <div class="session-metric{% if docs_total and docs_done >= docs_total %} is-ok{% elif docs_total and docs_done < docs_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">📁</span><span class="session-metric__label">Dossiers complets</span><strong>{{ docs_done }}/{{ docs_total }}</strong></div>
+      <div class="session-metric{% if s.exclude_from_sales_tracking %} is-muted{% else %} is-ok{% endif %}" data-sales-tracking-metric><span class="session-metric__icon">📈</span><span class="session-metric__label">Suivi ventes</span><strong>{{ "exclu" if s.exclude_from_sales_tracking else "inclus" }}</strong></div>
+    </div>
+
+    <div class="session-options">
+    {% if not is_read_only %}
+      <label class="modern-switch">
+        <input type="checkbox" data-sales-tracking-exclude="{{ s.id }}" {% if s.exclude_from_sales_tracking %}checked{% endif %}>
+        <span class="modern-switch__control" aria-hidden="true"></span>
+        <span>Exclure du suivi ventes</span>
+      </label>
+      {% if is_aps or is_vtc %}
+        <label class="modern-switch modern-switch--elearning">
+          <input type="checkbox" data-aps-elearning-toggle="{{ s.id }}" {% if s.aps_elearning_enabled %}checked{% endif %}>
+          <span class="modern-switch__control" aria-hidden="true"></span>
+          <span>🎓 E-learning</span>
+        </label>
+      {% endif %}
+    {% else %}
+      {% if s.exclude_from_sales_tracking %}<div class="sales-tracking-note">Session exclue du suivi des ventes.</div>{% endif %}
+      {% if (is_aps or is_vtc) and s.aps_elearning_enabled %}<div class="aps-elearning-note">🎓 E-learning activé</div>{% endif %}
+    {% endif %}
+    </div>
+
+    <div class="card-actions session-actions">
+      <a class="btn session-action session-action--primary" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">👥 Voir les stagiaires</a>
+      {% if aps_kickoff_supported(s) %}
+        <a class="btn btn-outline session-action session-action--kickoff" href="{{ url_for('admin_aps_kickoff_pdf', session_id=s.id) }}" target="_blank" rel="noopener" title="Ouvrir le PDF de lancement APS de cette session" aria-label="Diapo de lancement — {{ s.name }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h18M4 3v12h16V3M12 15v6m-4 0 4-4 4 4"/><path d="m10 6 5 3-5 3Z"/></svg>
+          <span>Diapo de lancement</span>
+        </a>
+      {% endif %}
+      {% if desp_kickoff_supported(s) %}
+        <a class="btn btn-outline session-action session-action--kickoff" href="{{ url_for('admin_desp_kickoff_pdf', session_id=s.id) }}" target="_blank" rel="noopener" title="Ouvrir le PDF de lancement DESP de cette session" aria-label="Diapo de lancement — {{ s.name }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h18M4 3v12h16V3M12 15v6m-4 0 4-4 4 4"/><path d="m10 6 5 3-5 3Z"/></svg>
+          <span>Diapo de lancement</span>
+        </a>
+      {% endif %}
+      {% if not is_read_only %}
+        {% if (s.training_type or '').upper().startswith('SSIAP') %}<a class="btn btn-outline session-action" href="{{ url_for('admin_ssiap_pathways',session_id=s.id) }}">Parcours SSIAP / SST</a>{% endif %}
+        <button class="btn btn-outline session-action" data-afc-enabled="{{ '1' if s.afc_enabled else '0' }}" data-ssiap-exam-date="{{ s.ssiap_exam_date }}" {% if s.can_split_vtc or s.vtc_practice_slots %}data-vtc-slots='{{ s.vtc_practice_slots|tojson }}'{% endif %} data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
+        <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
+        <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
+      {% endif %}
+    </div>
+  </article>
+  {% endif %}
+  {% endfor %}

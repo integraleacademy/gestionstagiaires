@@ -49,6 +49,8 @@ def test_threshold_in_session_editor_and_api(case, kind, size, cancelled, allowe
     if cancelled:
         session["trainees"][-1]["registration_canceled"] = "oui"
     page = html.fromstring(client.get("/admin/sessions").data)
+    if page.xpath('//*[@data-ended-session="S1"]'):
+        page = html.fragment_fromstring(client.get("/admin/sessions/ended-cards").data, create_parent=True)
     button = page.xpath('//*[@data-edit-session="S1"]')[0]
     assert ("data-vtc-slots" in button.attrib) == allowed
     response = post(client)
