@@ -4,16 +4,55 @@ from decimal import Decimal
 import re
 from zoneinfo import ZoneInfo
 
+from edof_directory import normalized
 from edof_invoicing import Review, fence, get, money, record_creation_rejection, update
 
 CDC_SIRET='18002002600019'
 QONTO_ITEM_TITLE_LIMIT = 40
+
+# The full EDOF offer distinguishes initial training, renewals, VAE and packs.
+CATALOGUE_ITEM_TITLES = {normalized(offer): label for offer, label in (
+    ("Formation Agent de Protection rapprochée (APR) - Agent de protection physique des personnes (A3P) "
+     "- Garde du corps (bodyguard)", "Agent de protection rapprochée (A3P/APR)"),
+    ("Formation Agent de Sécurité - CQP Agent de prévention et de sécurité (APS)",
+     "Agent de prévention et de sécurité (APS)"),
+    ("Formation Assurer les missions de chef de poste en sécurité privée (CPSP) - Encadrement (chef de poste)",
+     "Chef de poste en sécurité privée (CPSP)"),
+    ("Formation Dirigeant d'une entreprise sécurité privée - CQP dirigeant "
+     "- Titre Dirigeant d'entreprise de sécurité privée (DESP)", "DESP – Formation initiale"),
+    ("VAE TOTALE Dirigeant d'une entreprise sécurité privée - CQP dirigeant "
+     "- Titre Dirigeant d'entreprise de sécurité privée (DESP) - Validation des acquis de l'expérience",
+     "DESP – VAE totale"),
+    ("VAE Titre Dirigeant d'entreprise de sécurité privée (DESP) - CQP dirigeant", "DESP – VAE"),
+    ("Formation SSIAP 1 (agent de sécurité incendie) + SST (Sauveteur Secouriste du Travail)",
+     "Formation SSIAP 1 + SST"),
+    ("Pack Formation agent de sécurité : CQP Agent de Prévention et de sécurité (APS) "
+     "+ Agent de sécurité incendie SSIAP 1 + SST + habilitation électrique",
+     "Pack APS + SSIAP 1 + SST + habil. élec."),
+    ("Module complémentaire SSIAP 1 agent de sécurité incendie - spécial pompiers - SSIAP 1 par équivalence",
+     "SSIAP 1 par équivalence – Pompiers"),
+    ("Recyclage SSIAP 1 agent de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Recyclage SSIAP 1"),
+    ("Recyclage SSIAP 2 chef d'équipe de sécurité incendie et d'assistance aux personnes (SSIAP 2)",
+     "Recyclage SSIAP 2"),
+    ("Recyclage SSIAP 3 chef de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Recyclage SSIAP 3"),
+    ("Remise à niveau SSIAP 1 agent de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Remise à niveau SSIAP 1"),
+    ("Remise à niveau SSIAP 2 chef d'équipe de sécurité incendie et d'assistance aux personnes (SSIAP 2)",
+     "Remise à niveau SSIAP 2"),
+    ("Remise à niveau SSIAP 3 chef de service de sécurité incendie et d'assistance aux personnes (formation continue)",
+     "Remise à niveau SSIAP 3"),
+)}
 
 
 def invoice_item_title(course_title):
     title = ' '.join(course_title.split())
     if len(title) <= QONTO_ITEM_TITLE_LIMIT:
         return title
+    catalogue_title = CATALOGUE_ITEM_TITLES.get(normalized(title))
+    if catalogue_title:
+        return catalogue_title
     heading = re.split(r':|\s+[-–—]\s+', title, maxsplit=1)[0].strip()
     if heading and len(heading) <= QONTO_ITEM_TITLE_LIMIT:
         return heading
