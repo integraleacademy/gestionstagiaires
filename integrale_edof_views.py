@@ -15,7 +15,7 @@ GROUP_TABS = {
     "requests": {"all": "Toutes les demandes", "request": "À traiter",
                  "waiting": "Validation du titulaire", "ft": "Financement FT en cours",
                  "ft_refused": "Financement FT refusé"},
-    "training": {"all": "Toutes les formations", "accepted": "Accepté / À démarrer",
+    "training": {"all": "Toutes les formations", "to_register": "Acceptés à inscrire", "accepted": "Accepté / À démarrer",
                  "training": "En formation", "out": "Sortie déclarée"},
     "billing": {"all": "Toute la facturation", "declared": "Service fait déclaré",
                 "billable": "À facturer · Service fait validé", "invoiced": "Facturé · En attente de paiement",

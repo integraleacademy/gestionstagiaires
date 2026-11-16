@@ -1,0 +1,26 @@
+{% extends 'emails/_base.html' %}
+{% block email_title %}Votre demande d’annulation{% endblock %}
+{% block eyebrow %}SUIVI DE VOTRE INSCRIPTION{% endblock %}
+{% block heading %}Votre demande d’annulation{% endblock %}
+{% block subtitle %}Confirmation du centre de formation{% endblock %}
+{% block email_content %}
+<p style="margin-top:0">{{ greeting }}</p>
+<p>{{ intro }}</p>
+<h2 style="font-size:20px;color:#183865;margin:28px 0 8px">Si vous avez utilisé votre CPF</h2>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td style="background:#eff5ff;border-left:4px solid #3269da;padding:15px 18px;border-radius:8px">
+<strong>Vous devez aussi annuler vous-même le dossier depuis votre compte CPF.</strong>
+<p style="margin:8px 0 12px">{{ steps }}</p>
+<a href="{{ account }}" style="color:#194d9b;font-weight:700">Ouvrir Mon Compte Formation →</a></td></tr></table>
+{% for title, detail in rules %}
+<p style="margin:15px 0 0;font-size:14px;line-height:1.55"><strong style="color:#183865">{{ title }}</strong><br>{{ detail }}</p>
+{% endfor %}
+<p style="font-size:13px;color:#53657c">{{ info }} <a href="{{ help_url }}">Consulter les règles de Mon Compte Formation</a></p>
+<h2 style="font-size:20px;color:#183865;margin:28px 0 8px">Votre dossier auprès du centre</h2>
+<p>{{ centre }}</p><p>{{ refund }}</p>
+{% endblock %}
+{% block email_signature %}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:25px;border-top:1px solid #dfe6ef"><tr>
+<td style="padding:18px 15px 0 0"><img src="{{ email_base_url }}/static/images/connect-home/clement-memoji.png" alt="" width="64" height="64" style="display:block"></td>
+<td style="padding-top:18px"><strong style="color:#16335a">Clément VAILLANT</strong><br><span style="font-size:14px;color:#52617a">Directeur du centre de formation<br>Intégrale Academy</span></td>
+</tr></table>
+{% endblock %}

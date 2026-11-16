@@ -165,3 +165,16 @@ def test_targeted_read_rejects_wrong_identity_and_expired_watch(site):
         db.execute('UPDATE edof_enrolment_watch SET attempted=0,expires=0')
     watch.fill(context,witness,site.vault,site.owner,EDOF_HOST,API_PREFIX)
     context.request.get.assert_called_once()
+
+
+def test_manual_status_check_queues_a_read_and_never_changes_the_status_or_creates_a_trainee(site):
+    prepare(site, state="validated", full=False)
+    data = {"csrf":site.csrf, "refresh":"1"}
+    for _ in range(2):
+        result = site.client.post(BASE + "/journey/watch", data=data, headers=HEADERS)
+        assert result.json["state"] == "waiting" and not result.json["can_register"]
+    with site.store.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM directory_sync_requests WHERE scope='new'").fetchone()[0] == 1
+    with site.vault.connect() as db:
+        assert db.execute("SELECT attempted FROM edof_enrolment_watch WHERE folder='100000'").fetchone()[0] == -1
+    assert not json.loads(site.local.read_text())["sessions"][0]["trainees"]

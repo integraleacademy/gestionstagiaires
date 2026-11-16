@@ -117,7 +117,6 @@ def screen(site):
 
 
 def send(screen):
-    screen.page.locator('[name="confirm"]').check()
     screen.page.get_by_role('button',name='Valider et envoyer la proposition à EDOF').click()
     screen.page.locator('#edof-action-dialog[open]').wait_for()
     screen.page.wait_for_function("document.querySelector('#proposition-edof').dataset.transmissionState === 'queued'")
@@ -139,10 +138,12 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
     jobs.complete(screen.site.store.directory,work,{'code':'proposal_confirmed','proposal_receipt':edof_directory.project(row)},'Réception confirmée par EDOF.')
     page.locator('#edof-action-resume[data-state="waiting"]').wait_for()
     page.locator('#edof-action-resume').click()
-    assert page.locator('#edof-action-title').inner_text()=='En attente d’acceptation du titulaire'
-    assert 'Dossier transmis à EDOF, en attente d’acceptation par le titulaire.' in page.locator('#edof-action-message').inner_text()
+    assert page.locator('#edof-action-title').inner_text()=='En attente d’acceptation par le stagiaire'
+    assert 'Dossier transmis à EDOF, en attente d’acceptation par le stagiaire.' in page.locator('#edof-action-message').inner_text()
+    page.get_by_role('button', name='Rafraîchir manuellement le statut accepté', exact=True).click()
+    page.get_by_text('Actualisation demandée à EDOF. Le résultat apparaîtra ici.', exact=True).first.wait_for()
     page.screenshot(path='/tmp/edof-enrolment-waiting.png')
-    assert not page.get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
+    assert not page.get_by_role('button',name='Créer le stagiaire',exact=True).is_visible()
     # The dossier evolves independently from the delivery receipt.
     import time
     row['currentState']='accepted'
@@ -150,7 +151,7 @@ def test_modal_follows_actual_success_and_never_double_sends(screen):
         'checked':time.time()+1,'rows':{FOLDER:edof_directory.project(row)}})
     assert screen.site.client.get(f'/admin/edof-test/dossiers/{FOLDER}/journey').json['state']=='accepted'
     page.locator('#edof-action-dialog[data-journey="accepted"]').wait_for()
-    assert page.locator('#edof-action-dialog').get_by_role('button',name='Inscrire sur une session',exact=True).is_visible()
+    assert page.locator('#edof-action-dialog').get_by_role('button',name='Créer le stagiaire',exact=True).is_visible()
     page.screenshot(path='/tmp/edof-enrolment-accepted.png')
     assert screen.posts.count(BASE+'submit')==1
     assert all(path in {BASE+'submit', f'/admin/edof-test/dossiers/{FOLDER}/journey/watch'} for path in screen.posts)
@@ -190,7 +191,6 @@ def test_missing_fields_open_modal_without_post_and_return_to_invalid_field(scre
 def test_validation_rejection_and_network_loss_never_report_success(screen):
     page=screen.page
     screen.reject='Le début de session doit être au plus tôt le 19/11/2026.'
-    page.locator('[name="confirm"]').check()
     page.get_by_role('button',name='Valider et envoyer la proposition à EDOF').click()
     page.locator('#edof-action-dialog[data-state="error"]').wait_for()
     assert '19/11/2026' in page.locator('#edof-action-message').inner_text()
@@ -254,15 +254,16 @@ def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(scre
     site.legacy.increment_partner_trainee_usage=Mock()
     page.set_viewport_size({'width':width,'height':950})
     page.goto('http://fixture.local'+DETAIL)
-    page.get_by_role('button',name='Inscrire sur une session',exact=True).click()
+    page.get_by_role('button',name='Créer le stagiaire',exact=True).click()
     dialog=page.locator('#edof-action-dialog')
     page.locator('#edof-action-dialog[data-journey="choosing"]').wait_for()
     assert dialog.get_by_text('anne@example.invalid',exact=True).is_visible()
     assert dialog.locator('[data-session-option]').count()==2
     assert 'APS janvier' not in dialog.inner_text()
     submit=dialog.get_by_role('button',name='Confirmer l’inscription dans cette session',exact=True)
-    assert not submit.is_enabled()
+    assert submit.is_enabled() and dialog.locator('[name="session_id"][value="v1"]').is_checked()
     dialog.locator('[data-session-search]').fill('février')
+    assert not submit.is_enabled()
     assert dialog.locator('[data-session-option]:visible').count()==1
     dialog.locator('[data-session-search]').fill('')
     dialog.locator('[name="session_id"][value="v1"]').check()
@@ -279,3 +280,14 @@ def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(scre
     saved=json.loads(site.local.read_text())
     assert len(saved['sessions'][0]['trainees'])==len(saved['wedof_links'])==1
     assert screen.posts==[f'/admin/edof-test/dossiers/{FOLDER}/create-trainee']
+
+
+def test_comment_autosaves_below_dossier_name_and_survives_reload(screen):
+    page = screen.page
+    page.goto('http://fixture.local/admin/edof-test?section=requests&tab=request')
+    field = page.get_by_role('textbox', name=f'Commentaire sur le dossier {FOLDER}', exact=True)
+    field.fill('Rappeler après 14 h.')
+    page.get_by_text('Enregistré', exact=True).first.wait_for()
+    page.reload()
+    assert field.input_value() == 'Rappeler après 14 h.'
+    assert screen.posts.count(f'/admin/edof-test/dossiers/{FOLDER}/annotation') == 1

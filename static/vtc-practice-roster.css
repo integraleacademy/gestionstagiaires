@@ -60,3 +60,6 @@
   .vtc-roster { padding: 14px; }
   .vtc-roster-grid, .vtc-roster .vtc-slot-fields { grid-template-columns: 1fr; }
 }
+
+button.vtc-roster-badge { cursor: pointer; font-family: inherit; }
+button.vtc-roster-badge:hover, button.vtc-roster-badge:focus-visible { text-decoration: underline; }

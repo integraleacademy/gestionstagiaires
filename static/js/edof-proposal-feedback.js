@@ -44,8 +44,10 @@
   async function watch(force=false) {
     if (!section()?.dataset.watchUrl || (!force && (document.hidden || Date.now()-lastWatch < 60000))) return;
     const body = new FormData(); body.set('csrf', section().dataset.csrf);
-    await read(section().dataset.watchUrl, {method:'POST', body});
+    if (force) body.set('refresh', '1');
+    const result = await read(section().dataset.watchUrl, {method:'POST', body});
     lastWatch = Date.now();
+    return result;
   }
   function registered(id, link) {
     const content = feedback.content(id);
@@ -56,34 +58,57 @@
   }
   function accepted(id, journey) {
     if (journey.link) { registered(id, journey.link); return; }
-    feedback.journey(id, 'accepted', {title:'Dossier accepté par le titulaire', phase:'Vous pouvez inscrire le stagiaire',
+    feedback.journey(id, 'accepted', {title:'Dossier accepté', phase:'Vous pouvez inscrire le stagiaire',
       message:'L’acceptation est confirmée par EDOF. Choisissez maintenant la session de formation.',
-      action:journey.can_register ? () => chooseSession(id, journey.registration_url) : undefined});
+      actionLabel:'Créer le stagiaire', action:journey.can_register ? () => chooseSession(id, journey.registration_url) : undefined});
   }
   async function followJourney(url, id, first) {
-    let journey = first;
-    while (feedback.isCurrent(id)) {
+    let journey = first, manualBusy = false, finished = false, manualMessage = '';
+    async function refreshManually() {
+      if (finished || manualBusy || !feedback.isCurrent(id)) return;
+      manualBusy = true;
+      try {
+        const fresh = await watch(true);
+        if (finished || !feedback.isCurrent(id)) return;
+        if (fresh?.state === 'accepted') {
+          finished = true;
+          accepted(id, fresh);
+          await refreshDetail(fresh.detail_url);
+        } else {
+          manualMessage = 'Actualisation demandée à EDOF. Le résultat apparaîtra ici.';
+          feedback.update(id, manualMessage, 'Vérification du statut');
+        }
+      } catch (error) {
+        if (finished || !feedback.isCurrent(id)) return;
+        manualMessage = error.message || 'Actualisation indisponible.';
+        feedback.update(id, manualMessage, 'Actualisation à reprendre');
+      } finally { manualBusy = false; }
+    }
+    while (!finished && feedback.isCurrent(id)) {
       try {
         journey = journey || await read(url);
-        if (!feedback.isCurrent(id)) return;
-        if (journey.state === 'accepted' || journey.link) {
+        if (finished || !feedback.isCurrent(id)) return;
+        if (journey.state === 'accepted') {
+          finished = true;
           accepted(id, journey);
           await refreshDetail(journey.detail_url);
           return;
         }
         if (!['waiting','ft','ft_refused'].includes(journey.state)) {
+          finished = true;
           feedback.journey(id, 'error', {title:journey.state === 'canceled' ? 'Dossier annulé' : journey.state === 'refused' ? 'Proposition refusée' : 'Le statut du dossier a changé',
             phase:journey.label, message:'L’inscription sur une session n’est pas disponible pour ce statut.',
             actionLabel:'Ouvrir le dossier', action:() => location.assign(journey.detail_url)});
           return;
         }
-        feedback.journey(id, 'waiting', {title:'En attente d’acceptation du titulaire', phase:'Dossier transmis à EDOF',
-          message:'Dossier transmis à EDOF, en attente d’acceptation par le titulaire.' +
+        feedback.journey(id, 'waiting', {title:'En attente d’acceptation par le stagiaire', phase:'Dossier transmis à EDOF',
+          message:'Dossier transmis à EDOF, en attente d’acceptation par le stagiaire.' +
             (journey.state === 'ft' ? ' Une demande de financement France Travail est en cours.' : journey.state === 'ft_refused' ? ' La demande de financement France Travail a été refusée.' : ''),
-          help:'Le statut se met à jour automatiquement. Vous pouvez fermer cette fenêtre ; le suivi reste accessible depuis ce dossier.'});
+          help:manualMessage || 'Le suivi se met à jour automatiquement. Le dossier accepté se retrouve dans « Acceptés à inscrire ».',
+          actionLabel:'Rafraîchir manuellement le statut accepté', action:journey.can_watch ? refreshManually : undefined});
         if (journey.can_watch) await watch();
       } catch (error) {
-        if (!feedback.isCurrent(id)) return;
+        if (finished || !feedback.isCurrent(id)) return;
         feedback.journey(id, error.rejected ? 'error' : 'waiting', {title:'Suivi du dossier à reprendre',
           phase:'La proposition n’est pas renvoyée', message:error.rejected ? error.message : 'Le suivi est momentanément indisponible. Une nouvelle vérification sera faite automatiquement.',
           ...(error.rejected ? {actionLabel:'Actualiser le dossier', action:() => location.reload()} : {})});
@@ -112,8 +137,13 @@
       for (const option of form.querySelectorAll('[data-session-option]')) {
         option.hidden = !normalize(option.textContent).includes(query);
         if (!option.hidden) count++;
+        else {
+          const radio = option.querySelector('input[type="radio"]');
+          if (radio.checked) radio.checked = false;
+        }
       }
       form.querySelector('[data-session-empty]').hidden = count > 0;
+      choose();
     });
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -229,6 +259,14 @@
     }, 0);
   }, true);
 
+  document.addEventListener('change', event => {
+    if (event.target.matches('.edof-proposal-form [name="exam"]')) {
+      const amount = event.target.form.elements.montantFraisCertificationInclus;
+      amount.required = event.target.value === 'INCLUDED';
+      amount.min = amount.required ? '0.01' : '0';
+    }
+  });
+
   document.addEventListener('submit', async event => {
     const form = event.target;
     const check = form.matches('[data-proposal-recheck]');
@@ -240,6 +278,7 @@
     const button = event.submitter || form.querySelector('button[type="submit"]');
     const id = begin(button);
     const body = new FormData(form);
+    if (!check) body.set('confirm', 'yes');
     if (button) button.disabled = true;
     try {
       const job = await read(form.action, {method:'POST', body});

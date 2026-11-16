@@ -175,6 +175,10 @@ def simulate(kind, date, block, draft, now):
 
 
 
+def refusal_marker(record):
+    return str(record.get("funding_at") or record.get("ft_refused_at") or record.get("funding_refusal_reason") or "refused")
+
+
 def dashboard_rows(snapshot, data, operations, now):
     links = {str(x.get("external_id")): x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active")}
     blocked = active_blocks(data)
@@ -204,9 +208,16 @@ def dashboard_rows(snapshot, data, operations, now):
                 tags.add("unlinked")
         if block or kind == "unknown" or (action and not date):
             tags.add("anomaly")
+        refusal_seen = kind == "ft_refused" and flags.get("seen_refusal") == refusal_marker(record)
+        if refusal_seen:
+            tags.discard("ft_refused")
+        if kind == "accepted" and folder not in links:
+            tags.add("to_register")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
                      "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
+                     "comment": flags.get("comment", ""), "comment_version": flags.get("comment_version", 0),
+                     "refusal_seen": refusal_seen, "refusal_marker": refusal_marker(record) if kind == "ft_refused" else "",
                      "associable": associable(record), "association_ignored": bool(flags.get("association_ignored")), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
@@ -240,6 +251,9 @@ def operations_db(store):
                   archived INTEGER DEFAULT 0, draft TEXT, updated TEXT, actor TEXT)""")
     db.execute("""CREATE TABLE IF NOT EXISTS dossier_association_preferences
                   (folder TEXT PRIMARY KEY, ignored INTEGER NOT NULL DEFAULT 0, updated TEXT, actor TEXT)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS dossier_annotations (
+        folder TEXT PRIMARY KEY, comment TEXT NOT NULL DEFAULT '', comment_version INTEGER NOT NULL DEFAULT 0,
+        seen_refusal TEXT NOT NULL DEFAULT '')""")
     return db
 
 
@@ -264,6 +278,8 @@ def local_operations(store):
             result[row["folder"]] = {**dict(row), "draft": None if draft and draft.get("source") == "lms" else draft}
         for row in db.execute("SELECT folder,ignored FROM dossier_association_preferences"):
             result.setdefault(row["folder"], {})["association_ignored"] = bool(row["ignored"])
+        for row in db.execute("SELECT folder,comment,comment_version,seen_refusal FROM dossier_annotations"):
+            result.setdefault(row["folder"], {}).update(dict(row))
         return result
 
 
@@ -365,7 +381,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         sessions = []
         for group in associations.eligible_groups(data, partner_id, is_cancelled, include_cancelled=True):
             summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
-                  "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status") if key in group}
+                  "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status", "ssiap_pathways",
+                  "training_duration_hours", "duration_hours", "total_hours", "contract_training_hours", "training_price") if key in group}
             summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail","vtc_real_training_dates")
                                     if key in t}, "registration_cancelled": is_cancelled(t)} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
@@ -398,6 +415,29 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                     enriched[k] = row.get(k) or fields.get(k) or ""
             return enriched
         return row
+
+    def proposal_values(source, row, options, data):
+        dates = {**row, **{k:source["values"][v] for k,v in (
+            ("session_start_date","sessionStartDate"), ("session_end_date","sessionEndDate")
+        ) if source and source["values"].get(v)}}
+        exact = [s for s in matching_sessions(data, partner_id, dates) if s["dates_match"]]
+        terms = {}
+        if len(exact) == 1:
+            group = exact[0]
+            key = proposal_form.catalogue.course_key(row.get("title"))
+            group_key = proposal_form.catalogue.course_key(group.get("name")) or proposal_form.catalogue.course_key(group.get("training_type"))
+            if group_key and group_key == key:
+                terms["hours"] = next((group[k] for k in ("contract_training_hours", "training_duration_hours",
+                    "duration_hours", "total_hours") if group.get(k)), None)
+                terms["price"] = group.get("training_price")
+            path = group.get("ssiap_pathways") or {}
+            if path and key in {"SSIAP 1", "SSIAP 1 + SST"}:
+                from ssiap_pathways import settings
+                path = settings(group)
+                combined = key == "SSIAP 1 + SST"
+                terms["hours"] = float(path["ssiap_hours"]) + (float(path["sst_hours"]) if combined else 0)
+                terms["price"] = path["ssiap_sst_price" if combined else "ssiap_price"] or terms.get("price")
+        return proposal_form.displayed(source, row, options, terms)
 
     def find_matches(data, records):
         ignored = ignored_associations(selection)
@@ -455,7 +495,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if not store.connector_key:
             raise ValueError("La connexion EDOF est indisponible.")
         if category(row) in {"waiting", "ft", "ft_refused", "accepted"}:
-            enrolment_watch.watch(vault(), owner, row)
+            manual = request.form.get("refresh") == "1"
+            if manual and throttle.status(vault()):
+                raise ValueError(throttle.message(vault()))
+            enqueue = enrolment_watch.watch(vault(), owner, row, manual=manual)
+            if enqueue:
+                from edof_dispatch import wake
+                store.queue_sync(owner, "new")
+                wake(store.directory)
             store.use_directory(owner)
         return jsonify(journey_progress(owner, folder, row))
 
@@ -616,6 +663,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             data["wedof_automation_blocks"] = [*data.get("wedof_automation_blocks", []),
                 *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        to_register_count = counts["to_register"]
         unlinked_count = counts["unlinked"]
         ignored_count = counts["association_ignored"]
         all_rows = rows
@@ -674,7 +722,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 detail["proposal_status_url"] = url_for("integrale_edof.proposal_send_status", folder=folder,
                                                        ticket=detail["proposal_job"]["token"])
             if detail["request"]:
-                detail["proposal_values"] = proposal_form.initial(record)
+                detail["proposal_values"] = proposal_values(None, record, {}, data)
                 detail["proposal_connector"] = bool(store.connector_key)
             if detail["request"] and store.connector_key:
                 private = vault()
@@ -682,9 +730,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 detail["proposal_source"] = source
                 detail["proposal_options"] = private.get(proposals.option_key(owner)) or {}
                 stored = private.get("proposal-draft:"+owner+":"+folder) or {}
-                values = proposal_form.displayed(source,record)
+                values = proposal_values(source, record, detail["proposal_options"], data)
                 if not stored.get("signature") or source and stored["signature"] == source["signature"]:
-                    values.update(stored.get("values",{}))
+                    # Older drafts retained blank required fields even when a catalogue value is now known.
+                    required_defaults = {"priceTotal", "indicativeDuration", "hoursInCenter", "hoursInCompany", "typeOfTrainingCourse",
+                                         "teachingModalities", "trainingPaces", "montantFraisCertificationInclus"}
+                    values.update({k:v for k,v in stored.get("values", {}).items()
+                                   if k not in {"weeklyDuration", "exam"}
+                                   and (k not in required_defaults or v not in ("", "0", None, []) or not values.get(k))})
                 detail["proposal_values"] = values
                 read_job = request.args.get("proposal_read", "")
                 if read_job:
@@ -714,6 +767,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         history, history_alerts = None, Counter()
         if section == "consumption" and not detail:
             history = history_view.page(store, owner, snap, request.args)
+            dossiers = {r["folder_id"]: r for r in all_rows}
+            for event in history["entries"]:
+                event["dossier"] = dossiers.get(event["folder"])
             catchup = store.catchup_status(owner, include_outcomes=True)
             operations = views.operation_rows(all_rows, dispatches, now, selected["revision"], (catchup or {}).get("outcomes"))
             history_alerts = Counter(r["operation_bucket"] for r in operations
@@ -768,7 +824,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 detail["pilot_error"] = str(exc)
         return render_template("integrale_edof.html", proposal_fields=proposal_form, proposal_status=proposals.LABELS, title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
-            unlinked_count=unlinked_count, ignored_count=ignored_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
+            to_register_count=to_register_count, unlinked_count=unlinked_count, ignored_count=ignored_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
             period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS,
             invoice_records={r["folder"]:r for r in invoicing.records(store.directory, owner)},
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
@@ -878,6 +934,36 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         examined, created = reconcile(associations.observed_rows(store, owner, snap))
         flash(f"{created} association(s) créée(s) sur {examined} dossier(s) examinés.", "success")
         return back()
+
+    @bp.post("/dossiers/<folder>/annotation")
+    @admin_required
+    def annotate(folder):
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        try:
+            row = folder_record(results_owner(), folder)
+        except ValueError as exc:
+            return jsonify(message=str(exc)), 404
+        with closing(operations_db(selection)) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("INSERT OR IGNORE INTO dossier_annotations(folder) VALUES (?)", (folder,))
+            if "refusal" in request.form:
+                if category(row) != "ft_refused" or request.form["refusal"] != refusal_marker(row):
+                    return jsonify(message="Le statut a changé. Actualisez la liste."), 409
+                db.execute("UPDATE dossier_annotations SET seen_refusal=? WHERE folder=?", (refusal_marker(row), folder))
+                return jsonify(seen=True)
+            comment = request.form.get("comment")
+            version = request.form.get("version", type=int)
+            if comment is None or len(comment) > 3000 or version is None:
+                return jsonify(message="Commentaire invalide (3 000 caractères maximum)."), 400
+            old = db.execute("SELECT comment,comment_version FROM dossier_annotations WHERE folder=?", (folder,)).fetchone()
+            if old["comment"] == comment:
+                return jsonify(version=old["comment_version"])
+            if old["comment_version"] != version:
+                return jsonify(message="Un autre commentaire a été enregistré. Copiez votre texte puis actualisez."), 409
+            db.execute("UPDATE dossier_annotations SET comment=?,comment_version=comment_version+1 WHERE folder=?", (comment, folder))
+            return jsonify(version=version+1)
 
     @bp.post("/dossiers/<folder>/association-preference")
     @native_action
@@ -1050,7 +1136,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             flash("Les conditions ont changé. Rechargez la proposition EDOF.","error")
         else:
             values = proposal_form.form_values(request.form)
-            original = proposal_form.displayed(source if signature else None, enrich(owner,row))
+            original = proposal_values(source if signature else None, enrich(owner,row), private.get(proposals.option_key(owner)) or {}, local_data())
             changes = {k:v for k,v in values.items() if v!=original.get(k)}
             if any(isinstance(v,str) and len(v)>16000 for v in changes.values()):
                 abort(400)

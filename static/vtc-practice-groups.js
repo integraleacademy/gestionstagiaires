@@ -71,3 +71,23 @@ document.getElementById("vtcRosterForm")?.addEventListener("submit", async event
     submit.disabled = false;
   }
 });
+
+document.addEventListener("click", async event => {
+  const badge = event.target.closest("button[data-move-url]");
+  if (!badge || badge.disabled) return;
+  badge.disabled = true;
+  const status = badge.nextElementSibling;
+  const group = Number(badge.dataset.group) === 1 ? 2 : 1;
+  status.textContent = "Changement de groupe…";
+  try {
+    const response = await fetch(badge.dataset.moveUrl, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group})
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw Error(result.error || "Le groupe n’a pas été modifié.");
+    location.reload();
+  } catch (error) {
+    badge.disabled = false;
+    status.textContent = error.message || "Le groupe n’a pas été modifié.";
+  }
+});

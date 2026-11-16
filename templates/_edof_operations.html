@@ -4,7 +4,7 @@
     <tbody>{% for r in rows %}
       {% set href = url_for('integrale_edof.index', section=section, tab=tab, folder=r.folder_id, page=page, q=query, course=course, period=period, _anchor='declaration-edof') %}
       <tr data-edof-folder="{{ r.folder_id }}">
-        <td data-label="Stagiaire et formation"><div class="wedof-person-cell"><strong>{{ r.first_name }} {{ r.last_name }}</strong><span>{{ r.title or 'Formation non renseignée' }}</span><a href="{{ href }}">Dossier {{ r.folder_id }}</a></div></td>
+        <td data-label="Stagiaire et formation"><div class="wedof-person-cell"><strong>{{ r.first_name }} {{ r.last_name }}</strong>{{ comment_editor(r) }}<span>{{ r.title or 'Formation non renseignée' }}</span><a href="{{ href }}">Dossier {{ r.folder_id }}</a></div></td>
         <td data-label="Action"><strong>{{ action_labels[r.action] }}</strong>{% if r.operation_date %}<small class="edof-operation-date">Date déclarée : {{ date_fr(r.operation_date) }}</small>{% endif %}</td>
         <td data-label="{{ 'Réception vérifiée' if tab=='history' else 'Échéance' }}">{% set instant = r.operation_changed if tab=='history' else r.scheduled %}{% if instant %}<time class="edof-operation-time" datetime="{{ instant.isoformat() }}">{{ instant.strftime('%d/%m/%Y') }}<small>{{ instant.strftime('%H h %M') }} · Paris</small></time>{% else %}<span class="wedof-badge is-warning">Date à vérifier</span>{% endif %}</td>
         <td data-label="Suivi de l’action"><div class="wedof-badges">

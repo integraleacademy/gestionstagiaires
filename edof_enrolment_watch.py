@@ -20,17 +20,28 @@ def install(db):
         attempted REAL NOT NULL DEFAULT 0, PRIMARY KEY(owner,folder))""")
 
 
-def watch(private, owner, row):
+def watch(private, owner, row, *, manual=False):
+    now = time.time()
     folder = row["folder_id"]
     if not directory.ID_RE.fullmatch(folder):
         raise ValueError("Numéro de dossier invalide.")
     private.put(key(owner, folder)+":identity", {k:row[k] for k in
-                ("folder_id", "first_name", "last_name")}, ttl=600)
+            ("folder_id", "first_name", "last_name")}, ttl=3900)
     with private.connect() as db:
         install(db)
         db.execute("""INSERT INTO edof_enrolment_watch(owner,folder,expires) VALUES(?,?,?)
-            ON CONFLICT(owner,folder) DO UPDATE SET expires=excluded.expires""",
-                   (owner, folder, time.time()+300))
+            ON CONFLICT(owner,folder) DO UPDATE SET expires=max(expires,excluded.expires)""",
+                   (owner, folder, now+(3600 if manual else 300)))
+        if manual:
+            # Prioritize this explicit read, coalescing repeated clicks across administrators.
+            db.execute("""CREATE TABLE IF NOT EXISTS edof_manual_enrolment_reads (
+                owner TEXT NOT NULL, folder TEXT NOT NULL, requested REAL NOT NULL, PRIMARY KEY(owner,folder))""")
+            result = db.execute("""INSERT INTO edof_manual_enrolment_reads VALUES(?,?,?)
+                ON CONFLICT(owner,folder) DO UPDATE SET requested=excluded.requested WHERE requested<?""",
+                (owner, folder, now, now-60))
+            if result.rowcount:
+                db.execute("UPDATE edof_enrolment_watch SET attempted=-1 WHERE owner=? AND folder=?", (owner,folder))
+            return bool(result.rowcount)
 
 
 def with_watched(private, owner, snapshot):

@@ -307,6 +307,7 @@ def test_admin_resume_requires_a_paused_open_watch(site, monkeypatch):
     site.store.finish(jid, {"code":"day_login_used","day_session":True})
     site.vault.put("efp-login-day", {"date":dt.datetime.now(dashboard.PARIS).date().isoformat(),"count":4})
     monkeypatch.setattr('edof_day_session.working_hours',lambda *args,**kwargs:True)
+    monkeypatch.setattr('edof_day_session.session_deadline', lambda now, manual_until: now.timestamp()+3600)
     assert site.client.post(url, data={"csrf":""}).status_code == 403
     assert site.client.post(url, data={"csrf":site.csrf}).status_code == 303
     assert site.vault.get("day-login-override:"+site.owner) == dt.datetime.now(dashboard.PARIS).date().isoformat()
@@ -751,3 +752,39 @@ def test_ignore_preference_protects_access_and_nightly_reconciliation(site):
     assert site.client.post(url,data={'csrf':site.csrf}).status_code==303
     site.nightly(dt.datetime(2026,11,8,18,tzinfo=dashboard.PARIS))
     assert len(json.loads(site.local.read_text())['wedof_links'])==1
+
+
+def test_local_notes_survive_sync_and_review_only_hides_the_current_ft_refusal(site):
+    from bs4 import BeautifulSoup
+    folder = "100002"
+    key = edof_directory.record_key(site.owner)
+    snapshot = site.vault.get(key)
+    row = snapshot["rows"][folder]
+    row.update(state="validated", ft_refused=True, funding_at="2026-11-09")
+    site.vault.put(key, snapshot)
+    url = "/admin/edof-test/dossiers/" + folder + "/annotation"
+    payload = {"csrf":site.csrf, "comment":"Rappeler vendredi <important>", "version":0}
+    assert site.client.post(url, data=payload).json == {"version":1}
+    assert site.client.post(url, data=payload).json == {"version":1}
+    assert site.client.post(url, data={**payload, "comment":"autre"}).status_code == 409
+
+    def page(group, tab):
+        return BeautifulSoup(site.client.get("/admin/edof-test", query_string={"group":group, "tab":tab}).data, "html.parser")
+
+    selector = f'tr[data-edof-folder="{folder}"]'
+    refusal = page("requests", "ft_refused").select_one(selector)
+    assert refusal.select_one("textarea").get_text() == payload["comment"]
+    marker = refusal.select_one("[data-edof-refusal]")["data-edof-refusal"]
+    assert site.client.post(url, data={"csrf":site.csrf, "refusal":marker}).json == {"seen":True}
+    assert not page("requests", "ft_refused").select_one(selector)
+    assert page("all", "all").select_one(selector).select_one("textarea").get_text() == payload["comment"]
+    row["funding_at"] = "2026-11-15"
+    site.vault.put(key, snapshot)
+    assert page("requests", "ft_refused").select_one(selector)
+    assert site.client.post(url, data={"csrf":site.csrf, "refusal":marker}).status_code == 409
+    assert site.client.post(url, data={**payload, "csrf":"invalid"}).status_code == 403
+    with site.client.session_transaction() as session:
+        session["admin_role"] = "viewer"
+    assert site.client.post(url, data=payload).status_code == 403
+    viewer = page("all", "all").select_one(selector)
+    assert not viewer.select_one("textarea") and payload["comment"] in viewer.get_text()
