@@ -20,6 +20,9 @@ from .lesson_timing import first_pending, remaining_seconds as lesson_remaining_
 
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
+# Receipt times can vary independently of a continuously playing video.
+# This bounds the pending position and the balance of previously earned time.
+VIDEO_RECEIPT_JITTER_SECONDS = 2.0
 ACTIVE_SESSION_STALE_SECONDS = 45.0
 IDLE_TIMEOUT_SECONDS = 300.0
 APS_IDLE_TIMEOUT_SECONDS = 600.0
@@ -797,7 +800,7 @@ class NativeElearningStore:
                 credited=credited, delta=delta, accepted_active=accepted_active,
                 visible=visible, focused=focused, now_iso=now_iso,
                 playback=playback, pause_windows=pause_windows,
-                media_time_carry={media_id: min(.5, max(0.0, delta - credited))}
+                media_time_carry={media_id: min(VIDEO_RECEIPT_JITTER_SECONDS, max(0.0, delta - credited))}
                     if media_active and accepted_active else {},
             )
             updated = self._progress_row(connection, access)
@@ -862,12 +865,12 @@ class NativeElearningStore:
             # conservatively allows an interval spanning either endpoint rate.
             interval_rate = max(rate, prior_rate) if policy.get("conservative_rate_changes") else prior_rate
             if (before.get("playing") is True and sample.get("rate", 1) in rates and prior_rate in rates
-                    and position <= duration + .05 and (completed or prior_position <= frontier + .5)
+                    and position <= duration + .05 and (completed or prior_position <= frontier + VIDEO_RECEIPT_JITTER_SECONDS)
                     and delta <= HEARTBEAT_MAX_CREDIT_SECONDS
-                    and 0 < advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * interval_rate):
+                    and 0 < advancement <= (delta + VIDEO_RECEIPT_JITTER_SECONDS) * interval_rate):
                 # Only previously uncredited wall time may absorb request jitter;
                 # it is not a new per-request allowance. Buffering earns nothing.
-                carry = min(.5, max(0.0, float(before.get("time_credit_carry") or 0)))
+                carry = min(VIDEO_RECEIPT_JITTER_SECONDS, max(0.0, float(before.get("time_credit_carry") or 0)))
                 elapsed_playback = round(advancement / interval_rate, 9)
                 return video_id, min(elapsed_playback, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
         return None, 0.0
@@ -942,19 +945,26 @@ class NativeElearningStore:
             prior_rate = float(before.get("rate", 1))
             interval_rate = max(rate, prior_rate) if policy.get("conservative_rate_changes") else prior_rate
             valid_position = normal_rate and position <= duration + .05
-            continuous = (before.get("playing") is True and prior_rate in rates and previous_position <= frontier + .5
-                          and -.25 <= advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * interval_rate)
+            continuous = (before.get("playing") is True and prior_rate in rates
+                          and previous_position <= frontier + VIDEO_RECEIPT_JITTER_SECONDS
+                          and delta <= HEARTBEAT_MAX_CREDIT_SECONDS
+                          and -.25 <= advancement <= (delta + VIDEO_RECEIPT_JITTER_SECONDS) * interval_rate)
             carry = 0.0
             if valid_position and continuous and budget > 0:
                 # Retain a small amount of *already credited* time to absorb
                 # request jitter without losing viewing time on every ping.
                 # This is a balance, not a fresh allowance per request.
-                available = budget + min(.5, max(0.0, float(before.get("credit_carry") or 0)))
+                available = budget + min(VIDEO_RECEIPT_JITTER_SECONDS, max(0.0, float(before.get("credit_carry") or 0)))
                 extension = max(0.0, min(position, frontier + available * interval_rate) - frontier)
                 frontier += extension
-                carry = min(.5, max(0.0, available - extension / interval_rate))
+                if extension > 0:
+                    carry = min(VIDEO_RECEIPT_JITTER_SECONDS, max(0.0, available - extension / interval_rate))
                 budget = 0.0
-            if not valid_position or position > frontier + .5:
+            # A slightly early sample can remain pending until the next receipt.
+            # It adds no watched seconds and never relaxes the completion check.
+            tolerance = (VIDEO_RECEIPT_JITTER_SECONDS if continuous and accepted_active and visible and focused
+                         and sample.get("playing") is True and not sample.get("ended") else .5)
+            if not valid_position or position > frontier + tolerance:
                 resync[video_id] = round(frontier, 3)
             completed = (video_id not in resync and sample.get("ended") is True
                          and position >= duration - .05 and frontier >= duration - .5)
