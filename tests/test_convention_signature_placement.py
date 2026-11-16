@@ -1,4 +1,4 @@
-"""Signatures must stay below the label and wholly inside the blank table cell."""
+"""Check the rendered agreement header and the placement of electronic signatures."""
 from pathlib import Path
 import shutil
 import subprocess
@@ -35,18 +35,27 @@ def test_convention_moves_field_below_label_without_changing_foad_detector(tmp_p
 
 @pytest.mark.parametrize("model", sorted((ROOT / "templates_word").glob("convention*.docx")),
                          ids=lambda p: p.stem)
-def test_real_convention_signature_cells(model, tmp_path):
+def test_real_convention_header_and_signature_cells(model, tmp_path):
     binary = shutil.which("libreoffice") or shutil.which("soffice")
     if not binary:
         pytest.skip("LibreOffice is required to verify the real Word/PDF layout")
     target = tmp_path / "contract.docx"
-    style_document(Document(model)).save(target)
+    document = style_document(Document(model))
+    section = document.sections[0]
+    reference = section.header.tables[0].cell(0, 1).paragraphs[-1].text
+    document.save(target)
     subprocess.run([binary, "-env:UserInstallation=" + (tmp_path / "profile").as_uri(),
                     "--headless", "--convert-to", "pdf", "--outdir", str(tmp_path), str(target)],
                    check=True, capture_output=True, timeout=90)
     clean, fields = host._prepare_yousign_pdf_and_fields(str(target.with_suffix(".pdf")))
     assert fields
     with fitz.open(clean) as pdf:
+        for page in pdf:
+            strip = page.get_pixmap(clip=fitz.Rect(0, 20, page.rect.width, 21), alpha=False)
+            navy = (20, 40, 63)
+            assert strip.pixel(1, 0) == strip.pixel(strip.width - 2, 0) == navy, (model.name, page.number)
+            line, = page.search_for(reference, clip=fitz.Rect(0, 0, page.rect.width, 100))
+            assert line.x1 == pytest.approx(page.rect.width - section.right_margin.pt, abs=1)
         for field in fields:
             if field["type"] != "signature":
                 continue
