@@ -139,6 +139,8 @@ def test_qonto_and_yousign_webhooks_require_auth_and_do_not_trust_paid_payload(r
     payload={'event':'v1/client-invoices.updated','data':{'id':'invoice-test','status':'paid'}}
     response=client.post('/api/webhooks/qonto',json=payload)
     assert response.status_code==200 and response.json['queued']
+    assert host.qonto_webhook_inbox.Inbox(host.PERSIST_DIR).process_one(host._process_qonto_webhook, host.app.logger)
+    assert store.query('id=? AND next_attempt=0', (row['id'],))
     assert store.get(row['id'])['status']=='payment'
     remote.assert_not_called()
     response=client.post('/webhooks/yousign',json={'event_name':'signature_request.done','data':{'signature_request':{'id':'request-test','status':'done'}}})

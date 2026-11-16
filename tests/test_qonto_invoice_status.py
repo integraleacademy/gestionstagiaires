@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import unittest
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -31,6 +32,14 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         }
         self.saved = []
 
+    def _isolated_webhook_inbox(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = patch.object(gestion_app, "PERSIST_DIR", directory.name)
+        path.start()
+        self.addCleanup(path.stop)
+        return gestion_app.qonto_webhook_inbox.Inbox(directory.name)
+
     def test_sync_qonto_invoice_status_updates_payment_fields(self):
         remote = {
             "client_invoice": {
@@ -50,6 +59,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(len(self.saved), 1)
 
     def test_qonto_webhook_verifies_signature_and_updates_local_invoice(self):
+        inbox = self._isolated_webhook_inbox()
         secret = "webhook-secret"
         body = {
             "event": "v1/client-invoices.updated",
@@ -68,6 +78,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
              patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": body["data"]}), \
              patch.object(gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(self.data)) as persist:
             response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+            self.assertTrue(response.get_json()["queued"])
+            self.assertTrue(inbox.process_one(gestion_app._process_qonto_webhook, gestion_app.app.logger))
 
         self.assertEqual(response.status_code, 200)
         invoice = self.data["sessions"][0]["trainees"][0]["qonto_invoice"]
@@ -350,14 +362,16 @@ class QontoInvoiceStatusTests(unittest.TestCase):
                 gestion_app.ensure_qonto_webhook_subscription()
 
     def test_webhook_without_secret_is_rejected_and_recorded(self):
+        inbox = self._isolated_webhook_inbox()
         client = gestion_app.app.test_client()
         data = {"sessions": [], "billing_lines": []}
         with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "", "QONTO_WEBHOOK_SIGNATURE_SECRET": ""}, clear=False), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
             response = client.post("/api/qonto/webhooks", json={"event": "v1/client-invoices", "data": {"id": "inv_1"}})
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(data["qonto_webhook_history"][0]["result"], "rejected")
+        self.assertEqual(inbox.latest_notice()["result"], "rejected")
 
     def test_webhook_records_last_reception(self):
+        inbox = self._isolated_webhook_inbox()
         client = gestion_app.app.test_client()
         data = {"sessions": [], "billing_lines": []}
         raw = b'{"event":"v1/client-invoices","data":{"id":"inv_1"}}'
@@ -365,6 +379,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
         with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(data)), patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_1", "status": "paid", "total_amount": 10, "amount_paid": 10}}):
             response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+            self.assertTrue(response.get_json()["queued"])
+            self.assertTrue(inbox.process_one(gestion_app._process_qonto_webhook, gestion_app.app.logger))
         self.assertEqual(response.status_code, 200)
         entry = data["qonto_webhook_history"][0]
         self.assertEqual(entry["event"], "v1/client-invoices")
@@ -372,6 +388,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(entry["result"], "ignored")
 
     def test_mandate_webhook_accepts_singular_event_name(self):
+        inbox = self._isolated_webhook_inbox()
         secret = "webhook-secret"
         body = {"event": "v2/sepa_direct_debit_mandate.signed", "data": {"id": "mandate_123", "status": "signed"}}
         raw = json.dumps(body).encode("utf-8")
@@ -379,12 +396,13 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         client = gestion_app.app.test_client()
         with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), \
              patch.object(gestion_app, "load_data", return_value={"sessions": [], "billing_lines": []}), \
-             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate({})), \
              patch.object(gestion_app, "_apply_qonto_mandate_webhook", return_value=True) as apply:
             response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+            self.assertTrue(response.get_json()["queued"])
+            self.assertTrue(inbox.process_one(gestion_app._process_qonto_webhook, gestion_app.app.logger))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.get_json()["updated"])
         apply.assert_called_once()
 
 
@@ -745,6 +763,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(mocked_get.call_args_list[1].args[0], "https://qonto.test/inv_123.pdf")
 
     def test_qonto_webhook_rejects_invalid_signature(self):
+        self._isolated_webhook_inbox()
         client = gestion_app.app.test_client()
         with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "webhook-secret"}):
             response = client.post("/api/qonto/webhooks", json={"data": {"id": "inv_123"}}, headers={"X-Qonto-Signature": "bad"})
