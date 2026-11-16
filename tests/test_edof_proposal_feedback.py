@@ -23,7 +23,7 @@ def ready(site):
     source = offer.project(official())
     site.vault.put(jobs.source_key(site.owner,FOLDER),source)
     site.vault.put(jobs.option_key(site.owner),OPTIONS)
-    values = {**terms(official()), 'priceTotal':'1500'}
+    values = {**terms(official()), 'priceTotal':'1500', 'exam':'INCLUDED', 'montantFraisCertificationInclus':'75'}
     site.vault.put('proposal-draft:'+site.owner+':'+FOLDER,{'signature':source['signature'],'values':values})
     payload = MultiDict({k:v for k,v in values.items() if k not in {'blocks','trainingPaces'}})
     payload.update({'blocks':'BC01','trainingPaces':'p','csrf':site.csrf,'signature':source['signature'],'confirm':'yes'})
@@ -119,7 +119,7 @@ def screen(site):
 def send(screen):
     screen.page.get_by_role('button',name='Valider et envoyer la proposition à EDOF').click()
     screen.page.locator('#edof-action-dialog[open]').wait_for()
-    screen.page.wait_for_function("document.querySelector('#proposition-edof').dataset.transmissionState === 'queued'")
+    screen.page.locator('#proposition-edof[data-transmission-state="queued"]').wait_for(state='attached')
 
 
 def test_modal_follows_actual_success_and_never_double_sends(screen):
@@ -291,3 +291,18 @@ def test_comment_autosaves_below_dossier_name_and_survives_reload(screen):
     page.reload()
     assert field.input_value() == 'Rappeler après 14 h.'
     assert screen.posts.count(f'/admin/edof-test/dossiers/{FOLDER}/annotation') == 1
+
+
+def test_legacy_proposal_defaults_to_35h_and_asks_for_unspecified_included_fee(site):
+    from bs4 import BeautifulSoup
+
+    ready(site)
+    key = 'proposal-draft:'+site.owner+':'+FOLDER
+    draft = site.vault.get(key)
+    draft['values'].update(weeklyDuration='21', exam='NONE', montantFraisCertificationInclus='')
+    site.vault.put(key, draft)
+    form = BeautifulSoup(site.client.get(DETAIL).data, 'html.parser').select_one('.edof-proposal-form')
+    assert form.select_one('[name="weeklyDuration"]')['value'] == '35'
+    assert form.select_one('[name="exam"] option[selected]')['value'] == 'INCLUDED'
+    fee = form.select_one('[name="montantFraisCertificationInclus"]')
+    assert fee.has_attr('required') and not fee.get('value')
