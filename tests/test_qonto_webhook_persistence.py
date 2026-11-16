@@ -56,12 +56,13 @@ def test_webhook_cannot_erase_draft_created_during_remote_fetch(storage, monkeyp
     callback = client.post('/api/webhooks/qonto', json={
         'event': 'v1/client-invoices.created', 'data': {'id': event_invoice_id},
     })
-    assert callback.status_code == 200
+    assert callback.status_code == 200 and callback.json['queued']
+    inbox = gestion.qonto_webhook_inbox.Inbox(storage.parent)
+    assert inbox.process_one(gestion._process_qonto_webhook, gestion.app.logger)
     persisted = json.loads(storage.read_text())
     line = gestion._billing_lines(persisted)[0]
     assert line['qontoInvoiceId'] == 'inv-created'
     assert persisted['sessions'][0]['trainees'][0]['comment'] == 'Concurrent edit'
-    assert callback.json['updated'] is (event_invoice_id == 'inv-created')
     assert persisted['qonto_webhook_history'][-1]['result'] == (
         'updated' if event_invoice_id == 'inv-created' else 'ignored'
     )
@@ -99,7 +100,41 @@ def test_webhook_does_not_restore_an_invoice_reset_during_remote_fetch(storage, 
         'event': 'v1/client-invoices.updated', 'data': {'id': 'inv-old'},
     })
     assert response.status_code == 200
-    assert response.json['updated'] is False
+    assert response.json['queued']
+    assert gestion.qonto_webhook_inbox.Inbox(storage.parent).process_one(gestion._process_qonto_webhook, gestion.app.logger)
     persisted = gestion._billing_lines(json.loads(storage.read_text()))[0]
     assert not persisted['qontoInvoiceId']
     assert persisted['invoiceStatus'] == 'not_invoiced'
+
+
+def test_signed_mandate_preserves_concurrent_admin_edits_and_runs_once(storage, monkeypatch):
+    data = gestion.load_data()
+    line = gestion._billing_lines(data)[0]
+    line.update(qonto_direct_debit_mandate_id='mandate-test', mandateStatus='pending', paymentMode='sepa_direct_debit')
+    gestion._save_billing_line(data, line)
+    gestion.save_data(data)
+    calls = []
+
+    def slow_scheduling(line):
+        calls.append(line['id'])
+        def admin_edit(current):
+            current['sessions'][0]['trainees'][0]['comment'] = 'Edited while Qonto was busy'
+            current.setdefault('notifications_admin', []).insert(0, {'id': 'admin-notice'})
+            return {}
+        gestion._atomic_update_data(admin_edit)
+        return {'created': 0}
+
+    monkeypatch.setattr(gestion, 'ensure_qonto_sepa_installments_for_line', slow_scheduling)
+    payload = {'id': 'delivery-mandate-signed', 'type': 'v1/sepa-direct-debit-mandates',
+               'data': {'id': 'mandate-test', 'status': 'signed'}}
+    client = gestion.app.test_client()
+    assert client.post('/api/webhooks/qonto', json=payload).json['queued']
+    assert client.post('/api/qonto/webhooks', json=payload).json['queued']
+    inbox = gestion.qonto_webhook_inbox.Inbox(storage.parent)
+    assert inbox.process_one(gestion._process_qonto_webhook, gestion.app.logger)
+    assert not inbox.process_one(gestion._process_qonto_webhook, gestion.app.logger)
+    current = json.loads(storage.read_text())
+    assert current['sessions'][0]['trainees'][0]['comment'] == 'Edited while Qonto was busy'
+    assert current['notifications_admin'][0]['id'] == 'admin-notice'
+    assert current['billing_lines'][0]['qonto_mandate_status'] in {'signed', 'active'}
+    assert calls == [line['id']]

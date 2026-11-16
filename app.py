@@ -45,6 +45,8 @@ import desp_jury_projects
 import desp_scotia
 import a3p_documents
 import exam_retakes
+import qonto_webhook_inbox
+import sqlite3
 import training_convocations
 import afc_documents
 import afc_enrolments
@@ -2277,13 +2279,15 @@ def _qonto_webhook_resource_id(item: Dict[str, Any]) -> str:
     return str(item.get("id") or item.get("qonto_invoice_id") or item.get("direct_debit_mandate_id") or item.get("direct_debit_collection_id") or "")
 
 
-def _record_qonto_webhook(data: Dict[str, Any], event: str, item: Dict[str, Any], result: str, error: str = "") -> None:
+def _record_qonto_webhook(data: Dict[str, Any], event: str, item: Dict[str, Any], result: str, error: str = "", *, delivery: str = "") -> None:
     """Persist a small, secret-free delivery history for the admin diagnostics."""
     entries = data.setdefault("qonto_webhook_history", [])
     if not isinstance(entries, list):
         entries = []
         data["qonto_webhook_history"] = entries
     entries.insert(0, {"received_at": _now_iso(), "event": str(event or "unknown"), "resource_id": _qonto_webhook_resource_id(item), "result": result, "error": _sanitize_qonto_error(error)[:500] if error else ""})
+    if delivery:
+        entries[0]["delivery"] = delivery
     del entries[QONTO_WEBHOOK_HISTORY_LIMIT:]
 
 
@@ -2305,6 +2309,12 @@ def qonto_webhook_status() -> Dict[str, Any]:
     history = data.get("qonto_webhook_history") if isinstance(data.get("qonto_webhook_history"), list) else []
     snapshot = data.get("qonto_webhook_subscription") if isinstance(data.get("qonto_webhook_subscription"), dict) else {}
     last = history[0] if history else {}
+    try:
+        notice = qonto_webhook_inbox.Inbox(PERSIST_DIR).latest_notice()
+    except (OSError, sqlite3.Error):
+        notice = {}
+    if notice.get("received_at", "") > last.get("received_at", ""):
+        last = notice
     subscribed_events = [str(value) for value in snapshot.get("event_types", [])]
     missing_events = [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in subscribed_events]
     connection_api_key_ok = bool(_qonto_is_configured())
@@ -51440,43 +51450,116 @@ def api_admin_qonto_webhook_subscription_ensure():
         app.logger.warning("[QONTO] webhook subscription ensure failed: %s", _sanitize_qonto_error(str(exc)))
         return jsonify({"ok": False, "error": _sanitize_qonto_error(str(exc)), "callback_url": _qonto_webhook_callback_url()}), 502
 
+def _qonto_event_kind(event):
+    normalized = event.lower().replace("_", "-")
+    if "sepa-direct-debit-mandate" in normalized:
+        return "mandate"
+    if "sepa-direct-debit-collection" in normalized:
+        return "collection"
+    if not event or "client-invoices" in normalized or "client-invoice" in normalized:
+        return "invoice"
+    return "ignored"
+
+
 @app.post("/api/qonto/webhooks")
 @app.post("/api/webhooks/qonto")
 def api_qonto_webhooks():
-    raw_body = request.get_data(cache=True)
-    payload = request.get_json(silent=True) or {}
-    event = (payload.get("event") or payload.get("type") or "").strip()
+    verified = _verify_qonto_webhook_signature(request.get_data(cache=True))
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    event = str(payload.get("event") or payload.get("type") or "").strip()
     item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
-    if not _verify_qonto_webhook_signature(raw_body):
-        data = load_data(); _record_qonto_webhook(data, event, item, "rejected", "invalid_signature"); save_data(data)
-        return jsonify({"ok": False, "error": "invalid_signature"}), 401
-    normalized_event = event.lower().replace("_", "-")
-    if "sepa-direct-debit-mandate" in normalized_event:
-        data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); _record_qonto_webhook(data, event, item, "updated" if updated else "ignored"); save_data(data)
-        return jsonify({"ok": True, "updated": updated})
-    if "sepa-direct-debit-collection" in normalized_event:
-        data = load_data(); updated = _apply_qonto_collection_webhook(data, item); _record_qonto_webhook(data, event, item, "updated" if updated else "ignored"); save_data(data)
-        return jsonify({"ok": True, "updated": updated})
-    if event and "client-invoices" not in event and "client_invoice" not in event:
-        data = load_data(); _record_qonto_webhook(data, event, item, "ignored"); save_data(data)
-        return jsonify({"ok": True, "ignored": True})
+    kind = _qonto_event_kind(event)
     invoice_id = item.get("id") or item.get("qonto_invoice_id")
-    if not invoice_id:
-        data = load_data(); _record_qonto_webhook(data, event, item, "error", "missing_invoice_id"); save_data(data)
-        return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
+    inbox = qonto_webhook_inbox.Inbox(PERSIST_DIR)
+    if not verified or kind == "ignored" or (kind == "invoice" and not invoice_id):
+        if not verified:
+            result, error, code = "rejected", "invalid_signature", 401
+        elif kind == "ignored":
+            result, error, code = "ignored", "", 200
+        else:
+            result, error, code = "error", "missing_invoice_id", 400
+        try:
+            inbox.note({"received_at": _now_iso(), "event": (event or "unknown")[:160],
+                        "result": result, "error": error})
+        except (OSError, sqlite3.Error) as exc:
+            app.logger.warning("QONTO_WEBHOOK_NOTICE_FAILED type=%s", type(exc).__name__)
+        if error:
+            return jsonify({"ok": False, "error": error}), code
+        return jsonify({"ok": True, "ignored": True})
+
+    resource = item.get("direct_debit_subscription_id") if kind == "collection" else None
+    resource = resource or _qonto_webhook_resource_id(item)
+    try:
+        inbox.enqueue(payload, event, item, f"{kind}:{resource}")
+    except (OSError, sqlite3.Error) as exc:
+        app.logger.error("QONTO_WEBHOOK_NOT_STORED type=%s", type(exc).__name__)
+        return jsonify({"ok": False, "error": "retry_later"}), 503
+    state = qonto_webhook_inbox.start_worker(sys.modules[__name__])
+    if state:
+        state["wake"].set()
+    return jsonify({"ok": True, "queued": True})
+
+
+def _qonto_receipt_applied(data, key):
+    return any(entry.get("delivery") == key for entry in data.get("qonto_webhook_history", []))
+
+
+def _process_qonto_sepa_event(key, event, item, kind):
+    # Provider calls (including mandate scheduling) run outside the shared store
+    # lock. Commit only the changes made by this notification to fresh data.
+    snapshot = billing_persistence.track_payload(load_data(run_background_tasks=False))
+    if _qonto_receipt_applied(snapshot, key):
+        return "duplicate"
+    previous_alerts = {row["id"] for row in snapshot.get("notifications_admin", []) if row.get("id")}
+    previous_subs = {row.get("endpoint") for row in snapshot.get("admin_push_subscriptions", [])}
+    apply = _apply_qonto_mandate_webhook if kind == "mandate" else _apply_qonto_collection_webhook
+    updated = apply(snapshot, item)
+    alerts = [row for row in snapshot.get("notifications_admin", []) if row.get("id") not in previous_alerts]
+    removed_subs = previous_subs - {row.get("endpoint") for row in snapshot.get("admin_push_subscriptions", [])}
+    result = "updated" if updated else "ignored"
+
+    def persist(current):
+        if _qonto_receipt_applied(current, key):
+            return {"result": "duplicate"}
+        if updated:
+            merged = billing_persistence.merge_billing_state(snapshot, current)
+            current["billing_lines"] = merged.get("billing_lines", [])
+        if alerts:
+            current.setdefault("notifications_admin", [])[0:0] = alerts
+        if removed_subs:
+            current["admin_push_subscriptions"] = [row for row in current.get("admin_push_subscriptions", [])
+                                                   if row.get("endpoint") not in removed_subs]
+        _record_qonto_webhook(current, event, item, result, delivery=key)
+        return {"result": result}
+
+    return _atomic_update_data(persist)["result"]
+
+
+def _process_qonto_webhook(key, event, item):
+    kind = _qonto_event_kind(event)
+    if kind in {"collection", "mandate"}:
+        return _process_qonto_sepa_event(key, event, item, kind)
+    invoice_id = item.get("id") or item.get("qonto_invoice_id")
     if exam_retakes.notify(sys.modules[__name__], invoice_id=str(invoice_id)):
-        return jsonify({"ok": True, "queued": True, "document_type": "exam_retake"})
+        return "exam_retake"
     try:
         invoice_payload = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
-    except Exception as exc:
-        app.logger.warning("[QONTO] webhook invoice refresh failed invoice_id=%s error=%s", invoice_id, _sanitize_qonto_error(str(exc)))
-        invoice_payload = {"id": invoice_id, "status": item.get("status"), "paid_at": item.get("paid_at"), "amount_paid": item.get("amount_paid")}
+    except (QontoApiError, QontoConfigurationError) as exc:
+        # Preserve the signed event as a fallback when the invoice cannot be
+        # read. Temporary provider failures are retried from the durable inbox.
+        status_code = getattr(exc, "status_code", 0)
+        if status_code in (408, 425, 429) or status_code >= 500 or not item.get("status"):
+            raise
+        invoice_payload = item
 
     def persist_invoice_event(data: Dict[str, Any]) -> Dict[str, Any]:
         # Qonto can notify us before create-draft has saved its response. Read
         # the canonical data only after remote I/O, under the same file lock as
         # the write. Saving the snapshot taken before the GET used to erase the
         # newly created invoice (even when this webhook matched no local row).
+        if _qonto_receipt_applied(data, key):
+            return {"result": "duplicate"}
         updated = False
         for line in _billing_lines(data):
             if str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '') == str(invoice_id):
@@ -51490,11 +51573,11 @@ def api_qonto_webhooks():
             _apply_qonto_invoice_status(inv, invoice_payload)
             sess["trainees"] = trainees
             updated = True
-        _record_qonto_webhook(data, event, item, "updated" if updated else "ignored")
-        return {"updated": updated}
+        result = "updated" if updated else "ignored"
+        _record_qonto_webhook(data, event, item, result, delivery=key)
+        return {"result": result}
 
-    result = _atomic_update_data(persist_invoice_event)
-    return jsonify({"ok": True, **result})
+    return _atomic_update_data(persist_invoice_event)["result"]
 
 
 @app.get("/admin/trainee/<trainee_id>/convocation-aps/preview")
