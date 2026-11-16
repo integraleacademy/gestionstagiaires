@@ -504,6 +504,18 @@ class PartnerPostgresStore:
                 raise PartnerPostgresNotFound("partenaire PostgreSQL introuvable")
             return loaded
 
+    def bundle_revisions(self, partner_id: str = "") -> tuple:
+        """Read only the revisions visible in the same RLS scope as the payload."""
+        if partner_id:
+            partner_id = self._validate_partner_id(partner_id)
+        with self._transaction(partner_id=partner_id, platform_admin=not partner_id) as (_connection, cursor):
+            query = "SELECT partner_id, version, updated_at FROM partner_store.tenants"
+            if partner_id:
+                cursor.execute(query + " WHERE partner_id = %s", (partner_id,))
+            else:
+                cursor.execute(query + " ORDER BY partner_id")
+            return tuple(cursor.fetchall())
+
     def load_all_bundles(self) -> List[Tuple[Dict[str, Any], int]]:
         with self._transaction(platform_admin=True) as (_connection, cursor):
             cursor.execute(

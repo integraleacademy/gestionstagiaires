@@ -64,6 +64,19 @@ class PartnerPostgresIntegrationTests(unittest.TestCase):
         self.assertIsNone(checksum)
         self.assertIsNotNone(imported_at)
 
+    def test_document_cache_revisions_follow_writes_and_tenant_scope(self):
+        self.store.create_bundle(self.partner_a, self.bundle(self.partner_a))
+        self.store.create_bundle(self.partner_b, self.bundle(self.partner_b))
+        first = self.store.bundle_revisions(self.partner_a)
+        self.assertEqual([(row[0], row[1]) for row in first], [(self.partner_a, 1)])
+        self.assertIn(self.partner_b, {row[0] for row in self.store.bundle_revisions()})
+        self.store.mutate_bundle(self.partner_a, lambda current: current, expected_version=1)
+        second = self.store.bundle_revisions(self.partner_a)
+        self.assertEqual([(row[0], row[1]) for row in second], [(self.partner_a, 2)])
+        self.assertNotEqual(first, second)
+        self.store.delete_partner(self.partner_a)
+        self.assertEqual(self.store.bundle_revisions(self.partner_a), ())
+
     def test_new_account_creation_without_import_checksum(self):
         bundle = self.bundle(self.partner_a)
         result, version = self.store.mutate_bundle(
