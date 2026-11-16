@@ -339,10 +339,6 @@ def _header_footer(document, reference, kind):
     """The retake invitation's navy/gold banner, with native Word text and fields."""
     from docx.enum.table import WD_ROW_HEIGHT_RULE
     from docx.enum.text import WD_TAB_ALIGNMENT
-    modes = document.settings.element.xpath('./w:compat/w:compatSetting[@w:name="compatibilityMode"]/@w:val')
-    # Word 2010 positions a table relative to its first cell's text; newer
-    # models position its border. Compensate without changing body pagination.
-    banner_indent = -1021 if modes and int(modes[0]) >= 15 else 0
     visited = set()
     for section in document.sections:
         old_footer = " ".join(section.footer._element.xpath(".//w:t/text()"))
@@ -394,12 +390,13 @@ def _header_footer(document, reference, kind):
                 p.paragraph_format.line_spacing = Pt(10)
                 _font(p, 6.8, MUTED)
                 continue
-            table = container.add_table(rows=1, cols=2, width=Cm(21))
-            table.alignment = WD_TABLE_ALIGNMENT.LEFT
+            # The body margins are symmetric. Centering a page-wide table
+            # keeps both edges on the sheet in old and new Word layouts.
+            table = container.add_table(rows=1, cols=2, width=section.page_width)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
             table.autofit = False
             props = table._tbl.tblPr
-            _property(props, "w:tblW", w=11906, type="dxa")
-            _property(props, "w:tblInd", w=banner_indent, type="dxa")
+            _property(props, "w:tblW", w=section.page_width.twips, type="dxa")
             borders = _property(props, "w:tblBorders")
             for side in ("top", "left", "right", "insideH", "insideV"):
                 _property(borders, "w:" + side, val="nil")
@@ -415,7 +412,8 @@ def _header_footer(document, reference, kind):
                 for side in ("top", "left", "right"):
                     _property(cell_borders, "w:" + side, val="single", sz=4, color=NAVY)
                 margins = _property(cp, "w:tcMar")
-                for side, value in (("top", 0), ("bottom", 0), ("left", 1021 if i == 0 else 0), ("right", 1021 if i == 1 else 0)):
+                for side, value in (("top", 0), ("bottom", 0), ("left", section.left_margin.twips if i == 0 else 0),
+                                    ("right", section.right_margin.twips if i == 1 else 0)):
                     _property(margins, "w:" + side, w=value, type="dxa")
                 p = cell.paragraphs[0]
                 p.paragraph_format.space_after = Pt(0)
