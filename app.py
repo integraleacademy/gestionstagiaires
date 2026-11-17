@@ -677,8 +677,17 @@ def get_qonto_bank_account_id() -> str:
     return bank_account_id
 
 
+def _qonto_read_auth_data():
+    if has_request_context() and "qonto_cron_auth" in g:
+        if g.qonto_cron_auth is None:
+            g.qonto_cron_auth = {"qonto_oauth": copy.deepcopy(load_data().get("qonto_oauth") or {})}
+            _invalidate_request_data_cache()
+        return g.qonto_cron_auth
+    return load_data()
+
+
 def _qonto_oauth_missing_scopes(data: Optional[Dict[str, Any]] = None) -> List[str]:
-    data = data or load_data()
+    data = data or _qonto_read_auth_data()
     settings = _qonto_oauth_settings(data)
     raw = settings.get("scopes") or settings.get("scope") or []
     if isinstance(raw, str):
@@ -693,7 +702,7 @@ def _qonto_oauth_missing_scopes(data: Optional[Dict[str, Any]] = None) -> List[s
 
 def _qonto_oauth_has_scope(scope: str, data: Optional[Dict[str, Any]] = None) -> bool:
     """Never infer a granted scope from the presence of an old OAuth token."""
-    data = data or load_data()
+    data = data or _qonto_read_auth_data()
     settings = _qonto_oauth_settings(data)
     raw = settings.get("scopes") or settings.get("scope") or []
     granted = ({item.strip() for item in raw.replace(",", " ").split() if item.strip()}
@@ -702,7 +711,7 @@ def _qonto_oauth_has_scope(scope: str, data: Optional[Dict[str, Any]] = None) ->
 
 
 def _ensure_qonto_oauth_ready(data: Optional[Dict[str, Any]] = None) -> None:
-    data = data or load_data()
+    data = data or _qonto_read_auth_data()
     if not _qonto_oauth_connected(data):
         raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
     missing = _qonto_oauth_missing_scopes(data)
@@ -750,7 +759,7 @@ def _sanitize_qonto_error(message: str) -> str:
     secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret(), _qonto_webhook_secret() if "_qonto_webhook_secret" in globals() else ""]
     if "load_data" in globals():
         try:
-            data = load_data()
+            data = _qonto_read_auth_data()
             secrets_to_mask.extend([_qonto_oauth_access_token(data), _qonto_oauth_refresh_token(data)])
         except Exception:
             pass
@@ -781,7 +790,7 @@ def _qonto_oauth_token_environment(data: Dict[str, Any]) -> str:
 
 
 def _qonto_oauth_connected(data: Optional[Dict[str, Any]] = None) -> bool:
-    data = data or load_data()
+    data = data or _qonto_read_auth_data()
     settings = _qonto_oauth_settings(data)
     return bool(settings.get("refresh_token")) and _qonto_oauth_token_environment(data) == _qonto_oauth_environment()
 
@@ -850,6 +859,20 @@ def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None, *, force_re
     refresh is used by the settings health check so that the UI never labels a
     revoked credential as an active connection.
     """
+    if data is None and has_request_context() and "qonto_cron_auth" in g:
+        auth = _qonto_read_auth_data()
+        settings = _qonto_oauth_settings(auth)
+        if not _qonto_oauth_connected(auth):
+            raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
+        if not force_refresh and int(settings.get("expires_at") or 0) > int(time.time()) + 60:
+            return _qonto_oauth_access_token(auth)
+        # Rotation uses the normal locked writer and a complete canonical
+        # document. A credentials-only projection must never reach save_data.
+        try:
+            return _qonto_oauth_bearer_token(load_data(), force_refresh=force_refresh)
+        finally:
+            g.qonto_cron_auth = None
+            _invalidate_request_data_cache()
     data = data or load_data()
     settings = _qonto_oauth_settings(data)
     if not _qonto_oauth_connected(data):
@@ -4128,6 +4151,14 @@ def _clear_partner_login_account_limit(username: str) -> None:
         _partner_login_attempts.pop(account_key, None)
 
 
+def _data_file_revision():
+    try:
+        info = os.stat(DATA_FILE)
+    except OSError:
+        return None
+    return (os.path.abspath(DATA_FILE), info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
+
+
 def _partner_auth_file_fingerprint(path: str) -> Optional[Tuple[int, int]]:
     try:
         stat_result = os.stat(path)
@@ -5625,6 +5656,12 @@ def _write_json_with_backups(
                     _fsync_parent_dir(path)
                     if os.path.abspath(path) == os.path.abspath(DATA_FILE) and isinstance(payload, dict):
                         _store_partner_auth_index(payload, path)
+                        try:
+                            vtc_elearning_activation.record_committed(sys.modules[__name__], payload)
+                        except Exception:
+                            # The JSON has already been committed. The worker
+                            # can reconstruct its schedule directly from disk.
+                            app.logger.exception("vtc_elearning_schedule_refresh_failed")
                 finally:
                     if os.path.exists(tmp):
                         try:
@@ -45619,9 +45656,9 @@ def _qonto_background_lines(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     return lines
 
 
-def _qonto_background_snapshot(data: Dict[str, Any], line: Dict[str, Any]) -> Dict[str, Any]:
+def _qonto_background_snapshot(stored_lines: Dict[str, Any], line: Dict[str, Any]) -> Dict[str, Any]:
     return {
-        'stored': copy.deepcopy(_billing_existing_map(data).get(str(line['id']))),
+        'stored': copy.deepcopy(stored_lines.get(str(line['id']))),
         'context': {key: copy.deepcopy(line.get(key)) for key in (
             'sessionId', 'traineeId', 'amount', 'amountTTC', 'paymentMode',
             'qontoInvoiceId', 'qontoDraftId', 'qonto_direct_debit_mandate_id',
@@ -45645,9 +45682,9 @@ def _qonto_bank_transfer_eligible(line: Dict[str, Any]) -> bool:
     )
 
 
-def _qonto_bank_matching_lines(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+def _qonto_bank_matching_lines(data: Dict[str, Any], billing_lines=None) -> Dict[str, Dict[str, Any]]:
     """Include historical/unbilled registrations as ambiguity blockers."""
-    lines = _qonto_background_lines(data)
+    lines = _qonto_background_lines(data) if billing_lines is None else dict(billing_lines)
     contexts = {}
     for session_item in data.get('sessions') or []:
         for trainee in _session_trainees_list(session_item):
@@ -45683,7 +45720,7 @@ def _qonto_bank_matching_lines(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]
     return lines
 
 
-def _qonto_bank_transfer_context(data: Dict[str, Any]) -> Dict[str, Any]:
+def _qonto_bank_transfer_context(lines: Dict[str, Any]) -> Dict[str, Any]:
     """Snapshot every possible identity/amount, not just the requested trainee."""
     keys = ('id', 'traineeId', 'sessionId', 'traineeFirstName', 'traineeLastName',
             'amount', 'amountTTC', 'financingType', 'invoiceStatus', 'paymentStatus',
@@ -45692,7 +45729,7 @@ def _qonto_bank_transfer_context(data: Dict[str, Any]) -> Dict[str, Any]:
             'sepa_payment_plan',
             'registrationCancelled', 'dateStart', 'dateEnd', 'qonto_amount_paid_cents', 'qontoRemoteAmountPaidCents')
     return {key: {field: copy.deepcopy(line.get(field)) for field in keys}
-            for key, line in _qonto_bank_matching_lines(data).items()}
+            for key, line in lines.items()}
 
 
 def _fetch_qonto_bank_transactions(lines: List[Dict[str, Any]], *, since=None) -> List[Dict[str, Any]]:
@@ -45762,20 +45799,35 @@ def _fetch_qonto_bank_transactions(lines: List[Dict[str, Any]], *, since=None) -
 def _sync_qonto_bank_transfers(
     data: Dict[str, Any], scope_lines: Optional[List[Dict[str, Any]]] = None, *, force: bool = False,
 ) -> Dict[str, Any]:
-    all_lines = _qonto_bank_matching_lines(data)
-    scope_ids = {str(line.get('id')) for line in scope_lines} if scope_lines is not None else set(all_lines)
+    def refresh_working_data(current):
+        # Interactive callers continue working on a complete, editable snapshot.
+        if current is not data:
+            latest = copy.deepcopy(current)
+            data.clear()
+            data.update(latest)
+
+    plan = _qonto_bank_plan(_qonto_bank_matching_lines(data), scope_lines, force=force)
+    return _reconcile_qonto_bank_plan(plan, refresh_working_data)
+
+
+def _qonto_bank_plan(all_lines, scope_lines=None, *, force=False):
+    scope_ids = {str(line.get('id')) for line in scope_lines} if scope_lines is not None else None
     now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     candidates = []
     for line in all_lines.values():
-        if str(line.get('id')) not in scope_ids or not _qonto_bank_transfer_eligible(line):
+        if (scope_ids is not None and str(line.get('id')) not in scope_ids) or not _qonto_bank_transfer_eligible(line):
             continue
         previous = _parse_iso_datetime(line.get('qontoBankTransferSyncedAt') or '')
         interval = 86400 if bank_transfer_paid_cents(line) else 900
         if force or previous is None or (now - previous).total_seconds() >= interval:
-            candidates.append(line)
+            candidates.append({key: copy.deepcopy(line.get(key)) for key in ('id', 'dateStart', 'qontoBankTransfers')})
+    return candidates, _qonto_bank_transfer_context(all_lines) if candidates else {}
+
+
+def _reconcile_qonto_bank_plan(plan, refresh):
+    candidates, before = plan
     if not candidates:
         return {'attempted_count': 0, 'matched_count': 0, 'conflict_count': 0, 'errors': []}
-    before = _qonto_bank_transfer_context(data)
     error = ''
     transactions = []
     try:
@@ -45785,14 +45837,11 @@ def _sync_qonto_bank_transfers(
     candidate_ids = {str(line['id']) for line in candidates}
 
     def persist(current: Dict[str, Any]) -> Dict[str, Any]:
-        if _qonto_bank_transfer_context(current) != before:
-            latest = copy.deepcopy(current)
-            if current is not data:
-                data.clear()
-                data.update(latest)
+        current_lines = _qonto_bank_matching_lines(current)
+        if _qonto_bank_transfer_context(current_lines) != before:
+            refresh(current)
             return {'attempted_count': len(candidates), 'matched_count': 0,
                     'conflict_count': len(candidates), 'errors': []}
-        current_lines = _qonto_bank_matching_lines(current)
         matches = match_bank_transfers(list(current_lines.values()), transactions) if not error else {}
         matched = 0
         for line_id in candidate_ids:
@@ -45815,12 +45864,7 @@ def _sync_qonto_bank_transfers(
                 'Vérification des virements indisponible : ' + error if error else ''
             )
             _save_billing_line(current, line)
-        # Callers may continue their existing scoped invoice refresh. Bring
-        # their working snapshot up to date without replacing concurrent edits.
-        latest = copy.deepcopy(current)
-        if current is not data:
-            data.clear()
-            data.update(latest)
+        refresh(current)
         return {'attempted_count': len(candidates), 'matched_count': matched,
                 'conflict_count': 0, 'errors': ([{'kind': 'bank_transfer', 'message': error}] if error else [])}
 
@@ -46149,6 +46193,52 @@ def api_billing_bank_transfer_assign():
     return jsonify(result), (200 if result['ok'] else 409)
 
 
+def _qonto_invoice_batch(data, lines):
+    """Detach only this run's bounded set of unpaid/expired invoice and mandate checks."""
+    candidates = []
+    for line in lines.values():
+        has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+        has_debit = bool(
+            line.get('paymentMode') == 'sepa_direct_debit'
+            and (line.get('qonto_direct_debit_mandate_id') or line.get('qonto_mandate_rum'))
+        )
+        if not (has_invoice or has_debit):
+            continue
+        settled = str(line.get('paymentStatus') or '').lower() in {'paid', 'canceled', 'cancelled'}
+        if has_debit and any(
+            str(item.get('status') or '').lower() not in {'completed', 'paid', 'canceled', 'cancelled'}
+            for item in _effective_sepa_installments(line)
+        ):
+            settled = False
+        interval = 86400 if settled else QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
+        invoice_due = has_invoice and _billing_line_qonto_sync_due(line, interval_seconds=interval)
+        debit_due = has_debit and _billing_line_qonto_sync_due(line, direct_debit=True, interval_seconds=interval)
+        if invoice_due or debit_due:
+            candidates.append((settled, str(line.get('qontoAutoSyncAttemptedAt') or ''), str(line['id']), line, invoice_due, debit_due))
+    # Oldest pending records first, so a bounded batch cannot repeatedly
+    # select the same records and starve the remaining invoices.
+    candidates.sort(key=lambda item: item[:3])
+    stored_lines = _billing_existing_map(data)
+    work = [
+        (line_id, _qonto_background_snapshot(stored_lines, line), copy.deepcopy(line), invoice_due, debit_due)
+        for _, _, line_id, line, invoice_due, debit_due in candidates[:QONTO_BACKGROUND_SYNC_MAX_LINES]
+    ]
+    return len(candidates), work
+
+
+def _prepare_qonto_background_sync():
+    data = load_data(run_background_tasks=False)
+    lines = _qonto_background_lines(data)
+    bank = _qonto_bank_plan(_qonto_bank_matching_lines(data, lines))
+    # After a bank read, the atomic reconciliation callback builds the invoice
+    # batch from the latest store, on both success and conflict.
+    batch = (0, []) if bank[0] else _qonto_invoice_batch(data, lines)
+    if has_request_context():
+        g.qonto_cron_auth = {'qonto_oauth': copy.deepcopy(data.get('qonto_oauth') or {})}
+        _invalidate_request_data_cache()
+    return bank, batch
+
+
 def run_qonto_background_sync() -> Dict[str, Any]:
     """Reconcile existing Qonto records independently of any open browser."""
     if not _qonto_background_sync_lock.acquire(blocking=False):
@@ -46158,43 +46248,26 @@ def run_qonto_background_sync() -> Dict[str, Any]:
             return {'ok': False, 'status': 'qonto_not_configured'}
         started_at = _now_iso()
         started = time.monotonic()
-        data = copy.deepcopy(load_data(run_background_tasks=False))
-        bank_result = _sync_qonto_bank_transfers(data)
-        candidates = []
-        for line in _qonto_background_lines(data).values():
-            has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
-            has_debit = bool(
-                line.get('paymentMode') == 'sepa_direct_debit'
-                and (line.get('qonto_direct_debit_mandate_id') or line.get('qonto_mandate_rum'))
-            )
-            if not (has_invoice or has_debit):
-                continue
-            settled = str(line.get('paymentStatus') or '').lower() in {'paid', 'canceled', 'cancelled'}
-            if has_debit and any(
-                str(item.get('status') or '').lower() not in {'completed', 'paid', 'canceled', 'cancelled'}
-                for item in _effective_sepa_installments(line)
-            ):
-                settled = False
-            interval = 86400 if settled else QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
-            invoice_due = has_invoice and _billing_line_qonto_sync_due(line, interval_seconds=interval)
-            debit_due = has_debit and _billing_line_qonto_sync_due(line, direct_debit=True, interval_seconds=interval)
-            if invoice_due or debit_due:
-                candidates.append((settled, str(line.get('qontoAutoSyncAttemptedAt') or ''), str(line['id']), line, invoice_due, debit_due))
-        # Oldest pending records first, so a bounded batch cannot repeatedly
-        # select the same records and starve the remaining invoices.
-        candidates.sort(key=lambda item: item[:3])
+        bank, batch = _prepare_qonto_background_sync()
+
+        def refresh_invoice_batch(current):
+            nonlocal batch
+            batch = _qonto_invoice_batch(current, _qonto_background_lines(current))
+
+        bank_result = _reconcile_qonto_bank_plan(bank, refresh_invoice_batch)
+        del bank
+        candidate_count, work = batch
         updates = []
-        for _, _, line_id, source, invoice_due, debit_due in candidates[:QONTO_BACKGROUND_SYNC_MAX_LINES]:
+        for line_id, before, line, invoice_due, debit_due in work:
             if time.monotonic() - started >= QONTO_BACKGROUND_SYNC_MAX_SECONDS:
                 break
-            before = _qonto_background_snapshot(data, source)
-            line = copy.deepcopy(source)
             line['qontoAutoSyncAttemptedAt'] = _now_iso()
             failed = False
             issues = []
             if invoice_due:
                 try:
-                    missing, _ = _sync_billing_line_with_qonto(data, line)
+                    working_data = {'billing_lines': [before['stored']] if before['stored'] else []}
+                    missing, _ = _sync_billing_line_with_qonto(working_data, line)
                     failed = bool(missing)
                     if missing:
                         issues.append('invoice: ' + str(line.get('syncWarning') or 'Facture introuvable'))
@@ -46229,11 +46302,12 @@ def run_qonto_background_sync() -> Dict[str, Any]:
             updates.append((line_id, before, line, failed))
 
         def persist(current: Dict[str, Any]) -> Dict[str, Any]:
-            current_lines = _qonto_background_lines(current)
+            current_lines = _qonto_background_lines(current) if updates else {}
+            stored_lines = _billing_existing_map(current) if updates else {}
             synced = failed_count = conflicts = 0
             for line_id, before, line, failed in updates:
                 latest = current_lines.get(line_id)
-                if latest is None or _qonto_background_snapshot(current, latest) != before:
+                if latest is None or _qonto_background_snapshot(stored_lines, latest) != before:
                     # A user edit or webhook received during remote I/O wins.
                     conflicts += 1
                     continue
@@ -46248,7 +46322,7 @@ def run_qonto_background_sync() -> Dict[str, Any]:
                 'started_at': started_at, 'finished_at': _now_iso(),
                 'attempted_count': len(updates), 'synced_count': synced,
                 'failed_count': failed_count, 'conflict_count': conflicts,
-                'remaining_count': len(candidates) - len(updates) + conflicts,
+                'remaining_count': candidate_count - len(updates) + conflicts,
             }
             current['qonto_background_sync_status'] = summary
             return summary
@@ -46257,6 +46331,8 @@ def run_qonto_background_sync() -> Dict[str, Any]:
         app.logger.info('QONTO_BACKGROUND_SYNC %s', json.dumps(summary, ensure_ascii=False))
         return summary
     finally:
+        if has_request_context():
+            g.pop("qonto_cron_auth", None)
         _qonto_background_sync_lock.release()
 
 
@@ -54448,10 +54524,53 @@ def api_conventions_signed_unseen():
     items = _signed_conventions_unseen_items(load_data())
     return jsonify({"ok": True, "items": items, "count": len(items)})
 
+_docs_to_control_cache = OrderedDict()
+_docs_to_control_lock = threading.Lock()
+
+
+def _docs_source_revision(scope):
+    postgres = _partner_postgres_active()
+    file_revision = None
+    if not postgres or scope[0] == "global":
+        file_revision = _data_file_revision()
+        if file_revision is None:
+            return None
+    versions = None
+    if postgres:
+        try:
+            versions = _get_partner_postgres_store().bundle_revisions(scope[1])
+        except PartnerPostgresError:
+            return None
+    return (file_revision, versions)
+
+
+def _pending_document_items():
+    cache_key = _request_data_cache_key(False)
+    scope = cache_key[:2]
+    # Coalesce simultaneous dashboard polls on a cold cache. Store only the
+    # response rows, with a separate entry for every visible data scope.
+    with _docs_to_control_lock:
+        revision = _docs_source_revision(scope)
+        cached = _docs_to_control_cache.get(scope)
+        if revision is not None and cached is not None and cached[0] == revision:
+            _docs_to_control_cache.move_to_end(scope)
+            return cached[1]
+        had_payload = cache_key in getattr(g, "data_payload_cache", {})
+        rows = _docs_to_control_items(load_data())
+        overlay_ok = (not _partner_postgres_active() or scope[0] == "partner"
+                      or getattr(g, "partner_postgres_platform_baselines", None) is not None)
+        if not had_payload and overlay_ok and revision is not None and revision == _docs_source_revision(scope):
+            _docs_to_control_cache[scope] = (revision, rows)
+            _docs_to_control_cache.move_to_end(scope)
+            if len(_docs_to_control_cache) > 32:
+                _docs_to_control_cache.popitem(last=False)
+        return rows
+
+
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():
-    out = _docs_to_control_items(load_data())
+    out = _pending_document_items()
     return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
@@ -54468,15 +54587,17 @@ def _docs_to_control_items(data):
         trainees = _registered_trainees(s)
 
         for t in trainees:
-            # s'assure que les docs requis existent (sinon liste vide => pas détecté)
-            ensure_documents_schema_for_trainee(t, training_type)
-
-            docs = t.get("documents") or []
-            pending = 0
-            for d in docs:
-                st = (d.get("status") or "").strip().upper()
-                if st in ("A CONTRÔLER", "A CONTROLER"):
-                    pending += 1
+            # New schema entries always start as NON DÉPOSÉ. Count the same
+            # required keys (last stored duplicate wins) without creating or
+            # rewriting the entire document list just to display a badge.
+            statuses = {
+                d["key"]: str(d.get("status") or "").strip().upper()
+                for d in t.get("documents") or [] if isinstance(d, dict) and d.get("key")
+            }
+            to_review = {key for key, status in statuses.items() if status in ("A CONTRÔLER", "A CONTROLER")}
+            if not to_review:
+                continue
+            pending = sum(doc["key"] in to_review for doc in required_docs_for_training(training_type, t))
 
             if pending > 0:
                 out.append({
@@ -54553,42 +54674,7 @@ def public_docs_to_control():
             resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
         return resp
 
-    data = load_data()
-    out = []
-
-    for s in data.get("sessions", []):
-        if _is_wedof_leads_session(s):
-            continue
-        session_id = s.get("id")
-        session_name = _session_get(s, "name", "")
-        training_type = _session_get(s, "training_type", "")
-
-        trainees = _registered_trainees(s)
-
-        for t in trainees:
-            ensure_documents_schema_for_trainee(t, training_type)
-
-            docs = t.get("documents") or []
-            pending = 0
-            for d in docs:
-                st = (d.get("status") or "").strip().upper()
-                if st in ("A CONTRÔLER", "A CONTROLER"):
-                    pending += 1
-
-            if pending > 0:
-                out.append({
-                    "session_id": session_id,
-                    "session_name": session_name,
-                    "training_type": training_type,
-                    "trainee_id": t.get("id"),
-                    "last_name": t.get("last_name", ""),
-                    "first_name": t.get("first_name", ""),
-                    "pending_count": pending,
-                    "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
-                })
-
-    out.sort(key=lambda x: x.get("pending_count", 0), reverse=True)
-
+    out = _pending_document_items()
     resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
 
     # CORS uniquement lorsque l'accès public est volontairement activé.
@@ -54596,8 +54682,6 @@ def public_docs_to_control():
         resp.headers["Access-Control-Allow-Origin"] = "*"
         resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
         resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
-    return resp
-
     return resp
 
 

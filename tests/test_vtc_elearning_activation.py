@@ -70,7 +70,7 @@ def test_pending_is_locked_and_activated_is_available_before_formation(case):
         activation.process_due(host, data=case.data, now=DUE)
     after = case.client.get("/espace/public-token")
     assert after.status_code == 200
-    assert "Votre accès est disponible dès maintenant" in after.text
+    assert 'href="/espace/public-token/elearning"' in after.text
     assert "Accéder à mon parcours VTC" in after.text
     assert "Accès disponible le 01/01/2099" not in after.text
     assert case.client.get("/espace/public-token/elearning").status_code == 200
@@ -267,3 +267,60 @@ def test_refusal_detail_and_retry_are_visible_only_to_admin(case):
     case._public_login()
     public = case.client.get("/espace/public-token")
     assert "Format invalide" not in public.text
+
+
+def test_worker_reads_once_then_runs_due_activation_on_unchanged_file(case, monkeypatch, tmp_path):
+    path = tmp_path / "data.json"
+    path.write_text(json.dumps(case.data))
+    monkeypatch.setattr(host, "DATA_FILE", str(path))
+    monkeypatch.setitem(host.app.extensions, "vtc_elearning_worker", {})
+    with patch.object(host, "_load_valid_json_payload", wraps=host._load_valid_json_payload) as read, \
+         patch.object(host, "brevo_send_email", return_value={"ok": True}) as send:
+        for tick in range(40):
+            assert activation.process_due(host, now=NOW + dt.timedelta(seconds=15 * tick)) == DUE
+        send.assert_not_called()
+        activation.process_due(host, now=DUE)
+        send.assert_called_once()
+        read.assert_called_once_with(str(path))
+        # A worker restart before a canonical update rechecks the claim under
+        # lock. The same activation still results in a single delivery.
+        monkeypatch.setitem(host.app.extensions, "vtc_elearning_worker", {})
+        activation.process_due(host, now=DUE)
+        assert read.call_count == 2
+        send.assert_called_once()
+
+
+def test_committed_schedule_and_external_replacement(case, monkeypatch, tmp_path):
+    path = tmp_path / "data.json"
+    monkeypatch.setattr(host, "DATA_FILE", str(path))
+    monkeypatch.setattr(host, "BACKUP_DIR", str(tmp_path / "backups"))
+    monkeypatch.setitem(host.app.extensions, "vtc_elearning_worker", {})
+    host._write_json_with_backups(str(path), case.data, host._data_lock)
+    with patch.object(host, "_load_valid_json_payload", wraps=host._load_valid_json_payload) as read:
+        assert activation.process_due(host, now=NOW) == DUE
+        read.assert_not_called()
+        changed = tmp_path / "next.json"
+        changed.write_text(json.dumps({"sessions": []}))
+        changed.replace(path)
+        with patch.object(activation, "_process_one") as claim:
+            assert activation.process_due(host, now=DUE) is None
+            activation.process_due(host, now=DUE)
+        claim.assert_not_called()
+        read.assert_called_once_with(str(path))
+
+
+def test_replacement_during_scan_is_rechecked_on_next_tick(case, monkeypatch, tmp_path):
+    path = tmp_path / "data.json"
+    path.write_text(json.dumps({"sessions": []}))
+    monkeypatch.setattr(host, "DATA_FILE", str(path))
+    monkeypatch.setitem(host.app.extensions, "vtc_elearning_worker", {})
+
+    def replace_during_read(_path):
+        replacement = tmp_path / "incoming.json"
+        replacement.write_text(json.dumps(case.data))
+        replacement.replace(path)
+        return {"sessions": []}
+
+    with patch.object(host, "_load_valid_json_payload", side_effect=replace_during_read):
+        assert activation.process_due(host, now=NOW) is None
+    assert activation.process_due(host, now=NOW) == DUE

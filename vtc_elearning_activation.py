@@ -115,12 +115,18 @@ def preserve_state(payload, canonical, trainees):
                     trainee["sent_email_history"] = history[:200]
 
 
-def _due(state, now):
+def _deadline(state):
+    if not isinstance(state, dict):
+        return None
     due = parse(state.get("due_at"))
-    if not due or due > now or state.get("email_status") in {"sent", "needs_review", "not_requested"}:
-        return False
-    return all(not parse(state.get(k)) or parse(state[k]) <= now
-               for k in ("next_attempt_at", "lease_until"))
+    if due is None or state.get("email_status") in {"sent", "needs_review", "not_requested"}:
+        return None
+    return max(filter(None, (due, parse(state.get("next_attempt_at")), parse(state.get("lease_until")))))
+
+
+def _due(state, now):
+    due = _deadline(state)
+    return due is not None and due <= now
 
 
 def _find(host, data, session_id, trainee_id):
@@ -259,23 +265,68 @@ def _activate_individual(host, sid, tid, now):
         _logger(host).info("vtc_individual_access_activated")
 
 
+def _pending_activations(host, payload):
+    # Keep only identifiers and deadlines. In particular, never keep the JSON
+    # object alive while sending mail or waiting for the next check.
+    pending = []
+    for training in payload.get("sessions", []):
+        if not isinstance(training, dict) or not training.get("id") or not is_vtc(training):
+            continue
+        if training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID):
+            continue
+        for person in host._session_trainees_list(training):
+            if not isinstance(person, dict) or not person.get("id") or host._trainee_registration_is_cancelled(person):
+                continue
+            if STATE_KEY not in person and _individual_grant_requested(training, person):
+                pending.append((training["id"], person["id"], None))
+            elif not training.get("archived") and not training.get("cancelled"):
+                due = _deadline(person.get(STATE_KEY) or {})
+                if due is not None:
+                    pending.append((training["id"], person["id"], due))
+    return tuple(pending)
+
+
+def record_committed(host, payload):
+    """Publish the schedule for this exact file while the writer still holds its lock."""
+    worker = host.app.extensions.get("vtc_elearning_worker")
+    if worker is not None:
+        revision = host._data_file_revision()
+        if revision is not None:
+            worker["schedule"] = (revision, _pending_activations(host, payload))
+
+
+def _read_schedule(host, worker):
+    revision = host._data_file_revision()
+    if worker is not None and revision is not None:
+        saved_revision, entries = worker.get("schedule", (None, ()))
+        if saved_revision == revision:
+            return entries
+    payload = host._load_valid_json_payload(host.DATA_FILE)
+    if payload is None:
+        return ()
+    entries = _pending_activations(host, payload)
+    if worker is not None and revision is not None and host._data_file_revision() == revision:
+        worker["schedule"] = (revision, entries)
+    return entries
+
+
 def process_due(host, *, now=None, data=None):
     now = clock(now)
-    # Read the atomic JSON snapshot directly: no unrelated reminders, provider
-    # calls or expensive normalisation during the frequent scheduler check.
-    snapshot = data if data is not None else host._load_valid_json_payload(host.DATA_FILE)
-    for training in (snapshot or {}).get("sessions", []):
-        for trainee in host._session_trainees_list(training):
-            if (STATE_KEY not in trainee and is_vtc(training)
-                    and _individual_grant_requested(training, trainee)
-                    and not host._trainee_registration_is_cancelled(trainee)
-                    and training.get("partner_id") in (None, "", host.INTEGRALE_PARTNER_ID)):
-                _activate_individual(host, training["id"], trainee["id"], now)
-            if eligible(host, training, trainee) and _due(trainee.get(STATE_KEY) or {}, now):
-                try:
-                    _process_one(host, training["id"], trainee["id"], now)
-                except Exception:
-                    _logger(host).exception("vtc_elearning_activation_failed trainee_id=%s", trainee.get("id"))
+    entries = (_pending_activations(host, data) if data is not None
+               else _read_schedule(host, host.app.extensions.get("vtc_elearning_worker")))
+    next_due = None
+    for session_id, trainee_id, due in entries:
+        if due is not None and due > now:
+            next_due = due if next_due is None else min(next_due, due)
+            continue
+        try:
+            if due is None:
+                _activate_individual(host, session_id, trainee_id, now)
+            else:
+                _process_one(host, session_id, trainee_id, now)
+        except Exception:
+            _logger(host).exception("vtc_elearning_activation_failed trainee_id=%s", trainee_id)
+    return next_due
 
 
 def start_worker(host):
@@ -288,12 +339,15 @@ def start_worker(host):
     def run():
         logger.info("vtc_elearning_worker_started delay_seconds=600")
         while not stop.is_set():
+            wait = 15
             try:
                 with host.app.app_context():
-                    process_due(host)
+                    next_due = process_due(host)
+                    if next_due is not None:
+                        wait = max(0, min(wait, (next_due - clock()).total_seconds()))
             except Exception:
                 logger.exception("vtc_elearning_worker_failed")
-            stop.wait(15)
+            stop.wait(wait)
 
     worker = threading.Thread(target=run, name="vtc-elearning-activation", daemon=True)
     host.app.extensions["vtc_elearning_worker"] = {"thread": worker, "stop": stop}

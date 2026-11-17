@@ -206,3 +206,73 @@ def test_total_api_failure_is_visible_to_scheduler(background):
     assert response.status_code == 503
     assert response.json['failed_count'] == 2
     assert response.json['synced_count'] == 0
+
+
+def test_cron_detaches_unrelated_history_before_bank_and_invoice_reads(background, monkeypatch):
+    import weakref
+
+    class Snapshot(dict):
+        def __deepcopy__(self, memo):
+            raise AssertionError("The complete store must not be copied")
+
+    client, current, remote, load = background
+    current['sessions'][0]['trainees'].append({
+        'id': 'T-bank', 'first_name': 'Bank', 'last_name': 'Example', 'personal_amount': 200,
+    })
+    bank_line = next(row for row in gestion_app._billing_lines(current) if row['traineeId'] == 'T-bank')
+    bank_line['invoiceStatus'] = 'external_generated'
+    gestion_app._save_billing_line(current, bank_line)
+    current['qonto_oauth'] = {'access_token': 'test-access', 'refresh_token': 'test-refresh',
+                             'environment': gestion_app._qonto_oauth_environment(), 'expires_at': 5000000000}
+    refs = []
+
+    def read(**kwargs):
+        payload = Snapshot(copy.deepcopy(current))
+        payload['unrelated_learner_history'] = ['history'] * 1000
+        refs.append(weakref.ref(payload))
+        gestion_app.g.data_payload_cache = {('global', '', False): payload}
+        return payload
+
+    load.side_effect = read
+    def assert_released():
+        assert refs and refs[0]() is None
+        assert not gestion_app.g.data_payload_cache
+        assert gestion_app._qonto_oauth_bearer_token() == 'test-access'
+        assert 'test-refresh' not in gestion_app._sanitize_qonto_error('example test-refresh')
+
+    def fetch_bank(_lines):
+        assert_released()
+        return []
+
+    invoice_response = remote.side_effect
+    def fetch_invoice(invoice_id):
+        assert_released()
+        return invoice_response(invoice_id)
+
+    monkeypatch.setattr(gestion_app, '_fetch_qonto_bank_transactions', fetch_bank)
+    remote.side_effect = fetch_invoice
+    response = client.post(URL, headers=HEADERS)
+    assert response.status_code == 200
+    assert response.json['bank_transfer_errors'] == []
+    assert response.json['synced_count'] == 2
+    load.assert_called_once_with(run_background_tasks=False)
+
+
+def test_expired_cron_credentials_rotate_using_the_complete_store(monkeypatch):
+    canonical = {'sessions': [{'id': 'must-survive'}], 'qonto_oauth': {
+        'environment': gestion_app._qonto_oauth_environment(),
+        'access_token': 'old-access', 'refresh_token': 'old-refresh', 'expires_at': 1,
+    }}
+    monkeypatch.setattr(gestion_app, 'load_data', lambda: canonical)
+    monkeypatch.setattr(gestion_app, '_exchange_qonto_oauth_token', lambda _: {
+        'access_token': 'new-access', 'refresh_token': 'new-refresh', 'expires_in': 3600,
+    })
+    saved = Mock()
+    monkeypatch.setattr(gestion_app, 'save_data', saved)
+    with gestion_app.app.test_request_context(URL):
+        gestion_app.g.qonto_cron_auth = {'qonto_oauth': copy.deepcopy(canonical['qonto_oauth'])}
+        assert gestion_app._qonto_oauth_bearer_token() == 'new-access'
+        assert gestion_app._qonto_oauth_bearer_token() == 'new-access'
+        saved.assert_called_once_with(canonical, preserve_qonto_oauth=False)
+        assert saved.call_args.args[0]['sessions'] == [{'id': 'must-survive'}]
+        assert not gestion_app.g.data_payload_cache
