@@ -734,9 +734,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 if not stored.get("signature") or source and stored["signature"] == source["signature"]:
                     # Older drafts retained blank required fields even when a catalogue value is now known.
                     required_defaults = {"priceTotal", "indicativeDuration", "hoursInCenter", "hoursInCompany", "typeOfTrainingCourse",
-                                         "teachingModalities", "trainingPaces", "montantFraisCertificationInclus"}
+                                         "teachingModalities", "trainingPaces"}
                     values.update({k:v for k,v in stored.get("values", {}).items()
-                                   if k not in {"weeklyDuration", "exam"}
+                                   if k not in {"weeklyDuration", "exam", "montantFraisCertificationInclus"}
                                    and (k not in required_defaults or v not in ("", "0", None, []) or not values.get(k))})
                 detail["proposal_values"] = values
                 read_job = request.args.get("proposal_read", "")

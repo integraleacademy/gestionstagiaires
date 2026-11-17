@@ -293,16 +293,23 @@ def test_comment_autosaves_below_dossier_name_and_survives_reload(screen):
     assert screen.posts.count(f'/admin/edof-test/dossiers/{FOLDER}/annotation') == 1
 
 
-def test_legacy_proposal_defaults_to_35h_and_asks_for_unspecified_included_fee(site):
+@pytest.mark.parametrize("title,expected_exam,expected_fee", [
+    ("Formation test", "NONE", ""), ("Chauffeur VTC pratique", "INCLUDED", "250"),
+])
+def test_legacy_proposal_uses_current_weekly_hours_and_exam_fee(site, title, expected_exam, expected_fee):
     from bs4 import BeautifulSoup
 
     ready(site)
     key = 'proposal-draft:'+site.owner+':'+FOLDER
     draft = site.vault.get(key)
-    draft['values'].update(weeklyDuration='21', exam='NONE', montantFraisCertificationInclus='')
+    source = site.vault.get(jobs.source_key(site.owner, FOLDER))
+    source['values']['title'] = title
+    site.vault.put(jobs.source_key(site.owner, FOLDER), source)
+    draft['values'].update(title=title, weeklyDuration='21', exam='INCLUDED', montantFraisCertificationInclus='241')
     site.vault.put(key, draft)
     form = BeautifulSoup(site.client.get(DETAIL).data, 'html.parser').select_one('.edof-proposal-form')
     assert form.select_one('[name="weeklyDuration"]')['value'] == '35'
-    assert form.select_one('[name="exam"] option[selected]')['value'] == 'INCLUDED'
+    assert form.select_one('[name="exam"] option[selected]')['value'] == expected_exam
     fee = form.select_one('[name="montantFraisCertificationInclus"]')
-    assert fee.has_attr('required') and not fee.get('value')
+    assert fee.has_attr('required') == bool(expected_fee)
+    assert fee.get('value', '') == expected_fee
