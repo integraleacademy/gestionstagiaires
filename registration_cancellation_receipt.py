@@ -91,7 +91,7 @@ def register(app, host):
             return jsonify(ok=False, error=str(exc)), 409
         saved = trainee.get("cancellation_receipt") or {}
         return jsonify(ok=True, recipient=prepared["recipient"], subject=prepared["subject"], html=prepared["html"],
-                       preview_token=prepared["preview_token"],
+                       text=prepared["text"], preview_token=prepared["preview_token"],
                        already_sent=saved.get("key") == prepared["delivery"] and bool(saved.get("sent_at")))
 
     @app.post(route + "envoyer")

@@ -486,6 +486,7 @@ class RegistrationCancellationTests(unittest.TestCase):
         preview_payload = preview.get_json()
         self.assertEqual(preview_payload["recipient"], "alex@example.com")
         self.assertIn("Article 9", preview_payload["html"])
+        self.assertTrue(preview_payload["text"].strip())
         self.assertIn("Suite à votre demande d’annulation", preview_payload["subject"])
         self.assertTrue(preview_payload["warnings"])
 

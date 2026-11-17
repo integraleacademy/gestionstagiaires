@@ -30,6 +30,8 @@ def test_preview_and_optional_delivery_are_distinct_from_the_financial_summary(m
     assert client.post(url+"envoyer", json=proof).json["ok"]
     assert client.post(url+"envoyer", json=proof).json["already_sent"]
     assert send.call_count == 1 and send.call_args.args == (preview["recipient"],preview["subject"],preview["html"])
+    assert "Bonjour Camille," in preview["text"]
+    assert preview["text"] == send.call_args.kwargs["text_content"]
     assert send.call_args.kwargs["reply_to"]["email"] == "ecole@integraleacademy.com"
     assert t["sent_email_history"][0]["html"] == preview["html"] and "cancellation_email_sent_at" not in t
     assert client.post(url+"apercu").json["already_sent"]
