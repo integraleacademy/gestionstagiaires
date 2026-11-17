@@ -153,6 +153,50 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         self.assertEqual(payload["items"][0]["total"], 1)
         self.assertEqual(payload["items"][0]["admin_url"], "/admin/sessions/S-APS/trainees")
 
+    def test_session_keywords_match_name_training_and_french_dates(self):
+        afc = {"id": "S-AFC", "nom": "AFC APS + SSIAP NOVEMBRE 2026", "type_formation": "APS",
+               "date_debut": "2026-11-16", "date_fin": "2027-02-15"}
+        active = {"id": "S-COURT", "name": "Parcours intensif", "training_type": "APS",
+                  "afc_enabled": True, "date_start": "2026-11-02"}
+        sessions = [active, dict(afc, id="S-ARCH", archived=True), afc,
+                    dict(afc, id="S-PARTNER", partner_id="other"),
+                    dict(afc, id=gestion_app.WEDOF_LEADS_SESSION_ID)]
+        with patch.object(gestion_app, "load_data", return_value={"sessions": sessions}):
+            for query, expected in (
+                ("AFC novembre", ["S-AFC", "S-COURT", "S-ARCH"]),
+                ("nov. + aFc", ["S-AFC", "S-COURT", "S-ARCH"]),
+                ("SSIAP / AFC 2026", ["S-AFC", "S-ARCH"]),
+                ("FEVRIER afc", ["S-AFC", "S-ARCH"]),
+                ("APS 02/11/2026", ["S-COURT"]),
+                ("AFC novembre 2027", []), ("AFC mars", []), ("++", []),
+            ):
+                with self.subTest(query=query):
+                    response = self.client.get("/api/sessions_search", query_string={"q": query})
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual([item["session_id"] for item in response.json["items"]], expected)
+
+    def test_command_search_shares_one_scoped_read_for_both_result_types(self):
+        course = {"id": "S1", "name": "AFC APS + SSIAP novembre 2026",
+                  "trainees": [{"id": "T1", "first_name": "Afc", "last_name": "Novembre"}]}
+        data = {"sessions": [course, dict(course, id="S2", partner_id="other"),
+                             dict(course, id=gestion_app.WEDOF_LEADS_SESSION_ID)]}
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "_admin_searchable_sessions", wraps=gestion_app._admin_searchable_sessions
+        ) as scoped_sessions:
+            response = self.client.get("/api/admin/command_search", query_string={"q": "AFC novembre"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["admin_url"] for item in response.json["sessions"]], ["/admin/sessions/S1/trainees"])
+        self.assertEqual([item["trainee_id"] for item in response.json["trainees"]], ["T1"])
+        scoped_sessions.assert_called_once()
+        with self.client.session_transaction() as sess:
+            sess["partner_id"] = "other"
+            sess["admin_role"] = "partner_admin"
+        with patch.object(gestion_app, "load_data", return_value=data):
+            payload = self.client.get("/api/admin/command_search?q=afc").json
+        for group in ("sessions", "trainees"):
+            self.assertEqual([item["session_id"] for item in payload[group]], ["S2"])
+        self.assertEqual(gestion_app.app.test_client().get("/api/admin/command_search?q=afc").status_code, 401)
+
     def test_trainee_search_is_scoped_to_current_partner(self):
         fake_data = {
             "sessions": [

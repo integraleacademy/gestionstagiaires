@@ -288,17 +288,33 @@ async function api(url, method="GET", body=null) {
   let timer=0,sequence=0,activeIndex=-1,currentItems=[];
   const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const open=()=>{panel.hidden=false;input.setAttribute('aria-expanded','true');render(input.value);};
-  const close=()=>{panel.hidden=true;input.setAttribute('aria-expanded','false');activeIndex=-1;};
+  let searchController;
+  function cancelPending(){
+    sequence++;
+    window.clearTimeout(timer);
+    searchController?.abort();
+  }
+  const open=()=>{if(panel.hidden){panel.hidden=false;input.setAttribute('aria-expanded','true');render(input.value);}};
+  const close=()=>{if(!panel.hidden){cancelPending();panel.hidden=true;input.setAttribute('aria-expanded','false');activeIndex=-1;}};
   function functionMatches(query){
     const needle=normalize(query);
     return functions.filter(item=>!needle||normalize(`${item.label} ${item.description} ${item.keywords}`).includes(needle)).slice(0,8)
       .map(item=>({...item,type:'Fonction'}));
   }
-  function draw(items,query,loading=false){
+  function draw(items,query,state='ready'){
     currentItems=items;activeIndex=-1;
-    status.textContent=loading?'Recherche en cours…':(query?`${items.length} résultat${items.length>1?'s':''}`:'Suggestions');
-    if(!items.length){results.innerHTML='<div class="command-search__empty"><strong>Aucun résultat</strong><span>Essayez un nom, une formation ou un outil.</span></div>';return;}
+    results.setAttribute('aria-busy',String(state==='loading'));
+    if(state==='loading') status.textContent='Recherche en cours…';
+    else if(state==='short') status.textContent='Saisissez au moins deux caractères.';
+    else if(state==='error') status.textContent='Recherche des sessions et des stagiaires indisponible. Réessayez.';
+    else status.textContent=query?`${items.length} résultat${items.length>1?'s':''}`:'Suggestions';
+    if(!items.length){
+      results.replaceChildren();
+      if(state==='ready' && query){
+        results.innerHTML='<div class="command-search__empty"><strong>Aucun résultat</strong><span>Essayez un nom, une formation ou un outil.</span></div>';
+      }
+      return;
+    }
     let lastType='';
     results.innerHTML=items.map((item,index)=>{
       const heading=item.type!==lastType?`<div class="command-search__group">${escapeHtml(item.type)}</div>`:'';lastType=item.type;
@@ -306,9 +322,10 @@ async function api(url, method="GET", body=null) {
       return `${heading}<div class="command-search__result" role="option" data-command-index="${index}" data-command-href="${escapeHtml(item.href)}"><span class="command-search__icon">${escapeHtml(item.icon)}</span><span class="command-search__copy"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span>${actions}</div>`;
     }).join('');
   }
-  async function loadSuggestions(id){
+  async function loadSuggestions(id,signal){
     try{
-      const response=await fetch('/api/admin/search_suggestions',{headers:{Accept:'application/json'}});
+      const response=await fetch('/api/admin/search_suggestions',{signal,headers:{Accept:'application/json'}});
+      if(!response.ok)throw new Error();
       const payload=await response.json();if(id!==sequence||input.value.trim())return;
       const trainee=item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url,publicUrl:item.public_url,summaryUrl:item.summary_api_url});
       const items=[
@@ -318,27 +335,27 @@ async function api(url, method="GET", body=null) {
         ...(payload.recent_tools||[]).map(item=>({...item,type:'2 derniers outils consultés'}))
       ];
       draw(items,'');
-    }catch(_error){if(id===sequence)draw(functionMatches(''),'');}
+    }catch(_error){if(id===sequence)draw(functionMatches(''),'','error');}
   }
-  async function remoteSearch(query,id){
+  async function remoteSearch(query,id,signal){
     try{
-      const [traineesResponse,sessionsResponse]=await Promise.all([
-        fetch(`/api/trainees_search?q=${encodeURIComponent(query)}`,{headers:{Accept:'application/json'}}),
-        fetch(`/api/sessions_search?q=${encodeURIComponent(query)}`,{headers:{Accept:'application/json'}})
-      ]);
-      const [trainees,sessions]=await Promise.all([traineesResponse.json(),sessionsResponse.json()]);
+      const response=await fetch(`/api/admin/command_search?q=${encodeURIComponent(query)}`,{signal,headers:{Accept:'application/json'}});
+      if(!response.ok)throw new Error();
+      const payload=await response.json();
       if(id!==sequence)return;
-      const people=(trainees.items||[]).slice(0,6).map(item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url,publicUrl:item.public_url,summaryUrl:item.summary_api_url}));
-      const courses=(sessions.items||[]).slice(0,6).map(item=>({type:'Sessions',icon:'□',label:item.session_name||item.training_type||'Session',description:`${item.training_type||'Formation'}${item.date_range?' · '+item.date_range:''}`,href:item.admin_url}));
-      draw([...functionMatches(query),...people,...courses],query);
-    }catch(_error){if(id===sequence){draw(functionMatches(query),query);status.textContent='Résultats des outils uniquement';}}
+      const people=payload.trainees.slice(0,6).map(item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url,publicUrl:item.public_url,summaryUrl:item.summary_api_url}));
+      const courses=payload.sessions.slice(0,6).map(item=>({type:'Sessions',icon:'□',label:item.session_name||item.training_type||'Session',description:`${item.training_type||'Formation'}${item.date_range?' · '+item.date_range:''}`,href:item.admin_url}));
+      draw([...courses,...functionMatches(query),...people],query);
+    }catch(_error){if(id===sequence)draw(functionMatches(query),query,'error');}
   }
   function render(value){
-    const query=value.trim();window.clearTimeout(timer);
-    if(!query){const id=++sequence;draw([],query,true);loadSuggestions(id);return;}
-    if(query.length<2){draw(functionMatches(query),query);return;}
-    const id=++sequence;draw(functionMatches(query),query,true);
-    timer=window.setTimeout(()=>remoteSearch(query,id),180);
+    cancelPending();
+    const query=value.trim(),id=sequence;
+    if(query.length===1){draw(functionMatches(query),query,'short');return;}
+    searchController=new AbortController();
+    const signal=searchController.signal;
+    draw(query?functionMatches(query):[],query,'loading');
+    timer=window.setTimeout(()=>query?remoteSearch(query,id,signal):loadSuggestions(id,signal),180);
   }
   function select(index){
     const options=[...results.querySelectorAll('[data-command-index]')];if(!options.length)return;
@@ -351,7 +368,10 @@ async function api(url, method="GET", body=null) {
   input.addEventListener('keydown',event=>{
     if(event.key==='ArrowDown'){event.preventDefault();select(activeIndex+1);}
     else if(event.key==='ArrowUp'){event.preventDefault();select(activeIndex-1);}
-    else if(event.key==='Enter'&&activeIndex>=0){event.preventDefault();const option=results.querySelector(`[data-command-index="${activeIndex}"]`);if(option?.dataset.commandHref)window.location.href=option.dataset.commandHref;}
+    else if(event.key==='Enter'){
+      const selected=currentItems[activeIndex] || (currentItems.length===1 && results.getAttribute('aria-busy')==='false' && currentItems[0]);
+      if(selected){event.preventDefault();window.location.href=selected.href;}
+    }
     else if(event.key==='Escape'){event.preventDefault();close();input.blur();}
   });
   document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();input.focus();open();}});
