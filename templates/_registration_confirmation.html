@@ -1,0 +1,19 @@
+<dialog id="registrationConfirmation" aria-labelledby="registrationConfirmationTitle" aria-describedby="registrationConfirmationDescription">
+  <form method="dialog">
+    <div class="registration-confirmation__body">
+      <span class="registration-confirmation__icon" aria-hidden="true">
+        <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3h9l4 4v4M14 3v5h4M5 3v17h6M8 11h5m-5 4h2"/>
+          <circle cx="17.5" cy="17.5" r="4.5"/><path d="M15.7 17.5h3.6"/>
+        </svg>
+      </span>
+      <h2 id="registrationConfirmationTitle"></h2>
+      <p id="registrationConfirmationDescription"></p>
+      <p id="registrationConfirmationNext" class="registration-confirmation__note">Après confirmation, vous pourrez prévisualiser le mail d’annulation et choisir de l’envoyer.</p>
+    </div>
+    <div class="registration-confirmation__actions">
+      <button type="submit" value="dismiss" autofocus>Revenir à la fiche</button>
+      <button type="submit" value="confirm" id="registrationConfirmationSubmit"></button>
+    </div>
+  </form>
+</dialog>

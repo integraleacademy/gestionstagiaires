@@ -31,7 +31,8 @@ def test_only_the_authenticated_certified_ssiap1_candidate_can_get_an_up_to_date
     pdf = PdfReader(io.BytesIO(response.data))
     assert len(pdf.pages) == 1 and len(pdf.pages[0].images) >= 3
     text = pdf.pages[0].extract_text()
-    for term in ("Camille EXEMPLE", "05/10/2026", "16/10/2026", "19/10/2026", "faire valoir ce que de droit"):
+    for term in ("Camille EXEMPLE", "05/10/2026", "16/10/2026", "19/10/2026", "faire valoir ce que de droit",
+                 "83-23", "93 83 06002 83", "840 899 884 00026"):
         assert term in text
     trainee["ssiap_diploma_exam_date"] = "2026-10-21"
     assert "21/10/2026" in PdfReader(io.BytesIO(client.get(url).data)).pages[0].extract_text()

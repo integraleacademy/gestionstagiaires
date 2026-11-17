@@ -22,6 +22,9 @@
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261111-cpf-inline') }}">
 
+<link rel="stylesheet" href="{{ url_for('static', filename='css/registration-confirmation.css', v='20261117') }}">
+{% include "_registration_confirmation.html" %}
+
 <div class="breadcrumbs">
   <a data-return-to-roster data-all-vtc="{{ url_for('admin_vtc_trainees_all') }}" href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
@@ -2644,7 +2647,7 @@
   "afcEnabled": session.afc_enabled or false
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-annulation') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-confirmation') }}"></script>
   
 
 <!-- ===================== -->

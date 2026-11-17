@@ -4257,13 +4257,19 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   registrationCancelledCheckbox?.addEventListener("change", async ()=>{
     const previous = !registrationCancelledCheckbox.checked;
     const next = registrationCancelledCheckbox.checked;
-    const message = next
-      ? "Confirmer l’annulation de cette inscription ? Le dossier sera conservé, la personne ne comptera plus dans les indicateurs et toutes les automatisations seront désactivées."
-      : "Réactiver cette inscription ? La personne sera de nouveau comptabilisée dans les effectifs, les ventes et les KPI.";
-    if(!window.confirm(message)){
-      renderRegistrationCancellation(previous);
-      return;
-    }
+    renderRegistrationCancellation(previous);
+    const dialog = document.getElementById("registrationConfirmation");
+    dialog.dataset.mode = next ? "cancel" : "restore";
+    dialog.querySelector("h2").textContent = next ? "Annuler cette inscription ?" : "Réactiver cette inscription ?";
+    dialog.querySelector("#registrationConfirmationDescription").textContent = next
+      ? "Le dossier sera conservé. Le stagiaire ne sera plus comptabilisé dans les indicateurs et toutes les automatisations seront désactivées."
+      : "Le stagiaire sera de nouveau comptabilisé dans les effectifs, les ventes et les indicateurs.";
+    dialog.querySelector("#registrationConfirmationNext").hidden = !next;
+    dialog.querySelector("#registrationConfirmationSubmit").textContent = next ? "Annuler l’inscription" : "Réactiver l’inscription";
+    dialog.returnValue = "";
+    const choice = new Promise(resolve => dialog.addEventListener("close", () => resolve(dialog.returnValue), {once: true}));
+    dialog.showModal();
+    if (await choice !== "confirm") return;
 
     registrationCancelledCheckbox.disabled = true;
     try{
