@@ -18,6 +18,7 @@ let probeType = 'text/html; charset=utf-8';
 let probeRedirect = null;
 let loginRequired = false;
 let navigationRequests = 0;
+let healthRequests = 0;
 let probeRequests = 0;
 let probeCookie = '';
 let posts = 0;
@@ -28,7 +29,8 @@ function maintenanceHTML() {
   // Accelerate only the polling clock. All real fetch/navigation/SW behavior
   // remains exercised, and neither fixture nor browser contacts production.
   return html.replace("'gestionstagiaires-r5no.onrender.com'", `'${hostname}'`)
-    .replace('const interval = 12000;', 'const interval = 100;')
+    .replace('const firstDelay = 3000;', 'const firstDelay = 100;')
+    .replace('let nextInterval = 12000;', 'let nextInterval = 120;')
     .replace('const maxInterval = 30000;', 'const maxInterval = 300;');
 }
 const server = http.createServer((req, res) => {
@@ -60,7 +62,10 @@ const server = http.createServer((req, res) => {
   }
   res.statusCode = status;
   if (pathname === '/healthz' || pathname.startsWith('/api/')) {
-    if (pathname === '/healthz' && healthStatus !== null) res.statusCode = healthStatus;
+    if (pathname === '/healthz') {
+      healthRequests += 1;
+      if (healthStatus !== null) res.statusCode = healthStatus;
+    }
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify({ ok: res.statusCode === 200 }));
   }
@@ -125,6 +130,7 @@ const server = http.createServer((req, res) => {
       status = code;
       const response = await page.reload();
       assert.equal(response.status(), 503);
+      assert.equal(await response.headerValue('Retry-After'), '3');
       assert.equal(await response.headerValue('Rndr-Id'), `trace-${navigationRequests}`);
       await page.getByText('Reconnexion en cours…', { exact: true }).waitFor();
       assert.equal(await page.locator('#resume-note').isVisible(), true);
@@ -140,11 +146,15 @@ const server = http.createServer((req, res) => {
     assert.equal(posts, 1);
     assert.equal(lastPost, 'test-payload');
 
+    // A failing health endpoint must not strand a user whose page is available.
+    healthStatus = 502;
+    const healthBeforeRecovery = healthRequests;
     status = 200;
     await page.getByRole('heading', { name: 'Original page' }).waitFor({ timeout: 20000 });
     assert.equal(page.url(), originalURL);
     assert.equal((await context.cookies()).find(c => c.name === 'integrale_admin').value, 'local-test-session');
     assert.ok(probeCookie.includes('integrale_admin=local-test-session'), 'probe must use the existing login');
+    assert.equal(healthRequests, healthBeforeRecovery, 'only the original page should be probed');
     await page.waitForFunction(() => sessionStorage.getItem('integrale-maintenance-return') === null);
 
     // A one-off 502 is retried once without ever displaying the fallback.
@@ -259,7 +269,7 @@ const server = http.createServer((req, res) => {
       return Promise.all(names.map(async name => (await (await caches.open(name)).keys()).map(r => new URL(r.url).pathname)));
     });
     assert.deepEqual(finalCacheContents.flat(), ['/static/maintenance.html']);
-    console.log('PASS real Chromium: transient/persistent failures, healthy healthz with failed page, complete authenticated HTML, no reload loop, manual recovery, storage denied, redirects, offline, path/query/hash, cookies, APIs unchanged, POST once, public cache only');
+    console.log('PASS real Chromium: transient/persistent failures, available page while healthz fails, healthy healthz with failed page, complete authenticated HTML, no reload loop, manual recovery, storage denied, redirects, offline, path/query/hash, cookies, APIs unchanged, POST once, public cache only');
   } finally {
     await browser.close();
     server.close();

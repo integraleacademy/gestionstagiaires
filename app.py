@@ -31362,9 +31362,10 @@ def public_trainee_invoice_pdf(token: str, line_id: str):
     if not _public_is_authed(token):
         return redirect(url_for("public_trainee_login", token=token))
 
-    line = _find_billing_line(data, line_id)
+    line = next((row for row in _public_registration_billing_lines(data, session_obj, trainee)
+                 if row.get("id") == line_id), None)
     if not line:
-        abort(404)
+        abort(403 if _find_billing_line(data, line_id) else 404)
     if str(line.get("sessionId") or "") != str(session_obj.get("id") or ""):
         abort(403)
     if str(line.get("traineeId") or "") != str(trainee.get("id") or trainee.get("trainee_id") or ""):
@@ -34686,6 +34687,33 @@ def _vae_extract_trainee_token_from_referer(referer: str) -> str:
 
 
 
+def _public_registration_billing_lines(data, session_obj, trainee):
+    session_id = str(session_obj.get("id") or "")
+    trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
+    if not session_id or not trainee_id:
+        return []
+    # A public login may read a cross-partner store. Its token already resolved
+    # the course. Historical billing line IDs are unique only within a partner.
+    partner_id = session_obj.get("partner_id") or INTEGRALE_PARTNER_ID
+    shared_ids = any(
+        (other.get("partner_id") or INTEGRALE_PARTNER_ID) != partner_id
+        and str(other.get("id") or "") == session_id
+        and any(str(person.get("id") or person.get("trainee_id") or "") == trainee_id
+                for person in _session_trainees_list(other))
+        for other in data.get("sessions") or []
+    )
+    source = {
+        "sessions": [session_obj],
+        "billing_lines": [
+            row for row in (data.get("billing_lines") or [])
+            if isinstance(row, dict) and (
+                row.get("partner_id") == partner_id or (not row.get("partner_id") and not shared_ids)
+            )
+        ],
+    }
+    return _billing_lines_for_trainee_session(source, trainee_id, session_id)
+
+
 def _public_invoice_lines_for_trainee(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
     session_id = str(session_obj.get("id") or "")
     trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
@@ -34694,7 +34722,7 @@ def _public_invoice_lines_for_trainee(data: Dict[str, Any], session_obj: Dict[st
 
     visible_statuses = {"draft", "finalized", "sent", "paid"}
     invoices: List[Dict[str, Any]] = []
-    for line in _billing_lines(data):
+    for line in _public_registration_billing_lines(data, session_obj, trainee):
         if str(line.get("sessionId") or "") != session_id:
             continue
         if str(line.get("traineeId") or "") != trainee_id:

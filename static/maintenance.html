@@ -135,13 +135,13 @@
     const original = new URL(location.href);
     const isPlatform = ['gestionstagiaires-r5no.onrender.com', 'integraleconnect.com', 'www.integraleconnect.com'].includes(original.hostname);
     if (isPlatform) {
-      const interval = 12000;
+      const firstDelay = 3000;
       const maxInterval = 30000;
       const recoveryKey = 'integrale-maintenance-return';
       const note = document.getElementById('resume-note');
       const title = document.getElementById('waiting-title');
       const retryButton = document.getElementById('retry-page');
-      let nextInterval = interval;
+      let nextInterval = 12000;
       let canReturnAutomatically = false;
       try {
         const previousReturn = Number(sessionStorage.getItem(recoveryKey));
@@ -203,26 +203,14 @@
 
       async function checkAvailability() {
         if (!canReturnAutomatically) return;
-        let alive = false;
-        if (navigator.onLine !== false) {
-          const controller = new AbortController();
-          const deadline = setTimeout(() => controller.abort(), 5000);
-          try {
-            const response = await fetch('/healthz', {
-              cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
-            });
-            alive = response.ok;
-          } catch (_) {
-            // Keep the fallback on screen during a temporary interruption.
-          } finally {
-            clearTimeout(deadline);
-          }
-          if (alive && await pageIsAvailable()) { reopenPage(true); return; }
+        if (navigator.onLine !== false && await pageIsAvailable()) {
+          reopenPage(true);
+          return;
         }
         setTimeout(checkAvailability, nextInterval);
         nextInterval = Math.min(maxInterval, nextInterval * 2);
       }
-      if (canReturnAutomatically) setTimeout(checkAvailability, interval);
+      if (canReturnAutomatically) setTimeout(checkAvailability, firstDelay);
       else pauseAutomaticReturn();
     }
   </script>

@@ -8,7 +8,10 @@ worker_class = "gthread"
 threads = 4
 timeout = 300
 graceful_timeout = 30
-keepalive = int(os.environ.get("GUNICORN_KEEPALIVE") or "2")
+# Render may reuse an idle upstream HTTP/1.1 connection for up to 75 seconds.
+# Let the proxy close it first on the trainee service.
+default_keepalive = 90 if os.environ.get("RENDER_SERVICE_ID") == "srv-d5oss66id0rc73avvne0" else 2
+keepalive = int(os.environ.get("GUNICORN_KEEPALIVE") or default_keepalive)
 
 accesslog = "-"
 # Expose actual application request time for subsequent performance checks.
