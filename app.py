@@ -55154,56 +55154,101 @@ def _session_search_item(s: dict) -> dict:
     }
 
 
+def _admin_searchable_sessions() -> list:
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    return [
+        course for course in load_data().get("sessions", [])
+        if isinstance(course, dict)
+        and (course.get("partner_id") or INTEGRALE_PARTNER_ID) == visible_partner_id
+        and not _is_wedof_leads_session(course)
+    ]
+
+
+def _matching_session_items(courses: list, query: str) -> list:
+    # Keep numeric dates intact while treating punctuation between words as a separator.
+    terms = re.findall(r"\d+(?:[/-]\d+)+|[^\W_]+", _normalized_token(query))
+    if not terms:
+        return []
+    months = tuple(_normalized_token(month) for month in _QUICK_SUMMARY_FRENCH_MONTHS)
+    month_terms = [term for term in terms if len(term) >= 3 and any(m.startswith(term) for m in months)]
+    years = [term for term in terms if re.fullmatch(r"\d{4}", term)]
+    period = month_terms + years if len(month_terms) == len(years) == 1 else []
+    today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    matches = []
+    for course in courses:
+        title = _session_get(course, "name")
+        training = _session_get(course, "training_type")
+        afc = "AFC" if afc_schedule.enabled(course) else ""
+        label = _normalized_token(f"{title} {training} {afc}")
+        dates = [_parse_flexible_date(_session_get(course, field)) for field in ("date_start", "date_end", "exam_date")]
+        date_texts = [
+            f"{day.isoformat()} {day:%d/%m/%Y} {months[day.month]}" if day else ""
+            for day in dates
+        ]
+        # A November start and a February finish the following year describe two distinct periods.
+        if period and not any(all(term in field for term in period) for field in (label, *date_texts)):
+            continue
+        name_and_start = f"{label} {date_texts[0]}"
+        fields = (label, name_and_start, " ".join([name_and_start, *date_texts[1:]]))
+        rank = next((i for i, field in enumerate(fields) if all(term in field for term in terms)), None)
+        if rank is not None:
+            distance = abs((dates[0] - today).days) if dates[0] else float("inf")
+            matches.append(((bool(course.get("archived")), rank, distance, label), course))
+
+    matches.sort(key=lambda match: match[0])
+    return [_session_search_item(course) for _, course in matches[:30]]
+
+
+def _matching_trainee_items(courses: list, query: str) -> list:
+    matches = []
+    for course in courses:
+        for trainee in _session_trainees_list(course):
+            if not isinstance(trainee, dict):
+                continue
+            first = (trainee.get("first_name") or "").strip()
+            last = (trainee.get("last_name") or "").strip()
+            if query in f"{first} {last}".lower():
+                matches.append(_trainee_search_item(course, trainee))
+    matches.sort(key=lambda item: (item["last_name"].lower(), item["first_name"].lower()))
+    return matches[:30]
+
+
+@app.get("/api/admin/command_search")
+@admin_login_required
+def api_admin_command_search():
+    query = (request.args.get("q") or "").strip().lower()
+    if len(query) < 2:
+        return jsonify(ok=True, sessions=[], trainees=[])
+    courses = _admin_searchable_sessions()
+    return jsonify(
+        ok=True,
+        sessions=_matching_session_items(courses, query),
+        trainees=_matching_trainee_items(courses, query),
+    )
+
+
 @app.get("/api/sessions_search")
 @admin_login_required
 def api_sessions_search():
-    q = (request.args.get("q") or "").strip().lower()
-    data = load_data()
-    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
-    all_items = []
-
-    for s in data.get("sessions", []):
-        if not isinstance(s, dict):
-            continue
-        if s.get("partner_id") != visible_partner_id:
-            continue
-        if _is_wedof_leads_session(s):
-            continue
-        all_items.append(_session_search_item(s))
-
-    if len(q) < 2:
-        items = sorted(
-            all_items,
-            key=lambda item: (str(item.get("date_start") or ""), str(item.get("session_name") or "")),
+    query = (request.args.get("q") or "").strip()
+    courses = _admin_searchable_sessions()
+    if len(query) < 2:
+        recent = sorted(
+            courses,
+            key=lambda course: (_session_get(course, "date_start"), _session_get(course, "name")),
             reverse=True,
-        )[:10]
-        return jsonify({"ok": True, "items": items, "count": len(items)})
-
-    out = []
-    for item in all_items:
-        haystack = " ".join(str(item.get(key) or "") for key in (
-            "session_name", "training_type", "date_start", "date_end", "date_range", "exam_date"
-        )).lower()
-        if q in haystack:
-            out.append(item)
-
-    out.sort(key=lambda item: (bool(item.get("archived")), str(item.get("date_start") or "")), reverse=False)
-    out = out[:30]
-    return jsonify({"ok": True, "items": out, "count": len(out)})
+        )
+        items = [_session_search_item(course) for course in recent[:10]]
+    else:
+        items = _matching_session_items(courses, query)
+    return jsonify(ok=True, items=items, count=len(items))
 
 
 @app.get("/api/admin/search_suggestions")
 @admin_login_required
 def api_admin_search_suggestions():
     """Retourne les quatre groupes affichés à l'ouverture de la recherche globale."""
-    data = load_data()
-    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
-    sessions_by_id = {
-        str(item.get("id")): item for item in data.get("sessions", [])
-        if isinstance(item, dict)
-        and (item.get("partner_id") or INTEGRALE_PARTNER_ID) == visible_partner_id
-        and not _is_wedof_leads_session(item)
-    }
+    sessions_by_id = {str(item.get("id")): item for item in _admin_searchable_sessions()}
     trainee_items = []
     trainees_by_key = {}
     for session_obj in sessions_by_id.values():
@@ -55245,61 +55290,43 @@ def api_admin_search_suggestions():
 @admin_login_required
 def api_trainees_search():
     q = (request.args.get("q") or "").strip().lower()
-    data = load_data()
-    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    courses = _admin_searchable_sessions()
+    if len(q) >= 2:
+        items = _matching_trainee_items(courses, q)
+        return jsonify(ok=True, items=items, count=len(items))
+
     all_items = []
     items_by_key = {}
-
-    for s in data.get("sessions", []):
-        if not isinstance(s, dict) or (s.get("partner_id") or INTEGRALE_PARTNER_ID) != visible_partner_id:
-            continue
-        if _is_wedof_leads_session(s):
-            continue
+    for s in courses:
         for t in _session_trainees_list(s):
             item = _trainee_search_item(s, t)
             all_items.append(item)
             items_by_key[(str(item["session_id"]), str(item["trainee_id"]))] = item
 
-    if len(q) < 2:
-        latest_registered = sorted(
-            (
-                item for item in all_items
-                if not item.get("registration_cancelled")
-                and not _is_vae_training_type(item.get("training_type"))
-            ),
-            key=lambda item: str(item.get("created_at") or ""),
-            reverse=True,
-        )[:TRAINEE_SEARCH_RECENT_LIMIT]
-        recent_consulted = []
-        for entry in session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or []:
-            if not isinstance(entry, dict):
-                continue
-            item = items_by_key.get((str(entry.get("session_id")), str(entry.get("trainee_id"))))
-            if item:
-                recent_consulted.append(item)
-            if len(recent_consulted) == TRAINEE_SEARCH_RECENT_LIMIT:
-                break
-        return jsonify({
-            "ok": True,
-            "items": [],
-            "latest_registered": latest_registered,
-            "recent_consulted": recent_consulted,
-        })
-
-    out = []
-    for item in all_items:
-        first_name = item["first_name"]
-        last_name = item["last_name"]
-        full_name = f"{first_name} {last_name}".strip().lower()
-        if q in full_name or q in first_name.lower() or q in last_name.lower():
-            out.append(item)
-
-    out.sort(key=lambda item: (
-        (item.get("last_name") or "").lower(),
-        (item.get("first_name") or "").lower(),
-    ))
-    out = out[:30]
-    return jsonify({"ok": True, "items": out, "count": len(out)})
+    latest_registered = sorted(
+        (
+            item for item in all_items
+            if not item.get("registration_cancelled")
+            and not _is_vae_training_type(item.get("training_type"))
+        ),
+        key=lambda item: str(item.get("created_at") or ""),
+        reverse=True,
+    )[:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_consulted = []
+    for entry in session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or []:
+        if not isinstance(entry, dict):
+            continue
+        item = items_by_key.get((str(entry.get("session_id")), str(entry.get("trainee_id"))))
+        if item:
+            recent_consulted.append(item)
+        if len(recent_consulted) == TRAINEE_SEARCH_RECENT_LIMIT:
+            break
+    return jsonify({
+        "ok": True,
+        "items": [],
+        "latest_registered": latest_registered,
+        "recent_consulted": recent_consulted,
+    })
 
 
 @app.get("/api/admin/sessions/<session_id>/trainees/<trainee_id>/summary")
