@@ -10,6 +10,8 @@ class GunicornConfigTests(unittest.TestCase):
         clean_environment.pop("WEB_CONCURRENCY", None)
         clean_environment.pop("GUNICORN_MAX_REQUESTS", None)
         clean_environment.pop("GUNICORN_MAX_REQUESTS_JITTER", None)
+        clean_environment.pop("GUNICORN_KEEPALIVE", None)
+        clean_environment.pop("RENDER_SERVICE_ID", None)
         clean_environment.update(environment)
         with patch.dict(os.environ, clean_environment, clear=True):
             return runpy.run_path("gunicorn.conf.py")
@@ -20,6 +22,12 @@ class GunicornConfigTests(unittest.TestCase):
         self.assertEqual(config["workers"], 1)
         self.assertEqual(config["max_requests"], 0)
         self.assertEqual(config["max_requests_jitter"], 0)
+
+    def test_keepalive_for_trainee_service_and_explicit_override(self):
+        trainee_service = {"RENDER_SERVICE_ID": "srv-d5oss66id0rc73avvne0"}
+        self.assertEqual(self._load_config(**trainee_service)["keepalive"], 90)
+        self.assertEqual(self._load_config(**trainee_service, GUNICORN_KEEPALIVE="10")["keepalive"], 10)
+        self.assertEqual(self._load_config(RENDER_SERVICE_ID="another-service")["keepalive"], 2)
 
     def test_single_gthread_worker_ignores_worker_recycling_environment(self):
         config = self._load_config(
