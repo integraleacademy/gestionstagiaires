@@ -3907,6 +3907,11 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   const adminTraineeHero = document.getElementById("adminTraineeHero");
   const registrationCancellationReadOnly = sheetContext.readOnly;
   const cancellationMoneyFormatter = new Intl.NumberFormat("fr-FR", {style:"currency", currency:"EUR"});
+  const receiptButton = document.getElementById("btnCancellationReceipt");
+  const previewIntro = document.getElementById("cancellationEmailIntro");
+  const financialIntro = previewIntro?.textContent;
+  let receiptMode = false;
+  let previewSequence = 0;
   let currentCancellationCalculation = null;
   let currentCancellationEmailPreview = null;
   let cancellationCalculationTimer = null;
@@ -4146,20 +4151,27 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = true;
   }
 
-  prepareCancellationEmailButton?.addEventListener("click", async ()=>{
-    if(!currentCancellationCalculation?.calculation_complete) return;
+  async function previewCancellationEmail(receipt){
+    if(!receipt && !currentCancellationCalculation?.calculation_complete) return;
+    const sequence = ++previewSequence;
+    receiptMode = receipt;
+    if(backToCancellationCalculationButton) backToCancellationCalculationButton.hidden = receipt;
+    if(previewIntro) previewIntro.textContent = receipt
+      ? "Votre annulation est enregistrée. Vous pouvez envoyer cet accusé de réception au stagiaire après relecture."
+      : financialIntro;
     resetCancellationEmailPreview();
     const currentRecipient = String(document.getElementById("editEmail")?.value || cancellationEmailRecipient?.value || "").trim();
     if(cancellationEmailRecipient) cancellationEmailRecipient.value = currentRecipient;
     closeModal("cancellationIndemnityModal");
     openModal("cancellationEmailModal");
     try{
-      const response = await fetch(cancellationEmailPreviewEndpoint, {
+      const response = await fetch(receipt ? sheetContext.receiptPreviewUrl : cancellationEmailPreviewEndpoint, {
         method:"POST",
         headers:{"Accept":"application/json", "Content-Type":"application/json"},
-        body:JSON.stringify(cancellationCalculationPayload()),
+        body:JSON.stringify(receipt ? {} : cancellationCalculationPayload()),
       });
       const payload = await response.json().catch(()=>({}));
+      if(sequence !== previewSequence) return;
       if(!response.ok || payload.ok === false) throw new Error(payload.error || "Le mail n’a pas pu être préparé.");
       currentCancellationEmailPreview = payload;
       if(cancellationEmailRecipient) cancellationEmailRecipient.value = payload.recipient || currentRecipient;
@@ -4172,11 +4184,21 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       }
       if(cancellationEmailLoading) cancellationEmailLoading.hidden = true;
       if(cancellationEmailPreview) cancellationEmailPreview.hidden = false;
-      if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = registrationCancellationReadOnly;
+      if(sendCancellationEmailButton) {
+        sendCancellationEmailButton.disabled = registrationCancellationReadOnly || Boolean(payload.already_sent);
+        sendCancellationEmailButton.textContent = payload.already_sent ? "Accusé déjà envoyé" : "Envoyer le mail";
+      }
     }catch(error){
+      if(sequence !== previewSequence) return;
       showCancellationEmailError(error.message || "Le mail n’a pas pu être préparé.");
     }
-  });
+  }
+  prepareCancellationEmailButton?.addEventListener("click", () => previewCancellationEmail(false));
+  receiptButton?.addEventListener("click", () => previewCancellationEmail(true));
+  if (receiptButton && !receiptButton.hidden && location.hash === "#accuse-annulation") {
+    history.replaceState(null, "", location.pathname + location.search);
+    previewCancellationEmail(true);
+  }
 
   backToCancellationCalculationButton?.addEventListener("click", ()=>{
     closeModal("cancellationEmailModal");
@@ -4190,10 +4212,10 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     sendCancellationEmailButton.textContent = "Envoi en cours…";
     if(cancellationEmailError) cancellationEmailError.hidden = true;
     try{
-      const response = await fetch(cancellationEmailSendEndpoint, {
+      const response = await fetch(receiptMode ? sheetContext.receiptSendUrl : cancellationEmailSendEndpoint, {
         method:"POST",
         headers:{"Accept":"application/json", "Content-Type":"application/json"},
-        body:JSON.stringify(cancellationCalculationPayload()),
+        body:JSON.stringify(receiptMode ? {preview_token:currentCancellationEmailPreview.preview_token} : cancellationCalculationPayload()),
       });
       const payload = await response.json().catch(()=>({}));
       if(!response.ok || payload.ok === false) throw new Error(payload.error || "Le mail n’a pas pu être envoyé.");
@@ -4223,6 +4245,7 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     adminTraineeHero?.classList.toggle("is-registration-cancelled", cancelled);
     if(registrationCancelledBanner) registrationCancelledBanner.hidden = !cancelled;
     if(cancellationCalculatorButton) cancellationCalculatorButton.hidden = !cancelled;
+    if(receiptButton) receiptButton.hidden = !cancelled;
     if(!cancelled && cancellationCalculatorModal?.classList.contains("show")){
       closeModal("cancellationIndemnityModal");
     }
@@ -4246,6 +4269,7 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     try{
       const result = await updateTrainee({ registration_cancelled: next });
       renderRegistrationCancellation(Boolean(result.registration_cancelled));
+      if (next && result.registration_cancelled) history.replaceState(null, "", "#accuse-annulation");
       window.location.reload();
     }catch(error){
       renderRegistrationCancellation(previous);

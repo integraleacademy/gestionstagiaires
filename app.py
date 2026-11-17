@@ -31,6 +31,8 @@ import signal
 import atexit
 import sys
 import ssiap_exam
+import registration_cancellation_receipt
+import ssiap_success_certificate
 from qonto_sepa_guard import ensure_subscription as ensure_sepa_subscription
 from qonto_bank_transfers import (bank_transfer_paid_cents, match_bank_transfers,
                                  bank_transfer_candidates, verified_bank_transfer)
@@ -7929,21 +7931,25 @@ def _vtc_practice_appointment(session_obj, trainee, *, for_convocation=False):
     return slot
 
 
-def build_vtc_practice_convocation_email(first_name: str, practice_training_date: str, start="08h30", end="12h00", group=None) -> Tuple[str, str]:
-    trainee_first_name = (first_name or "").strip() or "Prénom"
+def build_vtc_practice_convocation_email(first_name: str, practice_training_date: str, start="08h30", end="12h00", group=None, *, theory_passed=True) -> Tuple[str, str]:
+    trainee_first_name = html.escape((first_name or "").strip() or "Prénom")
     practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
     group_label = f" (groupe {group})" if group else ""
 
+    theory_note = (
+        "<p>Félicitations pour votre réussite à l’examen théorique !</p>"
+        "<p>Lorsque la Chambre de Métiers et de l’Artisanat vous demande le nom du centre "
+        "et de l’établissement qui fournit le véhicule, indiquez Intégrale Sécurité Formations.</p>"
+        if theory_passed else ""
+    )
     subject = "Formation pratique Chauffeur VTC 🚘"
-    html = mail_layout(f"""
+    body = mail_layout(f"""
       <h2 style="margin:0 0 12px 0;color:#0f172a;">Convocation formation pratique</h2>
         <p style="margin:0 0 10px 0;">Bonjour {trainee_first_name},</p>
 
         <p style="margin:0 0 10px 0;">Je reviens vers vous concernant votre parcours Chauffeur VTC.</p>
 
-        <p style="margin:0 0 10px 0;">Tout d’abord, félicitations pour votre réussite à l’examen théorique 👏 C’est une étape importante vers l’obtention de votre carte professionnelle !</p>
-
-        <p style="margin:0 0 10px 0;">Vous avez normalement reçu un message de la Chambre de Métiers et de l'Artisanat vous demandant de préciser le centre de formation ainsi que l’établissement mettant à disposition le véhicule à doubles commandes pour l’épreuve pratique. Merci d’indiquer : Intégrale Sécurité Formations.</p>
+        {theory_note}
 
         <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin:12px 0;">
           <p style="margin:0;">Votre formation pratique est prévue le {practice_date_fr}, de {start} à {end}{group_label}, dans nos locaux :<br>
@@ -7967,7 +7973,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
         <p style="margin:0 0 10px 0;">Nous restons à votre disposition si vous avez la moindre question.<br>
         À très bientôt pour la préparation finale ! 🚗</p>
     """)
-    return subject, html
+    return subject, body
 
 
 def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: str, start="08h30", end="12h00", group=None) -> str:
@@ -27363,6 +27369,31 @@ def api_create_session():
     return jsonify({"ok": True, "id": session_id})
 
 
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/vtc-practice-group")
+@admin_login_required
+@admin_write_required
+def api_vtc_practice_group(session_id, trainee_id):
+    target = (request.get_json(silent=True) or {}).get("group")
+    if type(target) is not int or target not in (1, 2):
+        return jsonify(ok=False, error="Choisissez le groupe 1 ou 2."), 400
+
+    def change(data):
+        training = find_session(data, session_id)
+        if not training or not vtc_practice.supported(training):
+            return jsonify(ok=False, error="Session VTC introuvable."), 404
+        config = training.get(vtc_practice.KEY)
+        if not config or len(config.get("slots", [])) != 2:
+            return jsonify(ok=False, error="Confirmez d’abord les deux créneaux de pratique."), 409
+        active = _registered_trainees(training)
+        if not any(str(t.get("id")) == trainee_id for t in active):
+            return jsonify(ok=False, error="Inscription active introuvable."), 404
+        config["members"] = vtc_practice.assignments(config, active)
+        config["members"][trainee_id] = target
+        return jsonify(ok=True, group=target)
+
+    return _atomic_update_data(change)
+
+
 @app.post("/api/sessions/<session_id>/update")
 @admin_login_required
 @admin_write_required
@@ -34717,6 +34748,7 @@ def public_trainee_space(token):
         aps_kickoff=aps_kickoff.view(sys.modules[__name__], s, t),
         desp_kickoff=desp_kickoff.view(sys.modules[__name__], s, t),
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
+        ssiap_success=ssiap_success_certificate.document_fields(sys.modules[__name__], s, t),
         a3p_attestations=a3p_documents.view(sys.modules[__name__], s, t, token),
         public_convocation_available=_public_convocation_has_record(t),
         document_upload_error=session.pop("document_upload_error", None),
@@ -40329,7 +40361,8 @@ def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = N
 def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
     if vtc_practice.supported(session_obj or {}):
         slot = _vtc_practice_appointment(session_obj, trainee or {}, for_convocation=True)
-        return build_vtc_practice_convocation_email(first_name, slot["date"], slot["start"], slot["end"], slot["group"])
+        return build_vtc_practice_convocation_email(first_name, slot["date"], slot["start"], slot["end"], slot["group"],
+            theory_passed=bool((trainee or {}).get("vtc_theory_exam_sent_at")))
     pathway = ssiap_pathways.resolve(session_obj or {}, trainee or {}) if trainee is not None else None
     afc = afc_schedule.document_context(session_obj or {}, trainee or {}, fr_date)
     if afc:
@@ -40547,10 +40580,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convocation_status = "not_generated"
 
     theory_succeeded = bool(trainee.get("vtc_theory_exam_sent_at"))
-    if is_vtc_automation and not theory_succeeded:
-        convocation_block_reason = "En attente de réussite à l’examen théorique"
-    elif is_vtc_automation:
-        convocation_block_reason = ""
+    practice_date = _vtc_practice_appointment(session_obj, trainee, for_convocation=theory_succeeded)["date"] if is_vtc_automation else ""
+    if is_vtc_automation:
+        convocation_block_reason = ("" if theory_succeeded else "En attente de réussite à l’examen théorique") if practice_date else "Renseignez la date de formation pratique."
     elif not has_generated_convention:
         convocation_block_reason = "En attente de génération de la convention"
     elif not convention_sent:
@@ -40673,13 +40705,16 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": theory_succeeded if is_vtc_automation else True, "can_send": (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) and convocation_status in {"generated", "sent", "error"}, "block_reason": "" if (is_vtc_automation and theory_succeeded) or can_send_convocation_without_signed_convention else convocation_block_reason,
+            "can_generate": bool(practice_date) if is_vtc_automation else True,
+            "can_send": bool(practice_date) if is_vtc_automation else
+                (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent", "error"},
+            "block_reason": "" if not is_vtc_automation and can_send_convocation_without_signed_convention else convocation_block_reason,
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
             "error": convocation_error,
             "timeline_steps": [
-                {"label": "Examen théorique" if is_vtc_automation else "Convention validée", "value": ("Réussi" if theory_succeeded else convocation_block_reason) if is_vtc_automation else ("Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué"))), "state": "done" if (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) else "blocked"},
+                {"label": "Examen théorique" if is_vtc_automation else "Convention validée", "value": ("Réussi" if theory_succeeded else "Résultat en attente") if is_vtc_automation else ("Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué"))), "state": "done" if (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) else "blocked"},
                 {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
@@ -51870,15 +51905,16 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     if (request.get_json(silent=True) or {}).get("skip_if_already_sent") and t.get("convocation_aps_sent_at"):
         return jsonify(ok=True, skipped=True, status="already_sent")
     is_vtc = str(_automation_document_config(s).get("slug") or "") == "vtc"
-    if is_vtc and not t.get("vtc_theory_exam_sent_at"):
-        return jsonify({"ok": False, "error": "En attente de réussite à l’examen théorique"}), 400
+    if is_vtc and not _vtc_practice_appointment(s, t, for_convocation=bool(t.get("vtc_theory_exam_sent_at")))["date"]:
+        return jsonify(ok=False, error="Renseignez d’abord la date de formation pratique dans la session."), 400
     can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
     if not is_vtc and not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
         return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
-        if not os.path.exists(pdf_path):
-            raise Exception("Le PDF de convocation APS n’a pas été généré.")
+        abs_pdf_path = os.path.abspath(pdf_path)
+        if not _aps_convocation_pdf_is_allowed(abs_pdf_path) or not os.path.exists(abs_pdf_path) or os.path.getsize(abs_pdf_path) <= 0:
+            raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
         subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s, t)
@@ -51891,12 +51927,11 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         )
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
-        abs_pdf_path = os.path.abspath(pdf_path)
-        if not _aps_convocation_pdf_is_allowed(abs_pdf_path) or not os.path.exists(abs_pdf_path) or os.path.getsize(abs_pdf_path) <= 0:
-            raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         sent_at = _now_iso()
         t["convocation_aps_status"] = "sent"
         t["convocation_aps_generated_at"] = t.get("convocation_aps_generated_at") or sent_at
+        if is_vtc:
+            t["vtc_practice_convocation_sent_at"] = sent_at
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
         t["convocation_aps_docx_path"] = docx_path
@@ -58813,6 +58848,8 @@ desp_kickoff.register(app, sys.modules[__name__])
 desp_jury_projects.register(app, sys.modules[__name__])
 desp_scotia.register(app, sys.modules[__name__])
 a3p_documents.register(app, sys.modules[__name__])
+ssiap_success_certificate.register(app, sys.modules[__name__])
+registration_cancellation_receipt.register(app, sys.modules[__name__])
 afc_documents.register(app, sys.modules[__name__])
 exam_retakes.register(app, sys.modules[__name__])
 

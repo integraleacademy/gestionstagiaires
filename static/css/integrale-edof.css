@@ -686,3 +686,19 @@ dialog.edof-action-dialog { width:min(580px,calc(100vw - 32px)); max-width:calc(
 .edof-association-preference label{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.45;cursor:pointer;color:#334766}
 .edof-association-preference input[type=checkbox]{appearance:auto;position:static;opacity:1;width:18px;height:18px;min-width:18px;margin:0;accent-color:#315be8}
 .edof-association-preference small:empty{display:none}
+
+.edof-note { display: grid; gap: 2px; min-width: 10rem; }
+.edof-note textarea { width: 100%; min-height: 2rem; padding: .4rem .55rem; font: inherit; font-size: .83rem; color: #263a50; border: 1px solid #cbd5e1; border-radius: .4rem; resize: vertical; }
+.edof-note small:empty { display: none; }
+.edof-note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.edof-action-hero { position: relative; overflow: hidden; }
+.edof-fireworks { display: none; position: absolute; inset: 0; pointer-events: none; }
+.edof-action-dialog[data-journey="accepted"] .edof-fireworks { display: block; }
+.edof-fireworks i { position: absolute; top: 48%; left: 18%; width: 4px; height: 4px; border-radius: 50%; opacity: 0;
+  box-shadow: 0 -27px #ffd671, 18px -19px #72e4cf, 28px 0 #ffd671, 19px 20px #fff, 0 28px #75dcff, -20px 20px #ffd671, -28px 0 #72e4cf, -19px -19px #fff;
+  animation: edof-firework 1.2s ease-out 2; }
+.edof-fireworks i:nth-child(2) { top: 29%; left: 77%; animation-delay: .24s; }
+.edof-fireworks i:nth-child(3) { top: 65%; left: 88%; animation-delay: .5s; }
+@keyframes edof-firework { 0% { opacity: 0; transform: scale(.08); } 18% { opacity: 1; } 100% { opacity: 0; transform: scale(1.65); } }
+@media (prefers-reduced-motion: reduce) { .edof-fireworks i { animation: none; } }

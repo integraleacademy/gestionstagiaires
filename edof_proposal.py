@@ -6,6 +6,7 @@ import json
 import re
 from zoneinfo import ZoneInfo
 
+import edof_academy_catalogue as catalogue
 from edof_directory import FIRST_SESSION, session_date
 
 DATES = {"sessionStartDate":"Début de session", "sessionEndDate":"Fin de session"}
@@ -89,19 +90,20 @@ def initial(row):
     return values
 
 
-def displayed(source, row):
+def displayed(source, row, options=None, session_terms=None):
     values = initial(row)
     if source:
         values.update({k:v for k,v in source["values"].items() if v != ""})
         amounts = [source["values"].get(k) for k in ("vat","vatInclTax5","vatInclTax20")]
-        if source.get("total"):
+        if source.get("total") and Decimal(source["total"]) > 0:
             values["priceTotal"] = source["total"]
-        elif any(v not in ("", None) for v in amounts):
+        elif any(Decimal(v or "0") > 0 for v in amounts):
             values["priceTotal"] = number_string(sum(Decimal(v or "0") for v in amounts))
-    for key in ("priceTotal","indicativeDuration","weeklyDuration"):
-        if re.fullmatch(r"0+(?:[.,]0+)?", scalar(values.get(key))):
-            values[key] = ""
-    return values
+    for key in ("priceTotal", "indicativeDuration", "hoursInCenter"):
+        if not values.get(key) or re.fullmatch(r"0+(?:[.,]0+)?", scalar(values[key])):
+            summary = scalar((row.get("offer_summary") or {}).get(key))
+            values[key] = summary if summary and not re.fullmatch(r"0+(?:[.,]0+)?", summary) else ""
+    return catalogue.fill(values, options or {}, session_terms)
 
 
 def form_values(form):

@@ -159,8 +159,8 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
             ]
         }
 
-        gestion_app.load_data = lambda: self.data
-        gestion_app.save_data = lambda payload: None
+        gestion_app.load_data = lambda **kwargs: self.data
+        gestion_app.save_data = lambda payload, **kwargs: None
 
         with self.client.session_transaction() as sess:
             sess["admin_logged_in"] = True

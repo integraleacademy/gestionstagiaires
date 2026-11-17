@@ -5,10 +5,10 @@
   {% if detail.followable %}
     <div class="edof-journey-summary">
       <span class="edof-journey-badge">{{ 'Acceptation confirmée' if detail.accepted else 'Proposition transmise' }}</span>
-      <h3>{{ 'Le dossier est accepté par le titulaire' if detail.accepted else 'En attente d’acceptation par le titulaire' }}</h3>
-      <p>{{ 'Retrouvez les informations du candidat et choisissez la session de formation.' if detail.accepted else 'Dossier transmis à EDOF, en attente d’acceptation par le titulaire.' }}</p>
+      <h3>{{ 'Dossier accepté' if detail.accepted else 'En attente d’acceptation par le stagiaire' }}</h3>
+      <p>{{ 'Retrouvez les informations du candidat et choisissez la session de formation.' if detail.accepted else 'Dossier transmis à EDOF, en attente d’acceptation par le stagiaire.' }}</p>
       {% if detail.link %}<a class="btn btn-blue" href="{{ url_for('admin_trainee_page',session_id=detail.link.session_id,trainee_id=detail.link.trainee_id) }}">Ouvrir la fiche stagiaire</a>
-      {% elif detail.accepted and session.get('admin_role') != 'viewer' %}<button type="button" class="btn btn-blue" data-registration-open>Inscrire sur une session</button>
+      {% elif detail.accepted and session.get('admin_role') != 'viewer' %}<button type="button" class="btn btn-blue" data-registration-open>Créer le stagiaire</button>
       {% else %}<button type="button" class="btn btn-blue" data-journey-follow>Voir le suivi du dossier</button>{% endif %}
     </div>
   {% endif %}
@@ -75,10 +75,11 @@
         {% call step('02','frais','Frais et financement','Examen, frais annexes et TVA') %}
           <div class="edof-field-grid">
             {{ select_field('exam','Frais d’examen',proposal_fields.EXAM,true) }}
-            {{ field('montantFraisCertificationInclus','Dont frais d’examen inclus TTC (€)','number') }}
+            {{ field('montantFraisCertificationInclus','Dont frais d’examen inclus TTC (€)','number',v.exam == 'INCLUDED') }}
             {{ field('additionalFees','Frais annexes à la charge du titulaire (€)','number') }}
             {{ field('additionalFeesDetails','Détail des frais annexes') }}
           </div>
+          {% if v.exam == 'INCLUDED' and not v.montantFraisCertificationInclus|float %}<small>Les frais sont déjà compris dans le prix TTC. Leur montant n’est indiqué ni dans le dossier ni dans le barème de cette formation.</small>{% endif %}
           {% if source and source.total and source.total != '0' %}<small>Prix TTC actuellement inscrit dans EDOF · {{ source.total }} €.</small>{% endif %}
           <details data-fold="tva" {% if v.vatInclTax5 or v.vatInclTax20 %}open{% endif %}><summary>Ventilation de la TVA</summary>
             <p>La part restante du prix total est enregistrée en net de TVA.</p>
@@ -113,10 +114,10 @@
         {% endcall %}
         {% if not readonly and detail.proposal_connector %}<div class="edof-send-panel"><h3>Finaliser la proposition</h3>
           {% if not active %}<p>L’envoi nécessite <a href="{{ url_for('integrale_edof.index',section='technical') }}">Intégrale EDOF actif</a>.</p>{% endif %}
-          {% if source and active %}<label class="edof-confirm"><input type="checkbox" name="confirm" value="yes" required> J’ai vérifié les conditions de la proposition à envoyer au titulaire.</label>{% endif %}
+
           {% if not source %}<p>Chargez l’offre EDOF avant de transmettre la proposition au titulaire.</p>{% endif %}
           <div class="edof-save-actions"><button class="btn btn-outline" type="submit" formaction="{{ url_for('integrale_edof.save_proposal_draft',folder=f.folder_id) }}" formnovalidate>Enregistrer le brouillon</button>
-          <button type="submit" class="btn btn-blue" {% if not source or not active %}disabled{% endif %}>Valider et envoyer la proposition à EDOF</button></div></div>
+          <button type="submit" name="confirm" value="yes" class="btn btn-blue" {% if not source or not active %}disabled{% endif %}>Valider et envoyer la proposition à EDOF</button></div></div>
         {% elif not detail.proposal_connector %}<p>Le stockage du connecteur EDOF est indisponible.</p>{% endif %}
       </form>
     {% endif %}

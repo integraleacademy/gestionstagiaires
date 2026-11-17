@@ -556,7 +556,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     {% if not is_vtc and (t.identity_photo or "")|trim %}📷 {% endif %}{% if t.public_has_logged_in %}🛜 {% endif %}{% if t.test_fr_file_token %}✏️ {% endif %}{{ t.last_name or "" }}
   </a>
   {% if vtc_roster_groups and slot and slot.group %}
-  <div><span class="vtc-roster-badge" data-group="{{ slot.group }}">Groupe {{ slot.group }}</span></div>
+  <div>{% if is_read_only %}<span class="vtc-roster-badge" data-group="{{ slot.group }}">Groupe {{ slot.group }}</span>{% else %}
+    <button type="button" class="vtc-roster-badge" data-group="{{ slot.group }}" data-move-url="{{ url_for('api_vtc_practice_group', session_id=session.id, trainee_id=t.id) }}" title="Passer dans le groupe {{ 3 - slot.group }}" aria-label="Groupe {{ slot.group }} · Déplacer {{ t.first_name }} {{ t.last_name }} dans le groupe {{ 3 - slot.group }}">Groupe {{ slot.group }}</button><small role="status"></small>
+  {% endif %}</div>
   {% endif %}
   {% if session.afc_enabled and afc_training_dates %}
   {% set dates = afc_training_dates.get(t.id, {}) %}

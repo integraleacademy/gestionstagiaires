@@ -204,3 +204,49 @@ def test_roster_only_proposes_groups_for_eligible_vtc_sessions(case, kind, size,
     assert not page.xpath('//*[@id="vtc-roster-title" or @id="vtcRosterForm"]')
     all_vtc = html.fromstring(client.get("/admin/trainees/vtc").data)
     assert not all_vtc.xpath('//*[@id="vtc-roster-title" or @id="vtcRosterForm"]')
+
+
+def test_group_badge_moves_only_one_active_candidate_and_updates_their_appointment(case):
+    session, client = case
+    assert post(client).status_code == 200
+    before = dict(session[vtc_practice.KEY]["members"])
+    tid = session["trainees"][0]["id"]
+    url = f"/api/sessions/S1/stagiaires/{tid}/vtc-practice-group"
+    target = 3 - before[tid]
+    roster = html.fromstring(client.get("/admin/sessions/S1/trainees").data)
+    assert roster.xpath(f'//button[@data-move-url="{url}"]')
+    for _ in range(2):
+        assert client.post(url, json={"group":target}).json == {"ok":True, "group":target}
+    assert session[vtc_practice.KEY]["members"] == {**before, tid:target}
+    assert app._vtc_practice_appointment(session, session["trainees"][0])["group"] == target
+    assert client.post(url, json={"group":3}).status_code == 400
+    session["trainees"][0]["registration_cancelled"] = True
+    assert client.post(url, json={"group":1}).status_code == 404
+    session["training_type"] = "APS"
+    assert client.post(url, json={"group":1}).status_code == 404
+    with client.session_transaction() as auth:
+        auth["admin_role"] = "viewer"
+    assert client.post(url, json={"group":1}).status_code == 403
+
+
+def test_individual_manual_vtc_convocation_before_theory_sends_the_pdf_without_claiming_a_pass(case, tmp_path, monkeypatch):
+    session, client = case
+    trainee = session["trainees"][0]
+    pdf = tmp_path / "convocation.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    monkeypatch.setattr(app, "_aps_convocation_allowed_pdf_roots", lambda: [str(tmp_path)])
+    sender = Mock(return_value=True)
+    monkeypatch.setattr(app, "brevo_send_email", sender)
+    monkeypatch.setattr(app, "_automation_is_enabled", lambda *args:True)
+    monkeypatch.setattr(app, "_generate_aps_convocation_files", lambda *args:("unused.docx", str(pdf)))
+    url = f"/admin/sessions/S1/stagiaires/{trainee['id']}/convocation-aps/send"
+    assert client.post(url, json={}).status_code == 200
+    assert sender.call_count == 1 and sender.call_args.kwargs["attachments"]
+    assert "félicitations" not in sender.call_args.args[2].casefold()
+    assert "formation pratique" in sender.call_args.args[2].casefold()
+    saved = app.save_data.call_args.args[0]["sessions"][0]["trainees"][0]
+    assert saved["vtc_practice_convocation_sent_at"] and not saved.get("vtc_theory_exam_sent_at")
+    session["practice_training_date"] = ""
+    assert client.post(url, json={}).status_code == 400 and sender.call_count == 1
+    session["training_type"], session["name"] = "APS", "Session APS"
+    assert client.post(url, json={}).status_code == 400 and sender.call_count == 1

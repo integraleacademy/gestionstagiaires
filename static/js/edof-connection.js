@@ -156,7 +156,7 @@
   }
   function preserveSelection() {
     return feedback?.blockingReload || document.activeElement.matches("input, textarea, select") ||
-      document.querySelector('input[form="edof-effective-entries"]:checked');
+      document.querySelector('input[form="edof-effective-entries"]:checked, [data-edof-comment][data-unsaved]');
   }
   async function refresh() {
     if (!document.hidden) {

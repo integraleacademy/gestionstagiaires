@@ -385,3 +385,45 @@ def test_workspace_read_wrong_holder_never_writes(conn):
         jobs.perform(conn.ctx, conn.witness, spec, conn.path, conn.vault, API_PREFIX,
                      EDOF_HOST, workspace_witness=True)
     assert not conn.portal.writes
+
+
+def test_academy_defaults_complete_a_2026_vtc_offer_without_adding_exam_twice():
+    raw = official()
+    raw["trainingActionInfo"].update(title="Chauffeur VTC complet", sessionStartDate="01/12/2026",
+                                    totalIncl=0, vat=0, doesPriceIncludeMontantFraisExam="NONE")
+    source = offer.project(raw)
+    v = offer.displayed(source, directory.project(raw), OPTIONS)
+    assert (v["priceTotal"], v["indicativeDuration"], v["weeklyDuration"]) == ("1500", "105", "35")
+    assert (v["exam"], v["montantFraisCertificationInclus"], v["typeOfTrainingCourse"]) == ("INCLUDED", "241", "2")
+    v.update(sessionStartDate=DAY, sessionEndDate=END)
+    payload = offer.amended(raw, offer.validate(v, source, OPTIONS), OPTIONS)
+    assert payload["trainingActionInfo"]["totalIncl"] == 1500
+    assert payload["trainingActionInfo"]["montantFraisCertificationInclus"] == 241
+
+
+@pytest.mark.parametrize("title,year,amount,hours,center", [
+    ("APS", 2026, "1650", "175", "124"), ("A3P", 2026, "4200", "328", "328"),
+    ("Dirigeant de sécurité privée", 2026, "4300", "245", "70"),
+    ("Dirigeant VAE", 2026, "3800", "", "0"),
+    ("SSIAP 1 + SST", 2026, "1230", "81", "81"), ("SSIAP 1", 2026, "980", "67", "67"),
+    ("Remise à niveau SSIAP 1", 2026, "", "21", "21"), ("Recyclage SSIAP 2", 2026, "", "14", "14"),
+    ("SSIAP 3", 2026, "", "216", "216"), ("SST", 2026, "", "14", "14"),
+    ("VTC pratique + véhicule", 2026, "600", "", ""), ("A3P", 2027, "", "328", "328"),
+])
+def test_catalogue_uses_stated_durations_and_only_2026_prices(title, year, amount, hours, center):
+    v = offer.displayed(None, dict(title=title, session_start_date=f"{year}-12-01"))
+    assert (v["priceTotal"], v["indicativeDuration"], v["hoursInCenter"], v["weeklyDuration"]) == (amount, hours, center, "35")
+    assert v["exam"] == "INCLUDED" and not v["montantFraisCertificationInclus"]
+
+
+def test_missing_official_totals_preserve_quote_or_session_specific_terms():
+    source = offer.project(official())
+    source["values"].update(title="SSIAP 1", indicativeDuration="0", hoursInCenter="0", vat="0")
+    source["total"] = "0"
+    quote = dict(title="SSIAP 1", session_start_date="2026-12-01",
+                 offer_summary={"indicativeDuration":"70", "priceTotal":"1120"})
+    v = offer.displayed(source, quote, OPTIONS)
+    assert (v["indicativeDuration"], v["hoursInCenter"], v["priceTotal"]) == ("70", "70", "1120")
+    v = offer.displayed(None, dict(title="SSIAP 1 + SST", session_start_date="2026-12-01"),
+                        OPTIONS, {"hours":84, "price":1290})
+    assert (v["indicativeDuration"], v["hoursInCenter"], v["priceTotal"]) == ("84", "84", "1290")

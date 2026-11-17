@@ -101,7 +101,7 @@ class VtcConvocationAutomationTests(unittest.TestCase):
             self.assertEqual(dashboard["stats"]["errors"], 1)
             self.assertEqual(dashboard["rows"][0]["error"], self.trainee["convocation_aps_last_error"])
 
-    def test_automation_waits_for_theory_instead_of_convention(self):
+    def test_manual_actions_available_while_automatic_send_waits_for_theory(self):
         with gestion_app.app.test_request_context("/"):
             status = gestion_app._build_trainee_automation_status(
                 self.session, self.trainee, "S-VTC", "T-1"
@@ -113,7 +113,8 @@ class VtcConvocationAutomationTests(unittest.TestCase):
             ["Convention envoyée", "Convention signée", "Convocation"],
         )
         self.assertEqual(status["total_documents"], 3)
-        self.assertFalse(status["convocation"]["can_generate"])
+        self.assertTrue(status["convocation"]["can_generate"])
+        self.assertTrue(status["convocation"]["can_send"])
         self.assertEqual(status["convocation"]["block_reason"], "En attente de réussite à l’examen théorique")
         self.assertEqual(status["convocation"]["timeline_steps"][0]["label"], "Examen théorique")
 
