@@ -279,18 +279,21 @@ def perform(context, witness, spec, path, vault, origin, prefix):
         return {'code':'invoice_external'}
     if spec['mode']=='invoice_check':
         proof = {}
+        resume_note = ''
         try:
             terms = unreceived_terms(raw,bill,record)
             if record['qonto_id'] and record['invoice_number'] and record['send_started'] and time.time()-record['send_started'] >= 900:
                 proof = {'unreceived_at':time.time(), 'bill_id':terms['bill_id'], 'fingerprint':fingerprint(terms),
                          'qonto_id':record['qonto_id'], 'invoice_number':record['invoice_number']}
-        except Review:
-            pass
+            else:
+                resume_note = ' Une reprise nécessite au moins 15 minutes depuis la dernière tentative et une facture existante identifiée.'
+        except Review as exc:
+            resume_note = ' '+str(exc)
         update(path,record['token'],receipt=proof)
         state = str(raw.get('currentBillingState') or bill.get('currentState') or raw.get('currentState') or 'non renseigné')[:80]
         number = str(bill.get('billNumber') or 'non renseigné')[:80]
         return {'code':'invoice_uncertain', 'invoice_message':
-                f'EDOF ne confirme pas encore la facturation. État relu : {state}. Numéro de facture relu : {number}.'}
+                f'EDOF ne confirme pas encore la facturation. État relu : {state}. Numéro de facture relu : {number}.'+resume_note}
     if spec['mode']=='invoice_resume':
         requested = record['receipt'].get('resume_requested_at',0)
         if record['status']!='resuming' or not 0 <= time.time()-requested <= 900:
