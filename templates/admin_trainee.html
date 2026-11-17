@@ -20,7 +20,7 @@
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261111-cpf-inline') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261117-apercu-mail') }}">
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/registration-confirmation.css', v='20261117') }}">
 {% include "_registration_confirmation.html" %}
@@ -302,7 +302,8 @@
       <div class="cancellation-email-loading" id="cancellationEmailLoading" hidden>Préparation du mail…</div>
       <div class="cancellation-email-error" id="cancellationEmailError" role="alert" hidden></div>
       <div class="cancellation-email-preview" id="cancellationEmailPreview" hidden>
-        <iframe sandbox id="cancellationEmailFrame" title="Aperçu du mail d’annulation"></iframe>
+        <details id="cancellationEmailText"><summary>Lire la version texte</summary><pre></pre></details>
+        <div id="cancellationEmailLayout"></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -2647,7 +2648,7 @@
   "afcEnabled": session.afc_enabled or false
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-confirmation') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-apercu-mail') }}"></script>
   
 
 <!-- ===================== -->

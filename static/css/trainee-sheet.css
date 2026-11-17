@@ -393,6 +393,9 @@
   .cancellation-email-error{padding:14px 16px;border:1px solid #fecaca;border-radius:14px;background:#fef2f2;color:#991b1b;font-weight:850;line-height:1.5;}
   .cancellation-email-warning{margin-bottom:14px;padding:13px 15px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb;color:#92400e;font-size:12px;font-weight:850;line-height:1.55;}
   .cancellation-email-preview{padding:10px;border:1px solid #dbe4f0;border-radius:18px;background:#eaf0f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
+  #btnBackToCancellationCalculation[hidden],#cancellationEmailText[hidden],#cancellationEmailText[open] + #cancellationEmailLayout{display:none!important;}
+  #cancellationEmailText summary{cursor:pointer;color:#234e8b;font-size:.9rem;font-weight:700;padding:6px 8px 12px;}
+  #cancellationEmailText pre{margin:0;padding:18px;background:#fff;border-radius:12px;color:#25364d;font:inherit;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;}
   .cancellation-email-preview iframe{display:block;width:100%;min-height:58vh;border:0;border-radius:12px;background:#fff;}
   .cancellation-email-send{box-shadow:0 12px 26px rgba(37,99,235,.22);font-weight:950!important;}
   @media(max-width:760px){.cancellation-calculator-financing{grid-template-columns:repeat(2,minmax(0,1fr));}.cancellation-calculator-fields{grid-template-columns:1fr;}.cancellation-calculator-hours{display:grid;grid-template-columns:1fr;gap:12px;}}

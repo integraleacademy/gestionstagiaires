@@ -3898,7 +3898,8 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   const cancellationEmailError = document.getElementById("cancellationEmailError");
   const cancellationEmailWarning = document.getElementById("cancellationEmailWarning");
   const cancellationEmailPreview = document.getElementById("cancellationEmailPreview");
-  const cancellationEmailFrame = document.getElementById("cancellationEmailFrame");
+  const cancellationEmailLayout = document.getElementById("cancellationEmailLayout");
+  const cancellationEmailText = document.getElementById("cancellationEmailText");
   const backToCancellationCalculationButton = document.getElementById("btnBackToCancellationCalculation");
   const sendCancellationEmailButton = document.getElementById("btnSendCancellationEmail");
   const cancellationCalculatorEndpoint = sheetContext.cancellationUrl;
@@ -4136,7 +4137,10 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       cancellationEmailWarning.textContent = "";
     }
     if(cancellationEmailPreview) cancellationEmailPreview.hidden = true;
-    if(cancellationEmailFrame) cancellationEmailFrame.srcdoc = "";
+    cancellationEmailLayout.replaceChildren();
+    cancellationEmailText.open = false;
+    cancellationEmailText.querySelector("summary").textContent = "Lire la version texte";
+    cancellationEmailText.querySelector("pre").textContent = "";
     if(cancellationEmailSubject) cancellationEmailSubject.value = "";
     if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = true;
   }
@@ -4149,6 +4153,36 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       cancellationEmailError.hidden = false;
     }
     if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = true;
+  }
+
+  async function displayCancellationEmail(payload){
+    const text = (payload.text || "").trim();
+    const html = (payload.html || "").trim();
+    if (!html && !text) throw new Error("Le contenu du mail est vide. Rouvrez l’aperçu avant l’envoi.");
+    cancellationEmailText.querySelector("pre").textContent = text;
+    cancellationEmailText.hidden = !text;
+    cancellationEmailPreview.hidden = false;
+    if (html) {
+      const frame = document.createElement("iframe");
+      frame.id = "cancellationEmailFrame";
+      frame.title = "Aperçu du mail d’annulation";
+      frame.setAttribute("sandbox", "allow-same-origin");
+      const readable = await new Promise(resolve => {
+        const check = () => {
+          clearTimeout(timeout);
+          resolve(Boolean(frame.contentDocument?.body?.innerText.trim()));
+        };
+        const timeout = setTimeout(() => resolve(false), 3500);
+        frame.addEventListener("load", check, {once: true});
+        frame.srcdoc = html;
+        cancellationEmailLayout.replaceChildren(frame);
+      });
+      if (!frame.isConnected || readable) return;
+      frame.remove();
+    }
+    if (!text) throw new Error("Le contenu du mail ne s’affiche pas. Rouvrez l’aperçu avant l’envoi.");
+    cancellationEmailText.open = true;
+    cancellationEmailText.querySelector("summary").textContent = "Version texte du mail";
   }
 
   async function previewCancellationEmail(receipt){
@@ -4173,17 +4207,18 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       const payload = await response.json().catch(()=>({}));
       if(sequence !== previewSequence) return;
       if(!response.ok || payload.ok === false) throw new Error(payload.error || "Le mail n’a pas pu être préparé.");
-      currentCancellationEmailPreview = payload;
       if(cancellationEmailRecipient) cancellationEmailRecipient.value = payload.recipient || currentRecipient;
       if(cancellationEmailSubject) cancellationEmailSubject.value = payload.subject || "";
-      if(cancellationEmailFrame) cancellationEmailFrame.srcdoc = payload.html || "";
+      await displayCancellationEmail(payload);
+      if(sequence !== previewSequence) return;
+      currentCancellationEmailPreview = payload;
       const warnings = Array.isArray(payload.warnings) ? payload.warnings.filter(Boolean) : [];
       if(cancellationEmailWarning){
         cancellationEmailWarning.textContent = warnings.join(" ");
         cancellationEmailWarning.hidden = warnings.length === 0;
       }
       if(cancellationEmailLoading) cancellationEmailLoading.hidden = true;
-      if(cancellationEmailPreview) cancellationEmailPreview.hidden = false;
+
       if(sendCancellationEmailButton) {
         sendCancellationEmailButton.disabled = registrationCancellationReadOnly || Boolean(payload.already_sent);
         sendCancellationEmailButton.textContent = payload.already_sent ? "Accusé déjà envoyé" : "Envoyer le mail";

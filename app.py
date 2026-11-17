@@ -47066,7 +47066,7 @@ def api_registration_cancellation_email_preview(session_id: str, trainee_id: str
             'ok': False,
             'error': 'Complétez le nombre d’heures dispensées avant de préparer le mail.',
         }), 409
-    subject, html_body, _text_body = build_registration_cancellation_email(
+    subject, html_body, text_body = build_registration_cancellation_email(
         session_obj, trainee, calculation
     )
     warnings = []
@@ -47081,6 +47081,7 @@ def api_registration_cancellation_email_preview(session_id: str, trainee_id: str
         'recipient': recipient,
         'subject': subject,
         'html': html_body,
+        'text': text_body,
         'calculation': calculation,
         'warnings': warnings,
     })
