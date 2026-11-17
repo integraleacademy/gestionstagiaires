@@ -1,8 +1,12 @@
 """Keep issued training convocations in sync with their current source data."""
 import copy
+import fcntl
 import hashlib
 import json
 import os
+import re
+import zipfile
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -18,6 +22,37 @@ def current_source_hash(services, training, trainee):
     context = services._build_aps_convocation_context(copy.deepcopy(training), copy.deepcopy(trainee))
     template = services._ssiap_document_template(training, trainee, "convocation", services._aps_template_path)
     return source_hash(context, template)
+
+
+@contextmanager
+def generation_lock(directory):
+    """Run at most one office converter across preview, delivery and scheduled jobs."""
+    root = Path(directory)
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / ".conversion.lock").open("ab") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def cached_pair(directory, base, trainee, revision, is_pdf):
+    """Find the current complete pair, including previously issued SSIAP/AFC files."""
+    names = [base + ".pdf"]
+    if trainee.get("convocation_aps_source_hash") == revision:
+        previous = os.path.basename(str(trainee.get("convocation_aps_source_pdf_path") or ""))
+        if re.fullmatch(re.escape(base) + r"_[0-9a-f]{12}_[0-9a-f]{8}\.pdf", previous):
+            names.append(previous)
+    for name in names:
+        pdf = Path(directory) / name
+        docx = pdf.with_suffix(".docx")
+        if pdf.is_symlink() or docx.is_symlink() or not is_pdf(str(pdf)) or not docx.is_file():
+            continue
+        try:
+            with zipfile.ZipFile(docx) as document:
+                document.getinfo("word/document.xml")
+        except (OSError, KeyError, zipfile.BadZipFile):
+            continue
+        return str(docx), str(pdf)
+    return None
 
 
 def owns_download(trainee, file_token):
@@ -51,7 +86,7 @@ def existing_pdf(services, trainee):
                  if services._aps_convocation_pdf_is_allowed(path) and services._is_pdf_file(path)), "")
 
 
-def current_pdf(services, training, trainee):
+def current_pdf(services, training, trainee, *, cached_only=False):
     """Refresh an issued PDF, without sending mail or changing signed documents."""
     if not services._public_convocation_has_record(trainee):
         raise FileNotFoundError("Aucune convocation n’a encore été émise.")
@@ -67,6 +102,8 @@ def current_pdf(services, training, trainee):
     if (pdf_path and trainee.get("convocation_aps_source_hash") == expected_hash
             and os.path.basename(source_pdf) == os.path.basename(pdf_path)):
         return pdf_path
+    if cached_only:
+        return None
 
     # No hash means an older PDF whose source data cannot be verified. Refresh
     # it once, too. Generate outside the data lock and on a detached record.

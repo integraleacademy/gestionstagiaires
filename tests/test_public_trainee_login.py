@@ -249,7 +249,9 @@ class PublicTraineeLoginTests(unittest.TestCase):
         with self.client.session_transaction() as browser_session:
             browser_session["admin_logged_in"] = True
 
-        with patch.object(gestion_app, "load_data", return_value=self.data):
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(self.data)
+        ):
             response = self.client.get("/espace/PUBLIC-TOKEN")
 
         body = response.get_data(as_text=True)
@@ -271,7 +273,7 @@ class PublicTraineeLoginTests(unittest.TestCase):
         with self.client.session_transaction() as browser_session:
             browser_session["admin_logged_in"] = True
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
-            gestion_app, "save_data"
+            gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(self.data)
         ), patch.object(gestion_app, "_store_public_file_token", return_value="convention-vtc.pdf"):
             response = self.client.get("/espace/PUBLIC-TOKEN")
 

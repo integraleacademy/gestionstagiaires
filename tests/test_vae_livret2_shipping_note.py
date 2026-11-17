@@ -31,7 +31,7 @@ class VaeLivret2ShippingNoteTests(unittest.TestCase):
 
     def render_space(self):
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
-            gestion_app, "save_data"
+            gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(self.data)
         ):
             return self.client.get("/espace/TOKEN-VAE")
 

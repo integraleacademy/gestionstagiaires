@@ -332,12 +332,14 @@ class PublicTraineePageHostingTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
+        self.original_atomic_update = gestion_app._atomic_update_data
         self.original_hebergement_lookup = gestion_app.fetch_hebergement_status
         self.original_render_template = gestion_app.render_template
 
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
+        gestion_app._atomic_update_data = self.original_atomic_update
         gestion_app.fetch_hebergement_status = self.original_hebergement_lookup
         gestion_app.render_template = self.original_render_template
 
@@ -370,7 +372,12 @@ class PublicTraineePageHostingTests(unittest.TestCase):
         rendered = {}
 
         gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
+        def atomic(mutate):
+            result = mutate(data)
+            saved["count"] += 1
+            return result
+
+        gestion_app._atomic_update_data = atomic
 
         def fake_hebergement_lookup(email, **kwargs):
             seen["email"] = email
@@ -427,7 +434,7 @@ class PublicTraineePageHostingTests(unittest.TestCase):
         called = {"value": False}
 
         gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: None
+        gestion_app._atomic_update_data = lambda mutate: mutate(data)
         gestion_app.fetch_hebergement_status = lambda *args, **kwargs: called.__setitem__("value", True)
         gestion_app.render_template = lambda *args, **kwargs: "ok"
 

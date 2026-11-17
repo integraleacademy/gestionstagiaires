@@ -109,6 +109,27 @@ document.querySelectorAll(".automation-loading-form").forEach((form)=>{
       if(!sent && btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
       return;
     }
+    if(form.hasAttribute("data-convocation-generate")){
+      event.preventDefault();
+      if(!btn || btn.disabled) return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+      btn.textContent = "Demande en cours…";
+      try{
+        const job = await window.convocationJobs.submit(form.action);
+        await window.convocationJobs.wait(job, status => {
+          btn.textContent = status === "running" ? "Génération en cours…" : "Génération en attente…";
+        });
+        window.location.reload();
+      }catch(error){
+        alert(error.message || "Génération impossible.");
+        btn.disabled = false;
+        btn.removeAttribute("aria-busy");
+        btn.textContent = original;
+      }
+      return;
+    }
     if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Traitement…"; }
     if(form.action.includes("/automation/")){
       event.preventDefault();
@@ -179,9 +200,10 @@ if(btnAutomationSendConvocation){
     btnAutomationSendConvocation.setAttribute("aria-busy", "true");
     btnAutomationSendConvocation.textContent = "Envoi…";
     try{
-      const response = await fetch(sheetContext.convocationUrl, {method:"POST", headers:{"Content-Type":"application/json"}});
-      const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
-      if(!response.ok || !result.ok) throw new Error(result.error || "Erreur lors de l’envoi de la convocation.");
+      const job = await window.convocationJobs.submit(sheetContext.convocationUrl);
+      await window.convocationJobs.wait(job, status => {
+        btnAutomationSendConvocation.textContent = status === "running" ? "Envoi en cours…" : "Envoi en attente…";
+      });
       window.location.reload();
     }catch(error){
       alert(error.message || "Erreur lors de l’envoi de la convocation.");

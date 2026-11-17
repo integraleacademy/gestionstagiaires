@@ -10,6 +10,7 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
+        self.original_atomic_update = gestion_app._atomic_update_data
         self.original_now_iso = gestion_app._now_iso
         self.payload = {
             "sessions": [{
@@ -29,11 +30,13 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.saved = []
         gestion_app.load_data = lambda: self.payload
         gestion_app.save_data = lambda data: self.saved.append(data)
+        gestion_app._atomic_update_data = lambda update: update(self.payload)
         gestion_app._now_iso = lambda: "2026-06-08T10:30:00Z"
 
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
+        gestion_app._atomic_update_data = self.original_atomic_update
         gestion_app._now_iso = self.original_now_iso
 
     def _authenticate_public(self):

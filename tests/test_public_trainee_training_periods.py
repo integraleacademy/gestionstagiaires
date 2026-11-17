@@ -29,8 +29,9 @@ class PublicTraineeTrainingPeriodsTests(unittest.TestCase):
             ],
             **session_data,
         }
-        with patch.object(gestion_app, "load_data", return_value={"sessions": [session]}), patch.object(
-            gestion_app, "save_data"
+        data = {"sessions": [session]}
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(data)
         ):
             return self.client.get("/espace/PUBLIC-PERIODS")
 

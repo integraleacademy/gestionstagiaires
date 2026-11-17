@@ -49,7 +49,9 @@ import a3p_documents
 import exam_retakes
 import qonto_webhook_inbox
 import sqlite3
+import convocation_preview
 import training_convocations
+import convocation_jobs
 import afc_documents
 import afc_enrolments
 import afc_training_mail
@@ -31257,6 +31259,7 @@ def _public_convocation_has_record(trainee):
 
 
 @app.get("/espace/<token>/convocation.pdf")
+@convocation_preview.pollable
 def public_training_convocation(token: str):
     data = load_data(run_background_tasks=False)
     s, t = find_session_and_trainee_by_token(data, token)
@@ -31265,7 +31268,9 @@ def public_training_convocation(token: str):
     if not _public_is_authed(token):
         return redirect(url_for("public_trainee_login", token=token))
     try:
-        pdf_path = training_convocations.current_pdf(sys.modules[__name__], s, t)
+        pdf_path = training_convocations.current_pdf(sys.modules[__name__], s, t, cached_only=convocation_preview.browser_request())
+        if pdf_path is None:
+            return convocation_preview.wait_page()
     except Exception:
         app.logger.exception("[CONVOCATION] Public PDF refresh failed trainee_id=%s", t.get("id"))
         flash("La mise à jour de votre convocation a échoué. Merci de réessayer ou de contacter l’équipe pédagogique.", "error")
@@ -34640,44 +34645,29 @@ def _public_invoice_lines_for_trainee(data: Dict[str, Any], session_obj: Dict[st
     invoices.sort(key=lambda item: item.get("generated_at") or "", reverse=True)
     return invoices
 
-@app.get("/espace/<token>")
-def public_trainee_space(token):
-    data = load_data()
-    s, t = find_session_and_trainee_by_token(data, token)
-
-    if not s or not t:
-        abort(404)
-
-    # 🔒 Verrou public : si pas auth → login
-    if not _public_is_authed(token):
-        return redirect(url_for("public_trainee_login", token=token))
-
-    if not session.get("admin_logged_in") and not t.get("public_has_logged_in"):
-        _mark_public_login(data, s, t)
+def _prepare_public_space_record(s, t, first_login_at):
+    if first_login_at and not t.get("public_has_logged_in"):
+        t["public_has_logged_in"] = True
+        t["public_last_login_at"] = first_login_at
 
     for city_key in ("birth_city", "city"):
         if isinstance(t.get(city_key), str):
             t[city_key] = normalize_city(t[city_key])
 
     training_type = _session_get(s, "training_type", "")
-    _refresh_trainee_hebergement_status(s, t)
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""), afc_schedule.enabled(s))
 
-    # ✅ aligne la liste des docs requis
+    # Livret 2 is a technical upload separate from the standard required documents.
+    is_vae = (training_type or "").strip().upper() == "DIRIGEANT VAE"
+    livret = next((doc for doc in (t.get("documents") or [])
+                   if isinstance(doc, dict) and doc.get("key") == "livret_2"), None) if is_vae else None
     ensure_documents_schema_for_trainee(t, training_type)
-    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+    if is_vae:
+        if livret is not None:
+            t["documents"].append(livret)
         _ensure_livret2_document_entry(t)
         _ensure_complementary_documents_entry(t)
         _ensure_public_complementary_documents_upload_entry(t)
-
-    for d in (t.get("documents") or []):
-        file_token = d.get("file") or ""
-        d["file_token"] = file_token
-        files = d.get("files")
-        file_tokens = [x for x in files if x] if isinstance(files, list) else []
-        if file_token and file_token not in file_tokens:
-            file_tokens.insert(0, file_token)
-        d["file_tokens"] = file_tokens
 
     # Expose generated training documents in the public trainee space when their PDF exists.
     # Older records may only have the PDF path, so compute the token at render time too.
@@ -34703,6 +34693,73 @@ def public_trainee_space(token):
         ).strip()
         if unsigned_convention_path:
             convention_signature["unsigned_pdf_token"] = _store_public_file_token(unsigned_convention_path)
+
+
+class _PublicSpaceAlreadyCurrent(Exception):
+    """Skip the store write when another request already applied the update."""
+
+
+def _public_space_trainee(token, training, stored_trainee):
+    # Render an independent copy of this learner, never a copy of the entire store.
+    view = copy.deepcopy(stored_trainee)
+    first_login_at = None
+    if not session.get("admin_logged_in") and not view.get("public_has_logged_in"):
+        first_login_at = _now_iso()
+
+    # The accommodation lookup is remote. Keep it outside the write transaction.
+    _refresh_trainee_hebergement_status(training, view)
+    _prepare_public_space_record(training, view, first_login_at)
+    if view == stored_trainee:
+        return view
+
+    def persist(current_data):
+        current_training, current = find_session_and_trainee_by_token(current_data, token)
+        if (current is None or current_training.get("id") != training.get("id")
+                or current.get("id") != stored_trainee.get("id")):
+            abort(404)
+        before = copy.deepcopy(current)
+        _prepare_public_space_record(current_training, current, first_login_at)
+        if (view.get("hosting_status") != stored_trainee.get("hosting_status")
+                and current.get("hosting_status") == stored_trainee.get("hosting_status")
+                and all(current.get(key) == stored_trainee.get(key) for key in ("email", "last_name", "first_name"))
+                and all(_session_get(current_training, key, "") == _session_get(training, key, "")
+                        for key in ("training_type", "name", "date_start", "date_end"))):
+            current["hosting_status"] = view["hosting_status"]
+        if current == before:
+            raise _PublicSpaceAlreadyCurrent
+        return {}
+
+    try:
+        _atomic_update_data(persist)
+    except _PublicSpaceAlreadyCurrent:
+        pass
+    return view
+
+
+@app.get("/espace/<token>")
+def public_trainee_space(token):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+
+    if not s or not t:
+        abort(404)
+
+    # 🔒 Verrou public : si pas auth → login
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    t = _public_space_trainee(token, s, t)
+    training_type = _session_get(s, "training_type", "")
+    convention_signature = _yousign_state(t)
+
+    for d in (t.get("documents") or []):
+        file_token = d.get("file") or ""
+        d["file_token"] = file_token
+        files = d.get("files")
+        file_tokens = [x for x in files if x] if isinstance(files, list) else []
+        if file_token and file_token not in file_tokens:
+            file_tokens.insert(0, file_token)
+        d["file_tokens"] = file_tokens
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
@@ -34736,11 +34793,6 @@ def public_trainee_space(token):
         if tracking.get("file"):
             aps_elearning_progress = aps_elearning_completion(tracking)
             aps_elearning_progress["updated_at_label"] = _aps_elearning_datetime_label(tracking.get("uploaded_at"))
-
-    # ✅ persistance
-    s["trainees"] = _session_trainees_list(s)
-    s.pop("stagiaires", None)
-    save_data(data)
 
     ssiap_exam_date = str(_session_get(s, "ssiap_exam_date", "") or "").strip() or str(t.get("ssiap_exam_date") or "").strip()
     ssiap_medical_from_date = _subtract_months(ssiap_exam_date, 3) if ssiap_exam_date else ""
@@ -39965,9 +40017,7 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
     doc.save(output_docx_path)
 
 
-def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    from pathlib import Path
-
+def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "", *, cached_only: bool = False):
     template_path = _ssiap_document_template(session_obj, trainee, "convocation", _aps_template_path)
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
@@ -39976,11 +40026,27 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     source_hash = training_convocations.source_hash(context, template_path)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
     doc_slug = _automation_document_config(session_obj).get("slug") or "aps"
-    base = f"convocation_{_safe_filename_part(doc_slug)}_{_safe_filename_part(trainee.get('id') or trainee_id)}_{source_hash[:16]}"
-    base = _ssiap_document_filename(base, session_obj, trainee)
+    trainee_key = _safe_filename_part(trainee.get("id") or trainee_id)
+    base = f"convocation_{_safe_filename_part(doc_slug)}_{trainee_key}_{source_hash[:16]}"
+    pair = training_convocations.cached_pair(APS_CONVOCATION_DIR, base, trainee, source_hash, _is_pdf_file)
+    if cached_only:
+        return pair
+    if pair is None:
+        with training_convocations.generation_lock(APS_CONVOCATION_DIR):
+            pair = training_convocations.cached_pair(APS_CONVOCATION_DIR, base, trainee, source_hash, _is_pdf_file)
+            if pair is None:
+                pair = _render_aps_convocation_pair(template_path, context, base)
+    training_convocations.remember_download(trainee)
+    trainee["convocation_aps_source_hash"] = source_hash
+    trainee["convocation_aps_source_pdf_path"] = pair[1]
+    return pair
+
+
+def _render_aps_convocation_pair(template_path: str, context: Dict[str, Any], base: str) -> Tuple[str, str]:
+    from pathlib import Path
+
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
-    os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
     # Convert in isolation, then publish complete files. A failed or concurrent
     # refresh must never delete the previously issued PDF.
     with tempfile.TemporaryDirectory(prefix=".convocation-", dir=APS_CONVOCATION_DIR) as staging:
@@ -40003,9 +40069,6 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
             raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
         os.replace(staged_docx, final_docx_path)
         os.replace(staged_pdf, final_pdf_path)
-    training_convocations.remember_download(trainee)
-    trainee["convocation_aps_source_hash"] = source_hash
-    trainee["convocation_aps_source_pdf_path"] = final_pdf_path
     return final_docx_path, final_pdf_path
 
 
@@ -51694,6 +51757,7 @@ def _process_qonto_webhook(key, event, item):
 
 @app.get("/admin/trainee/<trainee_id>/convocation-aps/preview")
 @admin_login_required
+@convocation_preview.pollable
 def admin_preview_aps_convocation_by_trainee(trainee_id: str):
     data = load_data()
     s, _, t = _find_trainee_any_session(data, trainee_id)
@@ -51702,7 +51766,10 @@ def admin_preview_aps_convocation_by_trainee(trainee_id: str):
     if _trainee_registration_is_cancelled(t):
         return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
-        _, pdf_path = _generate_aps_convocation_files(s, t, "", trainee_id)
+        files = _generate_aps_convocation_files(s, t, "", trainee_id, cached_only=convocation_preview.browser_request())
+        if files is None:
+            return convocation_preview.wait_page()
+        _, pdf_path = files
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
     except Exception as exc:
         app.logger.exception("[CONVOCATION APS] Aperçu impossible")
@@ -51711,6 +51778,7 @@ def admin_preview_aps_convocation_by_trainee(trainee_id: str):
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps/preview")
 @admin_login_required
+@convocation_preview.pollable
 def admin_preview_aps_convocation(session_id: str, trainee_id: str):
     data = load_data()
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
@@ -51719,7 +51787,10 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
     if _trainee_registration_is_cancelled(t):
         return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
-        _, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
+        files = _generate_aps_convocation_files(s, t, session_id, trainee_id, cached_only=convocation_preview.browser_request())
+        if files is None:
+            return convocation_preview.wait_page()
+        _, pdf_path = files
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
     except Exception as exc:
         app.logger.exception("[CONVOCATION APS] Aperçu impossible")
@@ -51930,10 +52001,20 @@ def admin_trainee_automation_status(session_id: str, trainee_id: str):
     return jsonify({"ok": True, "automation_status": _build_trainee_automation_status(s, t, session_id, trainee_id)})
 
 
+@app.get("/admin/convocations/traitements/<job_id>")
+@admin_login_required
+@admin_write_required
+def admin_convocation_job_status(job_id):
+    return convocation_jobs.status(sys.modules[__name__], job_id)
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automation/convocation/generate")
 @admin_login_required
 @admin_write_required
 def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
+    host = sys.modules[__name__]
+    if "respond-async" in request.headers.get("Prefer", "").lower():
+        return convocation_jobs.defer(host, "generate", session_id, trainee_id)
     data = load_data()
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
@@ -51944,6 +52025,7 @@ def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    convocation_jobs.remember_fields(t)
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         now = _now_iso()
@@ -51955,20 +52037,23 @@ def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
         t["updated_at"] = now
         s["trainees"] = trainees
         s.pop("stagiaires", None)
-        save_data(data)
+        convocation_jobs.save_result(host, data, s, t)
         return jsonify({"ok": True, "status": "generated", "view_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)})
     except Exception as exc:
         message = str(exc) or "Erreur inconnue pendant la génération de la convocation APS."
         t["convocation_aps_last_error"] = message
         s["trainees"] = trainees
         s.pop("stagiaires", None)
-        save_data(data)
+        convocation_jobs.save_result(host, data, s, t)
         return jsonify({"ok": False, "error": message}), 400
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps/send")
 @admin_login_required
 @admin_write_required
 def admin_send_aps_convocation(session_id: str, trainee_id: str):
+    host = sys.modules[__name__]
+    if "respond-async" in request.headers.get("Prefer", "").lower():
+        return convocation_jobs.defer(host, "send", session_id, trainee_id)
     data = load_data()
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
@@ -51987,6 +52072,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
     if not is_vtc and not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
         return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
+    convocation_jobs.remember_fields(t)
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         abs_pdf_path = os.path.abspath(pdf_path)
@@ -51995,13 +52081,39 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
         subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s, t)
+        if g.get("convocation_job"):
+            # Release the old global snapshot before rechecking the dossier.
+            data = None
+            _invalidate_request_data_cache()
+            current_data = load_data()
+            current_s, _, current_t = _find_session_trainee(current_data, session_id, trainee_id)
+            if not current_t or _trainee_registration_is_cancelled(current_t):
+                return _cancelled_registration_automation_response()
+            if not _automation_is_enabled(current_s, current_t):
+                return jsonify(ok=False, error="module_locked", module="automations"), 403
+            if (request.get_json(silent=True) or {}).get("skip_if_already_sent") and current_t.get("convocation_aps_sent_at"):
+                return jsonify(ok=True, skipped=True, status="already_sent")
+            revision = t.get("convocation_aps_source_hash")
+            if (current_t.get("email") != t.get("email") or
+                    (revision and training_convocations.current_source_hash(host, current_s, current_t) != revision) or
+                    (not is_vtc and not _can_send_convocation_without_signed_convention(current_s)
+                     and not _is_yousign_signature_done(_yousign_state(current_t)))):
+                return jsonify(ok=False, error="Le dossier a changé pendant la préparation. Vérifiez la convocation avant son envoi."), 409
+            del current_data, current_s, current_t
+            _invalidate_request_data_cache()
+        delivery = convocation_jobs.begin_delivery()
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
             html_content,
             trainee=t,
             attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}],
+            **delivery,
         )
+        if isinstance(email_ok, dict):
+            if not email_ok.get("ok") and (email_ok.get("not_sent") or 400 <= (email_ok.get("status_code") or 0) < 500):
+                return jsonify(ok=False, delivery_refused=True, error="Le prestataire a refusé l’envoi de la convocation."), 400
+            email_ok = email_ok.get("ok")
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
         sent_at = _now_iso()
@@ -52021,7 +52133,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         t["updated_at"] = sent_at
         s["trainees"] = trainees
         s.pop("stagiaires", None)
-        save_data(data)
+        convocation_jobs.save_result(host, data, s, t)
         return jsonify({"ok": True, "status": "sent", "sent_at": sent_at, "sent_at_label": fr_datetime(sent_at), "view_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)})
     except Exception as exc:
         app.logger.exception("[CONVOCATION APS] Envoi impossible")
@@ -52031,7 +52143,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         t["updated_at"] = _now_iso()
         s["trainees"] = trainees
         s.pop("stagiaires", None)
-        save_data(data)
+        convocation_jobs.save_result(host, data, s, t)
         return jsonify({"ok": False, "error": message}), 400
 
 
@@ -53962,13 +54074,16 @@ def webhooks_yousign():
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps.pdf")
 @admin_login_required
+@convocation_preview.pollable
 def admin_view_aps_convocation(session_id: str, trainee_id: str):
     data = load_data(run_background_tasks=False)
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _is_aps_session(s) or not _public_convocation_has_record(t):
         abort(404)
     try:
-        pdf_path = training_convocations.current_pdf(sys.modules[__name__], s, t)
+        pdf_path = training_convocations.current_pdf(sys.modules[__name__], s, t, cached_only=convocation_preview.browser_request())
+        if pdf_path is None:
+            return convocation_preview.wait_page()
     except Exception:
         app.logger.exception("[CONVOCATION] Admin PDF refresh failed trainee_id=%s", trainee_id)
         return make_response("La mise à jour de la convocation a échoué. Merci de réessayer.", 503)

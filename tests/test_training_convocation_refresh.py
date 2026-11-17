@@ -1,7 +1,10 @@
 import copy
 import json
+import re
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier, Event
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -229,7 +232,7 @@ def test_individual_ssiap_and_afc_dates_are_part_of_revision():
         convocations.current_source_hash(app, afc, {**trainee, "training_date_start": "2026-11-23"})
 
 
-def test_real_docx_render_and_failed_conversion_keep_previous_files(tmp_path, monkeypatch):
+def test_concurrent_docx_render_is_reused_and_failed_refresh_keeps_previous_files(tmp_path, monkeypatch):
     template = tmp_path / "template.docx"
     doc = Document()
     doc.add_paragraph("{{date_debut_formation}} - {{date_fin_formation}} - {{date_examen}}")
@@ -247,8 +250,19 @@ def test_real_docx_render_and_failed_conversion_keep_previous_files(tmp_path, mo
         assert text == "10/11/2026 - 14/01/2027 - 15/01/2027"
         assert any(value.startswith("-env:UserInstallation=") for value in command)
         staged.with_suffix(".pdf").write_bytes(b"%PDF-1.4\n" + text.encode())
-    monkeypatch.setattr(app.subprocess, "run", convert)
+    converter = Mock(side_effect=convert)
+    monkeypatch.setattr(app.subprocess, "run", converter)
+    ready = Barrier(3)
+
+    def generate(_):
+        ready.wait(timeout=10)
+        return app._generate_aps_convocation_files(training, copy.deepcopy(trainee))
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        pairs = list(pool.map(generate, range(3)))
     docx, pdf = app._generate_aps_convocation_files(training, trainee)
+    assert pairs == [(docx, pdf)] * 3
+    converter.assert_called_once()
     assert trainee["convocation_aps_source_pdf_path"] == pdf
     assert "previous-issued.pdf" in trainee["convocation_aps_previous_pdf_tokens"]
     before = copy.deepcopy(trainee)
@@ -257,8 +271,84 @@ def test_real_docx_render_and_failed_conversion_keep_previous_files(tmp_path, mo
     def fail(*args, **kwargs):
         raise subprocess.CalledProcessError(1, args[0], stderr="conversion failure")
     monkeypatch.setattr(app.subprocess, "run", fail)
+    training["exam_date"] = "2027-01-16"
     with pytest.raises(RuntimeError, match="conversion failure"):
         app._generate_aps_convocation_files(training, trainee)
     assert Path(pdf).read_bytes() == original and Path(docx).is_file()
     assert trainee == before
     assert not list(Path(app.APS_CONVOCATION_DIR).glob(".convocation-*"))
+
+
+def test_cached_pair_accepts_historical_version_and_rejects_invalid_files(tmp_path):
+    revision = "a" * 64
+    base = "convocation_ssiap_t1_" + revision[:16]
+    pdf = tmp_path / (base + "_0123456789ab_01234567.pdf")
+    pdf.write_bytes(b"%PDF-1.4\nissued")
+    docx = pdf.with_suffix(".docx")
+    Document().save(docx)
+    issued = {"convocation_aps_source_hash": revision, "convocation_aps_source_pdf_path": str(pdf)}
+    assert convocations.cached_pair(tmp_path, base, issued, revision, app._is_pdf_file) == (str(docx), str(pdf))
+    assert convocations.cached_pair(tmp_path, base, issued, "other", app._is_pdf_file) is None
+    outside = tmp_path / "unrelated.docx"
+    docx.rename(outside)
+    docx.symlink_to(outside)
+    assert convocations.cached_pair(tmp_path, base, issued, revision, app._is_pdf_file) is None
+    docx.unlink()
+    docx.write_bytes(b"corrupt")
+    assert convocations.cached_pair(tmp_path, base, issued, revision, app._is_pdf_file) is None
+
+
+def test_browser_refreshes_issued_convocation_outside_request_and_preserves_download(case):
+    entered, resume = Event(), Event()
+
+    def slow_generate(*args):
+        entered.set()
+        assert resume.wait(5)
+        return case.generate(*args)
+
+    case.generator.side_effect = slow_generate
+    browser = {"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"}
+    queued = case.client.get(URL + "?download=1", headers=browser)
+    assert queued.status_code == 202
+    assert entered.wait(5)
+    job_id = re.search(rb'data-job-id="([0-9a-f]+)"', queued.data).group(1).decode()
+    status = URL + "?preparation=" + job_id
+    assert case.client.get(status).status_code == 202
+    assert app.app.test_client().get(status).status_code == 403
+    resume.set()
+    app.app.extensions["convocation_previews"].pending.join()
+    assert case.client.get(status).json == {"ok": True}
+    downloaded = case.client.get(URL + "?download=1", headers=browser)
+    assert downloaded.status_code == 200 and downloaded.mimetype == "application/pdf"
+    assert downloaded.headers["Content-Disposition"].startswith("attachment;")
+    case.generator.assert_called_once()
+
+
+@pytest.mark.parametrize("url", [
+    "/admin/sessions/S-REFRESH/stagiaires/T-REFRESH/convocation-aps/preview",
+    "/admin/trainee/T-REFRESH/convocation-aps/preview",
+])
+def test_viewer_previews_cold_pdf_without_issuing_it(case, url):
+    path = case.output / "preview.pdf"
+    path.write_bytes(b"%PDF-1.4\npreview")
+    ready = Event()
+
+    def generate(*args, cached_only=False):
+        if cached_only and not ready.is_set():
+            return None
+        ready.set()
+        return str(path.with_suffix(".docx")), str(path)
+
+    case.generator.side_effect = generate
+    before = copy.deepcopy(case.trainee)
+    with case.client.session_transaction() as auth:
+        auth.clear()
+        auth.update(admin_logged_in=True, admin_role="viewer")
+    browser = {"Accept": "text/html"}
+    queued = case.client.get(url, headers=browser)
+    assert queued.status_code == 202
+    app.app.extensions["convocation_previews"].pending.join()
+    assert ready.is_set()
+    assert case.client.get(url, headers=browser).data == path.read_bytes()
+    assert case.trainee == before
+    case.save.assert_not_called()

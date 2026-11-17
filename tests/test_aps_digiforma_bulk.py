@@ -22,6 +22,7 @@ def context(monkeypatch, tmp_path):
     monkeypatch.setattr(gestion, 'load_data', lambda **kwargs: data)
     save = Mock()
     monkeypatch.setattr(gestion, 'save_data', save)
+    monkeypatch.setattr(gestion, '_atomic_update_data', lambda update: update(data))
     monkeypatch.setattr(gestion, 'PERSIST_DIR', str(tmp_path))
     monkeypatch.setattr(gestion, 'UPLOADS_DIR', str(tmp_path / 'uploads'))
     client = gestion.app.test_client()
