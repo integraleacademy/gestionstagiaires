@@ -905,6 +905,16 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         flash("La facture existante sera vérifiée avant toute reprise.", "success")
         return back("state", tab="all", folder=folder, _anchor="dossier")
 
+    @bp.post("/dossiers/<folder>/facturation/reprendre")
+    @native_action
+    def resume_invoice(owner, folder):
+        if not invoicing.request_resume(store.directory, owner, folder):
+            raise ValueError("Vérifiez d’abord la réception : une lecture récente doit confirmer l’absence de facture dans EDOF, sans changement de montant.")
+        from edof_dispatch import wake
+        wake(store.directory)
+        flash("La transmission de la facture existante est demandée. Aucune nouvelle facture Qonto ne sera créée.", "success")
+        return back("state", tab="all", folder=folder, _anchor="dossier")
+
     @bp.post("/automatisations/rattraper")
     @native_action
     def catch_up(owner):

@@ -1,7 +1,8 @@
 """Durable CPF invoices: EDOF amount -> Qonto -> verified EDOF receipt.
 
 The billing DTO follows the official portal's registration-folder bill form.
-Every write is fenced on disk; an interrupted write is only reconciled, never replayed.
+Every write is fenced on disk. An interrupted send is read-only until an
+administrator explicitly resumes the same invoice after a fresh absence check.
 """
 from contextlib import closing
 from datetime import datetime
@@ -17,10 +18,11 @@ from zoneinfo import ZoneInfo
 from cpf_provider import ProviderStore
 import edof_directory as directory
 
-MODES = {"invoice_prepare", "invoice_send", "invoice_check"}
+MODES = {"invoice_prepare", "invoice_send", "invoice_check", "invoice_resume"}
 LABELS = {"queued":"Lecture du montant EDOF", "prepared":"Préparation de la facture Qonto",
           "creating":"Vérification de la création Qonto", "draft":"Finalisation Qonto",
           "ready":"Facture Qonto créée · transmission EDOF en attente",
+          "resuming":"Reprise de la facture existante · transmission EDOF en attente",
           "sending":"Vérification de la réception EDOF", "confirmed":"Facture transmise à EDOF",
           "review":"Facturation à vérifier", "external":"Déjà facturé dans EDOF"}
 MESSAGES = {"invoice_prepared":"Montant facturable vérifié dans EDOF.",
@@ -63,8 +65,9 @@ def database(path):
 def records(path, owner=None):
     with closing(database(path)) as db:
         rows = db.execute('SELECT * FROM cpf_invoices WHERE owner=? ORDER BY changed DESC', (owner,)) if owner else db.execute('SELECT * FROM cpf_invoices ORDER BY changed DESC')
-        return [{**dict(r), "identity":json.loads(r['identity']), "terms":json.loads(r['terms']),
-                 "receipt":json.loads(r['receipt']), "label":LABELS.get(r['status'],r['status'])} for r in rows]
+        result = [{**dict(r), "identity":json.loads(r['identity']), "terms":json.loads(r['terms']),
+                   "receipt":json.loads(r['receipt']), "label":LABELS.get(r['status'],r['status'])} for r in rows]
+        return [{**r, "resume_available":can_resume(r)} for r in result]
 
 
 def get(path, token):
@@ -92,7 +95,7 @@ def fence(path, record, before, after):
         db.execute('BEGIN IMMEDIATE')
         if not allowed(db,record):
             return False
-        marker = ',create_started=unixepoch()' if after=='creating' else ',send_started=unixepoch()' if after=='sending' else ''
+        marker = ',create_started=unixepoch()' if after=='creating' else ",send_started=unixepoch(),receipt='{}'" if after=='sending' else ''
         return db.execute('UPDATE cpf_invoices SET status=?,changed=?'+marker+' WHERE token=? AND status=?',
                           (after,time.time(),record['token'],before)).rowcount==1
 
@@ -125,23 +128,48 @@ def next_job(store, selection, *, check_only=False):
         return None
     with closing(database(store.directory)) as db:
         rows = db.execute("""SELECT * FROM cpf_invoices WHERE status IN
-              ('queued','prepared','creating','draft','ready','sending') AND revision=? AND retry_at<=?
+              ('queued','prepared','creating','draft','ready','sending','resuming') AND revision=? AND retry_at<=?
               ORDER BY CASE WHEN status='sending' THEN 0 ELSE 1 END,changed LIMIT 20""",
                           (selection['revision'],time.time())).fetchall()
         for r in rows:
             manual = bool(getattr(store, 'manual_until', lambda owner: 0)(r['owner']))
-            if check_only and (r['status'] != 'sending' or not manual):
+            if check_only and (r['status'] not in {'sending','resuming'} or not manual):
                 continue
             if not allowed(db,r) or not (store.directory_enabled(r['owner']) or check_only and manual):
                 continue
             # Browser and provider locks in start_job serialize this with declarations.
-            mode = 'invoice_check' if r['status']=='sending' else 'invoice_send' if r['status']=='ready' else 'invoice_prepare'
+            mode = 'invoice_resume' if r['status']=='resuming' else 'invoice_check' if r['status']=='sending' else 'invoice_send' if r['status']=='ready' else 'invoice_prepare'
             return {'mode':mode,'owner':r['owner'],'folder_id':r['folder'],'token':r['token'],
                     'revision':r['revision'],'provider':'integrale'}
 
 
 def fingerprint(terms):
     return hashlib.sha256(json.dumps(terms,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
+
+def can_resume(record):
+    """Only a recent, exact negative receipt may unlock an explicit resumption."""
+    proof = record.get('receipt') or {}
+    now = time.time()
+    return bool(record.get('status') == 'sending' and record.get('qonto_id') and record.get('invoice_number')
+        and record.get('send_started') and now-record['send_started'] >= 900
+        and 0 <= now-proof.get('unreceived_at', 0) <= 600
+        and proof.get('bill_id') == record['terms'].get('bill_id')
+        and proof.get('fingerprint') == fingerprint(record['terms'])
+        and proof.get('qonto_id') == record['qonto_id'] and proof.get('invoice_number') == record['invoice_number'])
+
+
+def unreceived_terms(raw, bill, record):
+    """Never treat an unknown, saved, paid or changed bill as absent."""
+    if (str(bill.get('billNumber') or '').strip()
+        or directory.normalized(raw.get('currentState') or '') not in {'servicedonevalidated','servicedonevalidatedrevisionvsf'}
+        or directory.normalized(raw.get('currentBillingState') or '') not in {'','servicedonevalidated'}
+        or directory.normalized(bill.get('currentState') or '') not in {'','draft'}):
+        raise Review('EDOF contient déjà des données de facturation ou un état différent. Aucun nouvel envoi effectué.')
+    terms = project(raw,bill,record['identity'])
+    if not record['terms'] or fingerprint(terms) != fingerprint(record['terms']):
+        raise Review('Les conditions de la facture existante ont changé. Aucun nouvel envoi effectué.')
+    return terms
 
 
 def watched(snapshot,vault,owner):
@@ -250,10 +278,26 @@ def perform(context, witness, spec, path, vault, origin, prefix):
         update(path,record['token'],status='external',message='Une facture est déjà enregistrée dans EDOF.')
         return {'code':'invoice_external'}
     if spec['mode']=='invoice_check':
+        proof = {}
+        try:
+            terms = unreceived_terms(raw,bill,record)
+            if record['qonto_id'] and record['invoice_number'] and record['send_started'] and time.time()-record['send_started'] >= 900:
+                proof = {'unreceived_at':time.time(), 'bill_id':terms['bill_id'], 'fingerprint':fingerprint(terms),
+                         'qonto_id':record['qonto_id'], 'invoice_number':record['invoice_number']}
+        except Review:
+            pass
+        update(path,record['token'],receipt=proof)
         state = str(raw.get('currentBillingState') or bill.get('currentState') or raw.get('currentState') or 'non renseigné')[:80]
         number = str(bill.get('billNumber') or 'non renseigné')[:80]
         return {'code':'invoice_uncertain', 'invoice_message':
                 f'EDOF ne confirme pas encore la facturation. État relu : {state}. Numéro de facture relu : {number}.'}
+    if spec['mode']=='invoice_resume':
+        requested = record['receipt'].get('resume_requested_at',0)
+        if record['status']!='resuming' or not 0 <= time.time()-requested <= 900:
+            raise Review('La demande de reprise a expiré. Vérifiez à nouveau la réception de la facture.')
+        # Re-read and validate the same bill immediately before sending; a later
+        # EDOF receipt above is reconciled without another POST.
+        unreceived_terms(raw,bill,record)
     if directory.normalized(raw.get('currentState') or '') not in {'servicedonevalidated','service done validated','servicedonevalidatedrevisionvsf','service done validated revision vsf'} and (raw.get('trainingActionInfo') or {}).get('validatedServiceDone') is not True:
         raise Review('Le service fait n’est plus validé dans EDOF.')
     terms=project(raw,bill,record['identity'])
@@ -286,7 +330,8 @@ def perform(context, witness, spec, path, vault, origin, prefix):
              'trainingReleaseDate':raw.get('trainingReleaseDate'),
              'beginDate':raw.get('beginDate'),'endDate':raw.get('endDate'),
              'sessionStartDate':terms['session_start_date'],'sessionEndDate':terms['session_end_date']}
-    if not record['invoice_number'] or not fence(path,record,'ready','sending'):
+    before = 'resuming' if spec['mode']=='invoice_resume' else 'ready'
+    if not record['invoice_number'] or not fence(path,record,before,'sending'):
         raise Review('La facturation est suspendue ou déjà en cours.')
     vault.put('directory-generation',time.time_ns())
     target=root+'organisms/current/bills/'+terms['bill_id']+'/validate'
@@ -327,6 +372,22 @@ def request_review(path,owner,folder):
             return False
         status='sending' if row['status']=='sending' or row['send_started'] else 'draft' if row['qonto_id'] else 'creating' if row['create_started'] else 'queued'
         db.execute('UPDATE cpf_invoices SET status=?,retry_at=0,message=? WHERE token=?',(status,'Nouvelle vérification demandée.',row['token']))
+        return True
+
+
+def request_resume(path,owner,folder):
+    """Explicit, one-shot permission to transmit the already-issued invoice."""
+    with closing(database(path)) as db,db:
+        db.execute('BEGIN IMMEDIATE')
+        row=db.execute('SELECT * FROM cpf_invoices WHERE owner=? AND folder=?',(owner,folder)).fetchone()
+        if not row or not allowed(db,row):
+            return False
+        record={**dict(row), 'terms':json.loads(row['terms']), 'receipt':json.loads(row['receipt'])}
+        if not can_resume(record):
+            return False
+        proof={**record['receipt'],'resume_requested_at':time.time()}
+        db.execute("UPDATE cpf_invoices SET status='resuming',retry_at=0,changed=?,receipt=?,message=? WHERE token=?",
+                   (time.time(),json.dumps(proof),'Reprise demandée de la facture existante. Les données EDOF seront revérifiées avant transmission.',row['token']))
         return True
 
 

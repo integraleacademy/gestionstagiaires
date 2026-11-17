@@ -200,6 +200,86 @@ def test_manual_evening_window_only_checks_existing_transmissions(tmp_path):
     assert ledger.next_job(store,selection,check_only=True) is None
 
 
+def missing_receipt(path):
+    app,portal=Qonto(),Portal()
+    store,spec=prepare(path,app,portal)
+    portal.timeout=True
+    with pytest.raises(TimeoutError):run(path,spec,portal)
+    with closing(ledger.database(path)) as db,db:
+        db.execute('UPDATE cpf_invoices SET send_started=unixepoch()-901 WHERE token=?',(spec['token'],))
+    portal.timeout=False
+    check=ledger.next_job(store,cpf_provider.ProviderStore(path).state())
+    assert run(path,check,portal)['code']=='invoice_uncertain'
+    return app,portal,store,spec
+
+
+def test_explicit_resume_reuses_same_invoice_and_rechecks_before_one_send(tmp_path):
+    app,portal,store,spec=missing_receipt(tmp_path)
+    assert ledger.get(tmp_path,spec['token'])['resume_available']
+    assert ledger.next_job(store,cpf_provider.ProviderStore(tmp_path).state())['mode']=='invoice_check'
+    assert ledger.request_resume(tmp_path,'admin',FOLDER)
+    assert not ledger.request_resume(tmp_path,'admin',FOLDER)
+    store.manual_until=lambda owner:9999999999
+    job=ledger.next_job(store,cpf_provider.ProviderStore(tmp_path).state(),check_only=True)
+    assert job['mode']=='invoice_resume'
+    assert run(tmp_path,job,portal)['code']=='invoice_confirmed'
+    assert app.creates==1 and app.finals==1 and len(portal.sent)==2
+    assert all(p['billNumber']=='FL-TEST-001' and p['id']=='bill-test' for p in portal.sent)
+    assert not ledger.request_resume(tmp_path,'admin',FOLDER)
+
+
+@pytest.mark.parametrize('change',['already_received','amount','identity','other_number','payment','state'])
+def test_resume_rechecks_changes_without_reposting(tmp_path,change):
+    app,portal,store,spec=missing_receipt(tmp_path)
+    assert ledger.request_resume(tmp_path,'admin',FOLDER)
+    if change=='already_received':
+        portal.raw['currentBillingState']='billed'
+        portal.bill.update(billNumber='FL-TEST-001',amountToInvoice=1260)
+    elif change=='amount':portal.bill['amountCGU']=1300
+    elif change=='identity':portal.raw['attendee']['firstName']='Autre'
+    elif change=='other_number':portal.bill['billNumber']='OTHER-001'
+    elif change=='payment':portal.bill['amountPaid']=1260
+    elif change=='state':portal.raw['currentState']='canceled'
+    job=ledger.next_job(store,cpf_provider.ProviderStore(tmp_path).state())
+    if change=='already_received':assert run(tmp_path,job,portal)['code']=='invoice_confirmed'
+    else:
+        with pytest.raises(ledger.Review):run(tmp_path,job,portal)
+    assert len(portal.sent)==1 and app.creates==1
+
+
+def test_resume_needs_fresh_proof_owner_and_unblocked_invoice(tmp_path,monkeypatch):
+    app,portal,store,spec=missing_receipt(tmp_path)
+    assert not ledger.request_resume(tmp_path,'other',FOLDER)
+    now=ledger.time.time()
+    with monkeypatch.context() as patch:
+        patch.setattr(ledger.time,'time',lambda:now+601)
+        assert not ledger.request_resume(tmp_path,'admin',FOLDER)
+    with closing(ledger.database(tmp_path)) as db,db:
+        db.execute('INSERT INTO edof_folder_holds VALUES(?)',(FOLDER,))
+    assert not ledger.request_resume(tmp_path,'admin',FOLDER)
+    assert len(portal.sent)==1
+
+
+def test_recent_timeout_cannot_authorize_resume(tmp_path):
+    app,portal=Qonto(),Portal();store,spec=prepare(tmp_path,app,portal)
+    portal.timeout=True
+    with pytest.raises(TimeoutError):run(tmp_path,spec,portal)
+    job=ledger.next_job(store,cpf_provider.ProviderStore(tmp_path).state())
+    run(tmp_path,job,portal)
+    assert not ledger.request_resume(tmp_path,'admin',FOLDER)
+    assert len(portal.sent)==1
+
+
+def test_resume_route_requires_csrf_and_fresh_negative_receipt(site):
+    store,spec=init(site.store.directory,site.owner)
+    site.vault.put(directory.record_key(site.owner),{'checked':1,'rows':{FOLDER:directory.project(RAW)}})
+    url='/admin/edof-test/dossiers/'+FOLDER+'/facturation/reprendre'
+    assert site.client.post(url,data={}).status_code==403
+    response=site.client.post(url,data={'csrf':site.csrf},headers={'Accept':'application/json'})
+    assert response.status_code==409
+    assert ledger.get(store.directory,spec['token'])['status']=='queued'
+
+
 def test_rejected_edof_account_can_be_reexamined_after_qonto_accepts_it(tmp_path, monkeypatch):
     app, portal = Qonto(), Portal()
     store, spec = init(tmp_path)

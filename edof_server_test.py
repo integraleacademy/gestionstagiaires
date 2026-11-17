@@ -974,7 +974,7 @@ def register_edof_server_test(legacy):
                                     billing_owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
                                 for owner in billing_owners:
                                     if not working_hours(now):
-                                        continue  # Manual evening windows only verify existing transmissions.
+                                        continue  # No automatic new invoices outside the daytime window.
                                     snapshot = directory.dated_snapshot(private.get(directory.record_key(owner), keep=True))
                                     snapshot = invoicing.watched(snapshot, private, owner)
                                     if snapshot:
