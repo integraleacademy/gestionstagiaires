@@ -19,7 +19,7 @@ def test_only_the_authenticated_certified_ssiap1_candidate_can_get_an_up_to_date
     training = cohort()
     trainee = training["trainees"][0]
     monkeypatch.setattr(app, "load_data", lambda **kwargs:{"sessions":[training]})
-    monkeypatch.setattr(app, "save_data", Mock())
+    monkeypatch.setattr(app, "_atomic_update_data", lambda update: update({"sessions": [training]}))
     client = app.app.test_client()
     url = "/espace/un-exemple/attestation-reussite-ssiap-1.pdf"
     assert client.get(url).status_code == 302

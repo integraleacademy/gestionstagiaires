@@ -1302,7 +1302,8 @@ class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess['public_auth_public-token'] = True
 
-        response = self.client.get('/espace/public-token')
+        with mock.patch.object(gestion_app, '_atomic_update_data', side_effect=lambda update: update(payload)):
+            response = self.client.get('/espace/public-token')
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -1322,7 +1323,8 @@ class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess['public_auth_public-token'] = True
 
-        response = self.client.get('/espace/public-token')
+        with mock.patch.object(gestion_app, '_atomic_update_data', side_effect=lambda update: update(payload)):
+            response = self.client.get('/espace/public-token')
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)

@@ -59,17 +59,41 @@
     filter.addEventListener('change',()=>rows.forEach(row=>{row.hidden=filter.value!=='all'&&row.dataset.pathway!==filter.value;if(row.hidden)row.querySelector('input').checked=false;}));
     document.getElementById('ssiapSelectVisible').addEventListener('click',()=>rows.forEach(row=>{const box=row.querySelector('input');box.checked=!row.hidden&&!box.disabled;}));
     send.addEventListener('click',async()=>{
+      if (send.disabled) return;
       const chosen=rows.filter(row=>!row.hidden&&row.querySelector('input').checked&&!row.querySelector('input').disabled);
       if(!chosen.length){message('Sélectionnez au moins un stagiaire.');return;}
       send.disabled=true;filter.disabled=true;document.getElementById('ssiapSelectVisible').disabled=true;
-      let sent=0,failed=0,skipped=0;
+      let sent=0,unconfirmed=0,skipped=0;
+      const accepted = [];
       for (const [i,row] of chosen.entries()) {
-        const state=row.querySelector('[data-send-status]'); const box=row.querySelector('input');box.disabled=true;
-        message(`Envoi ${i+1} sur ${chosen.length}… Gardez cette page ouverte.`);state.textContent='Envoi en cours…';
-        try {const result=await post(row.dataset.sendUrl,{skip_if_already_sent:true});if(result.skipped){skipped++;state.textContent='Déjà envoyée';}else{sent++;state.textContent='Envoyée';}box.checked=false;}
-        catch(error){failed++;state.textContent=error.message;box.checked=false;}
+        const state = row.querySelector('[data-send-status]');
+        const box = row.querySelector('input');
+        box.disabled = true;
+        message(`Transmission des demandes ${i+1} sur ${chosen.length}…`);
+        try {
+          const job = await window.convocationJobs.submit(row.dataset.sendUrl, {skip_if_already_sent:true});
+          accepted.push({state, job});
+          state.textContent = job.statusUrl ? 'Envoi programmé' : 'Traitement terminé';
+        } catch (error) {
+          unconfirmed++;
+          state.textContent = error.message;
+        }
+        box.checked = false;
       }
-      message(`${sent} convocation(s) envoyée(s) · ${skipped} déjà envoyée(s) · ${failed} échec(s).${failed?' Consultez les statuts avant de relancer depuis les fiches.':''}`);
+      if (accepted.length) message('Demandes transmises. Vous pouvez quitter la page pendant le traitement.');
+      for (const {state, job} of accepted) {
+        try {
+          const result = await window.convocationJobs.wait(job, status => {
+            state.textContent = status === 'running' ? 'Envoi en cours…' : 'En attente…';
+          });
+          if (result.skipped) { skipped++; state.textContent='Déjà envoyée'; }
+          else { sent++; state.textContent='Envoyée'; }
+        } catch (error) {
+          unconfirmed++;
+          state.textContent = error.message;
+        }
+      }
+      message(`${sent} convocation(s) envoyée(s) · ${skipped} déjà envoyée(s) · ${unconfirmed} à vérifier.`);
       send.disabled=false;filter.disabled=false;document.getElementById('ssiapSelectVisible').disabled=false;
     });
   }

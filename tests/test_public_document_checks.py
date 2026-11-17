@@ -180,6 +180,7 @@ class UploadWorkflowTests(unittest.TestCase):
                         patch.object(gestion, 'UPLOADS_DIR', self.tmp.name), patch.object(gestion, 'brevo_send_email'),
                         patch.object(gestion, 'get_partner_storage_path',
                                      side_effect=lambda partner_id, *parts: os.path.join(self.tmp.name, 'partners', partner_id, *parts))]
+        self.patches.append(patch.object(gestion, '_atomic_update_data', side_effect=lambda update: update(self.data)))
         self.started = [p.start() for p in self.patches]
         self.save = self.started[1]
         self.mail = self.started[4]

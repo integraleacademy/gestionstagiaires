@@ -24,6 +24,7 @@ def real_app(monkeypatch,tmp_path):
     data={'sessions':[source,target]}
     monkeypatch.setattr(host,'load_data',lambda **kw:copy.deepcopy(data))
     monkeypatch.setattr(host,'save_data',Mock())
+    monkeypatch.setattr(host, '_atomic_update_data', lambda update: update(data))
     monkeypatch.setattr(host,'fetch_cnapsv3_tracking_requests',lambda:([],''))
     monkeypatch.setattr(host,'_remember_admin_trainee_consultation',lambda *a:None)
     client=host.app.test_client()

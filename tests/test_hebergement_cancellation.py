@@ -32,6 +32,13 @@ def hosting_case(monkeypatch):
     }
     data = {"sessions": [session]}
     saved = []
+
+    def atomic(mutate):
+        result = mutate(data)
+        saved.append(deepcopy(data))
+        return result
+
+    monkeypatch.setattr(gestion_app, "_atomic_update_data", atomic)
     monkeypatch.setattr(gestion_app, "load_data", lambda: data)
     monkeypatch.setattr(gestion_app, "save_data", lambda value: saved.append(deepcopy(value)))
     monkeypatch.setattr(gestion_app, "fetch_cnaps_status_by_name", lambda *_: "ACCEPTÉ")

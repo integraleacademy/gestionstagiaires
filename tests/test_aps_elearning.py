@@ -314,7 +314,7 @@ class ApsElearningTests(unittest.TestCase):
 
         def render_attendance_section():
             with patch.object(gestion_app, "load_data", return_value=data), patch.object(
-                gestion_app, "save_data"
+                gestion_app, "_atomic_update_data", side_effect=lambda update: update(data)
             ):
                 response = self.client.get("/espace/PUBLIC-TOKEN")
             self.assertEqual(response.status_code, 200)
@@ -1493,7 +1493,7 @@ class ApsElearningTests(unittest.TestCase):
         data = self._data(tomorrow.isoformat())
 
         with patch.object(gestion_app, "load_data", return_value=data), patch.object(
-            gestion_app, "save_data"
+            gestion_app, "_atomic_update_data", side_effect=lambda update: update(data)
         ):
             response = self.client.get("/espace/PUBLIC-TOKEN")
 
@@ -1509,7 +1509,7 @@ class ApsElearningTests(unittest.TestCase):
         data = self._data(datetime.date.today().isoformat())
 
         with patch.object(gestion_app, "load_data", return_value=data), patch.object(
-            gestion_app, "save_data"
+            gestion_app, "_atomic_update_data", side_effect=lambda update: update(data)
         ):
             response = self.client.get("/espace/PUBLIC-TOKEN")
 
@@ -1530,7 +1530,7 @@ class ApsElearningTests(unittest.TestCase):
         data["sessions"][0]["trainees"][0]["aps_elearning_login"] = "alice.aps"
 
         with patch.object(gestion_app, "load_data", return_value=data), patch.object(
-            gestion_app, "save_data"
+            gestion_app, "_atomic_update_data", side_effect=lambda update: update(data)
         ):
             response = self.client.get("/espace/PUBLIC-TOKEN")
 
@@ -1549,7 +1549,7 @@ class ApsElearningTests(unittest.TestCase):
                 training_type=training_type,
             )
             with patch.object(gestion_app, "load_data", return_value=data), patch.object(
-                gestion_app, "save_data"
+                gestion_app, "_atomic_update_data", side_effect=lambda update: update(data)
             ):
                 response = self.client.get("/espace/PUBLIC-TOKEN")
             html = response.get_data(as_text=True)
