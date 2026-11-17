@@ -119,18 +119,26 @@ def test_invalid_input_changes_nothing(case, kind):
     mail.assert_not_called()
 
 
-def test_drafts_allowed_but_incomplete_or_wrong_counts_cannot_export(case):
+def test_incomplete_drafts_cannot_export_but_individual_hours_can(case):
     client, training, data, mail = case
     request = payload(client, training)
     request["profiles"]["T11"] = None
     assert client.post(urls(training)[1], json=request).status_code == 200
     assert client.get(urls(training)[2]).status_code == 422
     request = payload(client, training)
-    request["profiles"]["T11"] = 54
+    request["profiles"]["T00"] = 40
+    request["start_overrides"] = {"T00": "2026-11-18"}
     assert client.post(urls(training)[1], json=request).status_code == 200
     response = client.get(urls(training)[2])
-    assert response.status_code == 422
-    assert "8 candidats" in response.json["error"]
+    assert response.status_code == 200
+    rows = list(load_workbook(io.BytesIO(response.data)).active.iter_rows(min_row=6, values_only=True))
+    assert [row[3] for row in rows] == [40] + [54] * 7 + [40] * 2 + [0] * 2
+    assert rows[0][6] == dt.datetime(2026, 11, 18)
+    assert sum(rows[0][2:6]) == 379
+    assert [row[6] for row in rows[1:]] == ([dt.datetime(2026, 11, 16)] * 7
+                                          + [dt.datetime(2026, 11, 18)] * 2
+                                          + [dt.datetime(2026, 11, 26)] * 2)
+    mail.assert_not_called()
 
 
 @pytest.mark.parametrize("change", ["profile", "date", "roster", "name", "session_date"])

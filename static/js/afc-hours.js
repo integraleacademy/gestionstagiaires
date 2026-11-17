@@ -47,12 +47,11 @@
     for (const hours of ['54', '40', '0']) {
       root.querySelector(`[data-count="${hours}"]`).textContent = counts[hours];
       root.querySelector(`[data-profile-date="${hours}"]`).textContent = `Début : ${formatDate(currentDates[hours])}`;
-      root.querySelector(`[data-profile-card="${hours}"]`).classList.toggle('is-over', Boolean(state.target && counts[hours] > state.target[hours]));
     }
     const matches = !state.target || Object.keys(counts).every(key => counts[key] === state.target[key]);
     const invalidDate = [...dateFields, ...overrideFields].some(input => !input.checkValidity());
     const conflicts = state.read_only && state.rows.some(row => row.date_conflict);
-    const ready = rows.length > 0 && pending === 0 && !missingDate && !invalidDate && matches && !conflicts;
+    const ready = rows.length > 0 && pending === 0 && !missingDate && !invalidDate && !conflicts;
     exportButton.disabled = busy || !ready;
     if (saveButton) saveButton.disabled = busy || rows.length === 0;
     if (fillButton) fillButton.disabled = busy || pending === 0;
@@ -62,8 +61,8 @@
       if (!rows.length) showMessage('Ajoutez des candidats à la session pour préparer l’export.');
       else if (pending) showMessage(state.suggestion?.issue || 'Sélectionnez les profils à 40 h et sans RAN, puis complétez les autres à 54 h.');
       else if (missingDate || invalidDate) showMessage('Complétez les dates d’entrée dans le calendrier.', true);
-      else if (!matches) showMessage('Répartition attendue : 8 à 54 h, 2 à 40 h et 2 sans RAN.', true);
       else if (conflicts) showMessage('Une date individuelle a changé. Un administrateur doit enregistrer les profils.', true);
+      else if (!matches) showMessage('Répartition adaptée aux parcours individuels. ' + (dirty ? 'Enregistrez pour appliquer les dates aux dossiers.' : 'Les heures enregistrées peuvent être exportées.'));
       else showMessage(dirty ? 'Répartition prête. Enregistrez pour appliquer les dates aux dossiers.' : 'Répartition prête pour l’export.');
     }
     return ready;
