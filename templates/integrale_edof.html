@@ -273,6 +273,7 @@
     {% if invoice.qonto_id %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_invoice_pdf', invoice_id=invoice.qonto_id) }}" target="_blank" rel="noopener">Voir la facture Qonto</a>{% endif %}
     {% if invoice.message %}<p class="wedof-notice is-warning">{{ invoice.message }}</p>{% endif %}
     {% if invoice.status in ['review', 'sending'] and active %}<form method="post" action="{{ url_for('integrale_edof.review_invoice', folder=detail.record.folder_id) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn btn-outline" type="submit">Vérifier la réception de la facture</button></form>{% endif %}
+    {% if invoice.resume_available and active %}<form method="post" action="{{ url_for('integrale_edof.resume_invoice', folder=detail.record.folder_id) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><p>La dernière lecture confirme qu’aucun numéro de facture n’est enregistré dans EDOF. Vous pouvez reprendre la transmission de la facture {{ invoice.invoice_number }}, sans en créer une nouvelle.</p><button class="btn btn-primary" type="submit">Transmettre la facture existante à EDOF</button></form>{% endif %}
     {% if invoice.status == 'confirmed' %}<p>Le numéro et le montant ont été relus dans EDOF après la transmission.</p>{% endif %}
   </div></section>{% endif %}
   {% if detail.request or detail.proposal_job or detail.followable %}{% include "_edof_proposal.html" %}{% endif %}
