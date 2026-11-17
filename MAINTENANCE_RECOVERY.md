@@ -16,11 +16,13 @@ encore, le secours affiche « Connexion interrompue » avec un statut 503,
 sans annoncer une mise à jour qui n'a pas été constatée. Les appels API,
 formulaires POST, ressources statiques et sondes `/healthz` ne sont pas
 interceptés. Aucune page utilisateur, réponse API ou donnée de session n'est
-mise en cache. Après une première attente de 12 secondes, la page vérifie
-`/healthz`, puis charge l'URL d'origine avec la session de l'utilisateur. Le
-retour n'est autorisé que si le contenu HTML complet est disponible et n'est
-pas lui-même une page de secours. Les paramètres et le fragment sont conservés.
-Les vérifications échouées s'espacent jusqu'à 30 secondes, sans quitter l'écran.
+mise en cache. Après une première attente de 3 secondes, le navigateur vérifie
+l'URL d'origine avec la session de l'utilisateur. Il peut ainsi rouvrir la page
+même lorsque la sonde `/healthz` répond encore en erreur. Avant de naviguer, il
+vérifie que la réponse contient un document HTML complet et écarte la page de
+secours. Les paramètres et le fragment sont conservés. Après un échec, la
+vérification suivante commence 12 secondes plus tard, puis 24 secondes et enfin
+toutes les 30 secondes. Chaque vérification dispose d'un délai maximal de 10 secondes.
 Les cookies restent sur le même domaine ; les redirections externes sont refusées.
 
 Un marqueur temporaire dans `sessionStorage` protège la tentative de retour.
@@ -49,7 +51,8 @@ copie et augmenter la version `MAINTENANCE_CACHE` dans `static/sw.js`.
 
 Le workflow `Maintenance anciens liens` teste l'insertion du script et une
 vraie installation du service worker dans Chromium contre un serveur local :
-502/503/504, erreur passagère, perte de réseau, serveur sain mais page en panne,
+502/503/504, erreur passagère, perte de réseau, page disponible pendant une erreur
+de la sonde, sonde disponible pendant une erreur de la page,
 validation du HTML complet, arrêt après un retour raté, reprise manuelle,
 stockage refusé, redirections, paramètres et fragment, conservation du cookie,
 absence de rejeu POST et contenu du cache.

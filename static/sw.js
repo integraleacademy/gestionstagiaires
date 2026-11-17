@@ -43,7 +43,7 @@ self.addEventListener('notificationclick', (event) => {
 
 
 // Cache only this public maintenance document: never user pages or API data.
-const MAINTENANCE_CACHE = 'integrale-maintenance-20261113-v2';
+const MAINTENANCE_CACHE = 'integrale-maintenance-20261117-v3';
 const MAINTENANCE_URL = '/static/maintenance.html';
 
 self.addEventListener('install', (event) => {
@@ -93,7 +93,7 @@ async function maintenanceResponse(originalResponse, networkError) {
   const headers = new Headers({
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store, max-age=0',
-    'Retry-After': '12',
+    'Retry-After': '3',
     'Referrer-Policy': 'no-referrer',
     'X-Content-Type-Options': 'nosniff',
   });
