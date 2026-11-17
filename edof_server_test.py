@@ -968,16 +968,18 @@ def register_edof_server_test(legacy):
                                             continue
                                         except JobCooldown:
                                             pass  # Keep the watch running between dossier jobs.
-                            if daily and on_production_service() and not manual_sync and working_hours(now) and store.connector_key:
+                            if daily and on_production_service() and not manual_sync and store.connector_key:
                                 private = Vault(store.directory, store.connector_key)
                                 with closing(store.connect()) as db:
                                     billing_owners = [r[0] for r in db.execute("SELECT owner FROM directory_activity")]
                                 for owner in billing_owners:
+                                    if not working_hours(now):
+                                        continue  # Manual evening windows only verify existing transmissions.
                                     snapshot = directory.dated_snapshot(private.get(directory.record_key(owner), keep=True))
                                     snapshot = invoicing.watched(snapshot, private, owner)
                                     if snapshot:
                                         invoicing.discover(store, owner, snapshot)
-                                billing_job = invoicing.next_job(store, active)
+                                billing_job = invoicing.next_job(store, active, check_only=not working_hours(now))
                                 if billing_job:
                                     try:
                                         start_job(store, billing_job["owner"], billing_job, day_worker=worker)

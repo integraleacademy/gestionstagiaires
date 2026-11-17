@@ -183,6 +183,23 @@ def test_pending_receipt_can_be_rechecked_without_retransmission(tmp_path):
     assert len(portal.sent)==1 and app.creates==1
 
 
+def test_manual_evening_window_only_checks_existing_transmissions(tmp_path):
+    app,portal=Qonto(),Portal()
+    store,spec=prepare(tmp_path,app,portal)
+    store.manual_until=lambda owner:9999999999
+    selection=cpf_provider.ProviderStore(tmp_path).state()
+    assert ledger.next_job(store,selection,check_only=True) is None  # ready to send is not read-only
+    portal.timeout=True
+    with pytest.raises(TimeoutError):run(tmp_path,spec,portal)
+    job=ledger.next_job(store,selection,check_only=True)
+    assert job['mode']=='invoice_check'
+    result=run(tmp_path,job,portal)
+    assert result['code']=='invoice_uncertain' and 'serviceDoneValidated' in result['invoice_message']
+    assert len(portal.sent)==1 and app.creates==1
+    store.manual_until=lambda owner:0
+    assert ledger.next_job(store,selection,check_only=True) is None
+
+
 def test_rejected_edof_account_can_be_reexamined_after_qonto_accepts_it(tmp_path, monkeypatch):
     app, portal = Qonto(), Portal()
     store, spec = init(tmp_path)

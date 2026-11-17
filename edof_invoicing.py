@@ -120,7 +120,7 @@ def discover(store, owner, snapshot):
                        (folder,owner,state['revision'],uuid.uuid4().hex,time.time(),json.dumps(identity)))
 
 
-def next_job(store, selection):
+def next_job(store, selection, *, check_only=False):
     if selection['provider']!='integrale' or selection['pending']:
         return None
     with closing(database(store.directory)) as db:
@@ -129,7 +129,10 @@ def next_job(store, selection):
               ORDER BY CASE WHEN status='sending' THEN 0 ELSE 1 END,changed LIMIT 20""",
                           (selection['revision'],time.time())).fetchall()
         for r in rows:
-            if not allowed(db,r) or not store.directory_enabled(r['owner']):
+            manual = bool(getattr(store, 'manual_until', lambda owner: 0)(r['owner']))
+            if check_only and (r['status'] != 'sending' or not manual):
+                continue
+            if not allowed(db,r) or not (store.directory_enabled(r['owner']) or check_only and manual):
                 continue
             # Browser and provider locks in start_job serialize this with declarations.
             mode = 'invoice_check' if r['status']=='sending' else 'invoice_send' if r['status']=='ready' else 'invoice_prepare'
@@ -247,7 +250,10 @@ def perform(context, witness, spec, path, vault, origin, prefix):
         update(path,record['token'],status='external',message='Une facture est déjà enregistrée dans EDOF.')
         return {'code':'invoice_external'}
     if spec['mode']=='invoice_check':
-        return {'code':'invoice_uncertain'}
+        state = str(raw.get('currentBillingState') or bill.get('currentState') or raw.get('currentState') or 'non renseigné')[:80]
+        number = str(bill.get('billNumber') or 'non renseigné')[:80]
+        return {'code':'invoice_uncertain', 'invoice_message':
+                f'EDOF ne confirme pas encore la facturation. État relu : {state}. Numéro de facture relu : {number}.'}
     if directory.normalized(raw.get('currentState') or '') not in {'servicedonevalidated','service done validated','servicedonevalidatedrevisionvsf','service done validated revision vsf'} and (raw.get('trainingActionInfo') or {}).get('validatedServiceDone') is not True:
         raise Review('Le service fait n’est plus validé dans EDOF.')
     terms=project(raw,bill,record['identity'])
@@ -343,4 +349,4 @@ def complete(store,spec,result):
     elif code=='invoice_review':
         update(store.directory,r['token'],status='review',message=result.get('invoice_message') or MESSAGES[code])
     elif code not in {'invoice_confirmed','invoice_external'}:
-        update(store.directory,r['token'],retry_at=time.time()+900,message=MESSAGES.get(code,'Connexion indisponible : nouvelle vérification prévue.'))
+        update(store.directory,r['token'],retry_at=time.time()+900,message=result.get('invoice_message') or MESSAGES.get(code,'Connexion indisponible : nouvelle vérification prévue.'))
