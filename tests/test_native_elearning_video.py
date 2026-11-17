@@ -193,15 +193,33 @@ def test_old_completion_does_not_bypass_new_required_video(lesson):
     assert page["initialModuleComplete"] is False
 
 
-def test_network_jitter_does_not_accumulate_lost_viewing_time(lesson):
+@pytest.mark.parametrize('jitter', [.35, .9, 1.5])
+def test_network_jitter_does_not_accumulate_lost_viewing_time(lesson, jitter):
     c = lesson
     heartbeat(c, 0)
-    # Alternating network latency must not discard 0.35 s at every heartbeat.
-    for position, elapsed in [(2, 2.35), (4, 1.65), (6, 2.35), (8, 1.65)]:
+    for position, elapsed in [(2, 2 + jitter), (4, 2 - jitter), (6, 2 + jitter), (8, 2 - jitter)]:
         result = heartbeat(c, position, seconds=elapsed, playing=position < 8, ended=position == 8)
         assert not result.get_json()["video_resync"]
         assert video_state(result)["watched_seconds"] == position
     assert video_state(result)["completed"] is True
+
+
+def test_early_video_receipt_waits_for_wall_time_before_completion(lesson):
+    heartbeat(lesson, 0)
+    early = heartbeat(lesson, 4, seconds=3.1)
+    assert not early.get_json()['video_resync']
+    assert video_state(early)['watched_seconds'] == pytest.approx(3.1)
+    final = heartbeat(lesson, 8, seconds=4.9, playing=False, ended=True)
+    assert video_state(final)['completed']
+
+
+def test_repeated_early_receipts_cannot_accumulate_extra_viewing(lesson):
+    heartbeat(lesson, 0)
+    for position in (2, 4, 6):
+        result = heartbeat(lesson, position, seconds=1)
+        assert video_state(result)['watched_seconds'] <= position / 2
+    assert result.get_json()['video_resync'] == {'required-video': 3}
+    assert not video_state(result)['completed']
 
 
 def test_api_accepts_advancing_receipts_after_mouse_inactivity_expires(lesson):

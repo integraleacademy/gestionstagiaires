@@ -35,6 +35,8 @@
   const idleMilliseconds = Number(config.idleSeconds || 300) * 1000;
   const continueWhenHidden = config.continueWhenHidden === true;
   const idleLabel = `Pause · inactif depuis ${Math.round(idleMilliseconds / 60000)} min`;
+  const connection = { failures: 0, retryTimer: 0, starting: false, blocked: false, generation: 0, resume: null };
+  const inForeground = () => document.visibilityState === "visible" && document.hasFocus();
 
   const state = {
     trackingSessionId: "",
@@ -242,6 +244,7 @@
       method: "POST",
       credentials: "same-origin",
       keepalive: Boolean(options.keepalive),
+      signal: options.signal,
       headers: {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -255,12 +258,72 @@
     } catch (_error) {
       result = {};
     }
-    if (!response.ok || result.ok === false) {
-      const error = new Error(result.error || "Le serveur de suivi ne répond pas.");
-      error.status = response.status;
+    const redirectedToLogin = response.redirected && result?.ok !== true;
+    if (!response.ok || result?.ok === false || redirectedToLogin) {
+      const error = new Error(result?.error || "Le serveur de suivi ne répond pas.");
+      error.status = redirectedToLogin ? 401 : response.status;
       throw error;
     }
     return result;
+  }
+
+  async function trackingRequest(url, payload) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      const result = await postJson(url, payload, { signal: controller.signal });
+      if (result.ok !== true || !result.progress || (url === config.startUrl && !result.tracking_session_id)) {
+        throw new Error("Réponse de suivi incomplète.");
+      }
+      return result;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  function retryTracking() {
+    if (connection.retryTimer) window.clearTimeout(connection.retryTimer);
+    connection.retryTimer = 0;
+    if (state.trackingSessionId) sendHeartbeat();
+    else startTracking();
+  }
+
+  function trackingFailed(error) {
+    const status = Number(error.status) || 0;
+    const temporary = !status || status === 408 || status === 429 || status >= 500;
+    connection.blocked = !temporary;
+    connection.failures++;
+    if (temporary) {
+      const delay = Math.min(15000, 1000 * 2 ** Math.min(connection.failures - 1, 4));
+      connection.retryTimer = window.setTimeout(retryTracking, delay);
+    }
+    // Keep buffered playback through one short missed receipt. A longer outage
+    // must wait for the server before playback and viewing credit can resume.
+    if (!temporary || connection.failures > 1 || Date.now() - state.lastReceipt >= 8000) {
+      const playing = requiredVideos.find(video => !video.paused && !video.ended);
+      const resume = temporary && inForeground() && !state.idlePaused
+        ? connection.resume || (playing && { video: playing, position: playing.currentTime }) : null;
+      pauseRequiredVideos(true);
+      connection.resume = resume;
+    }
+    if (lessonTiming) lessonTiming.active = false;
+    state.playbackAvailable = false;
+    state.serverActive = false;
+    state.serverMediaActive = false;
+    state.displayAnchor = Date.now();
+    setTrackingState("offline", temporary ? "Reconnexion en cours…" : "Suivi déconnecté");
+    if (!temporary) showToast("Le suivi a été interrompu. Rechargez la page pour vérifier votre accès.", true);
+  }
+
+  function resumeConfirmedVideo(resume) {
+    if (!resume || state.idlePaused || !inForeground()) return;
+    const { video, position } = resume;
+    if (!video.paused || video.closest("[hidden]")) return;
+    const confirmed = Number(videoProgress(video).watched_seconds) || 0;
+    const resumeAt = videoCompleted(video) ? position : Math.min(position, confirmed);
+    if (video.ended && resumeAt >= video.duration - .05) return;
+    if (video.readyState >= 1 && Math.abs(video.currentTime - resumeAt) > .05) video.currentTime = resumeAt;
+    video.play().catch(() => showToast("Connexion rétablie. Appuyez sur Lecture pour reprendre."));
   }
 
   function activitySignals() {
@@ -330,6 +393,7 @@
   }
 
   function pauseRequiredVideos(reset = false) {
+    connection.resume = null;
     optionalVideoPacing.forEach((pacing, video) => {
       pacing?.cancelPause();
       if (!video.paused) video.pause();
@@ -446,10 +510,14 @@
         sendHeartbeat();
       });
       const playing = () => {
-        if (!state.trackingSessionId || document.visibilityState !== "visible" || !document.hasFocus()) {
+        if (!state.trackingSessionId || state.stopped || connection.blocked || connection.failures > 1 || !inForeground()) {
+          if (!state.stopped && !connection.blocked && inForeground()) {
+            connection.resume = { video, position: video.currentTime };
+          }
           video.pause();
           return;
         }
+        connection.resume = null;
         requiredVideos.forEach((other) => { if (other !== video && !other.paused) other.pause(); });
         enforceVideoRate(video);
         reader.waiting = false;
@@ -547,29 +615,38 @@
   }
 
   async function sendHeartbeat() {
-    if (!state.trackingSessionId || state.stopped) return;
+    if (!state.trackingSessionId || state.stopped || connection.blocked || connection.retryTimer) return;
     if (state.heartbeatRunning) { state.heartbeatQueued = true; return; }
     state.heartbeatRunning = true;
+    const generation = connection.generation;
     const sentLessonPageId = lessonTiming?.pageId || '';
     try {
-      const result = await postJson(config.heartbeatUrl, {
+      const result = await trackingRequest(config.heartbeatUrl, {
         tracking_session_id: state.trackingSessionId,
         activity_id: config.activityId,
         lesson_page_id: sentLessonPageId,
         ...activitySignals(),
         videos: videoSignals(),
       });
-      if (state.stopped) return;
+      if (state.stopped || generation !== connection.generation) return;
+      if (result.ended) throw Object.assign(new Error("Session de suivi terminée."), { status: 409 });
+      const recovering = connection.failures > 0;
+      connection.failures = 0;
+      let resume = connection.resume;
+      connection.resume = null;
       applyProgress(result.progress);
       lessonTiming?.receipt(result, sentLessonPageId);
       for (const video of requiredVideos) {
         const position = result.video_resync?.[video.dataset.requiredVideo];
         if (Number.isFinite(position)) {
+          if ((recovering && !video.paused) || (video.ended && video.duration - position <= 2)) {
+            resume = { video, position };
+          }
           videoReaders.get(video)?.pacing?.cancelPause();
           video.pause();
           videoReaders.get(video).maximum = position;
           if (Math.abs(video.currentTime - position) > .05) video.currentTime = position;
-          showToast("Reprenez la vidéo à la dernière position enregistrée.");
+          if (!resume && !result.duplicate) showToast("Reprenez la vidéo à la dernière position enregistrée.");
         }
       }
       state.serverMediaActive = Boolean(result.media_active);
@@ -589,54 +666,66 @@
           state.serverActive ? "active" : "paused",
           state.serverActive ? "Chrono actif" : (activitySignals().recent_activity ? "Chrono en pause" : idleLabel)
         );
+        resumeConfirmedVideo(resume);
       }
       scheduleIdlePause();
     } catch (error) {
-      if (lessonTiming) lessonTiming.active = false;
-      pauseRequiredVideos(true);
-      state.playbackAvailable = false;
-      state.serverActive = false;
-      state.serverMediaActive = false;
-      state.displayAnchor = Date.now();
-      setTrackingState("offline", "Suivi déconnecté");
-      if ([401, 403, 409].includes(Number(error.status))) showToast("Votre accès ou le parcours a changé. Rechargez la page.", true);
+      if (!state.stopped && generation === connection.generation) trackingFailed(error);
     } finally {
-      state.heartbeatRunning = false;
-      if (state.heartbeatQueued) {
-        state.heartbeatQueued = false;
-        window.setTimeout(sendHeartbeat, 0);
+      if (generation === connection.generation) {
+        state.heartbeatRunning = false;
+        if (state.heartbeatQueued) {
+          state.heartbeatQueued = false;
+          window.setTimeout(sendHeartbeat, 0);
+        }
+        renderTimer();
       }
-      renderTimer();
     }
   }
 
   async function startTracking() {
-    state.stopped = false;
+    if (state.stopped || connection.blocked || connection.starting || connection.retryTimer || state.trackingSessionId) return;
+    const generation = connection.generation;
+    connection.starting = true;
     setTrackingState("connecting", "Connexion…");
     try {
-      const result = await postJson(config.startUrl, {
+      const result = await trackingRequest(config.startUrl, {
         tab_id: tabId,
         activity_id: config.activityId,
       });
-      state.trackingSessionId = result.tracking_session_id || "";
+      if (generation !== connection.generation) return;
+      connection.failures = 0;
+      state.trackingSessionId = result.tracking_session_id;
       applyProgress(result.progress);
       await sendHeartbeat();
-    } catch (_error) {
-      setTrackingState("offline", "Suivi déconnecté");
-      showToast("Impossible de démarrer le suivi du temps. Rechargez la page.", true);
+    } catch (error) {
+      if (generation === connection.generation) trackingFailed(error);
+    } finally {
+      if (generation === connection.generation) connection.starting = false;
     }
   }
 
   function finishTracking() {
-    if (!state.trackingSessionId || state.stopped) return;
+    if (state.stopped) return;
     state.stopped = true;
+    connection.generation++;
+    window.clearTimeout(connection.retryTimer);
+    connection.retryTimer = 0;
+    connection.starting = false;
+    connection.failures = 0;
+    connection.blocked = false;
+    state.heartbeatRunning = false;
+    state.heartbeatQueued = false;
     if (lessonTiming) lessonTiming.active = false;
     state.playbackAvailable = false;
     pauseRequiredVideos();
     state.serverActive = false;
+    if (!state.trackingSessionId) return;
+    const finishedSession = state.trackingSessionId;
+    state.trackingSessionId = "";
     postJson(
       config.finishUrl,
-      { tracking_session_id: state.trackingSessionId, activity_id: config.activityId },
+      { tracking_session_id: finishedSession, activity_id: config.activityId },
       { keepalive: true }
     ).catch(() => {});
   }
@@ -898,6 +987,9 @@
   window.setInterval(renderTimer, 1000);
   window.setInterval(sendHeartbeat, requiredVideos.length ? 4000 : lessonTiming ? 5000 : Math.max(5, Number(config.heartbeatSeconds || 15)) * 1000);
   window.addEventListener("pagehide", finishTracking);
-  window.addEventListener("pageshow", (event) => { if (event.persisted && state.stopped) startTracking(); });
+  window.addEventListener("online", () => { if (connection.retryTimer) retryTracking(); });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && state.stopped) { state.stopped = false; startTracking(); }
+  });
 })();
 

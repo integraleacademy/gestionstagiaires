@@ -7,7 +7,7 @@ const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 const pacingSource = fs.readFileSync(path.join(__dirname, "../static/js/native-video-pacing.js"), "utf8");
 
-async function fixture({ watched = 0, completed = false, duration = 8, autoAdvance = false, pacing = false, pauses = [], realSeeking = false, aps = false, optional = false, savedRate } = {}) {
+async function fixture({ watched = 0, completed = false, duration = 8, autoAdvance = false, pacing = false, pauses = [], realSeeking = false, aps = false, optional = false, savedRate, startFailures = 0 } = {}) {
   let record = { watched_seconds: watched, completed, duration_seconds: duration };
   const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds: 300,
     startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish", completeUrl: "/complete",
@@ -30,6 +30,7 @@ async function fixture({ watched = 0, completed = false, duration = 8, autoAdvan
   if (savedRate !== undefined) window.sessionStorage.setItem('nativeElearningPlaybackRate', String(savedRate));
   let now = 0, nextTimer = 0, focused = true, offline = false, resync = {}, receiptPosition = 0;
   let blockedResponse = null, releaseResponse = null;
+  let heartbeatStatus = 0, duplicate = false;
   const scheduled = new Map(), requests = [];
   window.Date.now = () => now;
   window.setTimeout = (fn, delay = 0) => { const id = ++nextTimer; scheduled.set(id, { fn, at: now + delay }); return id; };
@@ -58,11 +59,18 @@ async function fixture({ watched = 0, completed = false, duration = 8, autoAdvan
   window.fetch = async (url, options) => {
     const body = JSON.parse(options.body);
     requests.push({ url, body });
+    if (url === "/start" && startFailures > 0) {
+      startFailures--;
+      return { ok: false, status: 503, json: async () => ({ ok: false }) };
+    }
     if (url === "/heartbeat" && blockedResponse) await blockedResponse;
     if (offline) throw new Error("offline");
+    if (url === "/heartbeat" && heartbeatStatus) {
+      return { ok: false, status: heartbeatStatus, json: async () => ({ ok: false }) };
+    }
     const advancing = body.videos?.[0]?.playing && video.currentTime > receiptPosition;
     if (url === '/heartbeat') receiptPosition = video.currentTime;
-    const response = { ok: true, tracking_session_id: "tracking", active: focused, media_active: Boolean(advancing), video_resync: resync,
+    const response = { ok: true, tracking_session_id: "tracking", active: focused, media_active: Boolean(advancing), video_resync: resync, duplicate,
       progress: { video_progress: { lesson: { capsule: { ...record } } }, active_seconds: now / 1000,
         module_complete: url === "/complete", progress_percent: url === "/complete" ? 100 : 0 } };
     resync = {};
@@ -96,6 +104,8 @@ async function fixture({ watched = 0, completed = false, duration = 8, autoAdvan
     button: window.document.querySelector("#nativeActionButton"), close: () => dom.window.close(),
     confirm: (seconds, done = false) => { record = { ...record, watched_seconds: seconds, completed: done }; },
     disconnect: () => { offline = true; }, resync: (position) => { resync = { capsule: position }; },
+    reconnect: () => { offline = false; }, refuseHeartbeat: status => { heartbeatStatus = status; },
+    otherTabTookOver: () => { duplicate = true; },
     blur: () => { focused = false; window.dispatchEvent(new window.Event("blur")); },
     hide: () => { Object.defineProperty(window.document, 'visibilityState', {value:'hidden', configurable:true}); window.document.dispatchEvent(new window.Event('visibilitychange')); },
     hold: () => { blockedResponse = new Promise((resolve) => { releaseResponse = resolve; }); },
@@ -314,6 +324,73 @@ test("server resync and a lost connection return to confirmed viewing without un
     assert.equal(f.button.disabled, true);
     assert.equal(f.window.document.querySelector("#nativeTrackingState").dataset.state, "offline");
   } finally { f.close(); }
+});
+
+test("one missed receipt retries without interrupting continuous playback", async () => {
+  const f = await fixture({ duration: 60, autoAdvance: true, aps: true });
+  try {
+    await f.video.play(); await f.advance(4000);
+    f.disconnect();
+    await f.advance(4000);
+    assert.equal(f.video.paused, false);
+    f.reconnect();
+    await f.advance(1000);
+    assert.equal(f.video.paused, false);
+    assert.equal(f.video.currentTime, 9);
+    assert.equal(f.window.document.querySelector("#nativeTrackingState").dataset.state, "active");
+  } finally { f.close(); }
+});
+
+test("a sustained interruption resumes from the latest server-confirmed position", async () => {
+  const f = await fixture({ duration: 60, autoAdvance: true, aps: true });
+  try {
+    await f.video.play(); await f.advance(0);
+    f.confirm(4); await f.advance(4000);
+    f.disconnect(); await f.advance(5000);
+    assert.equal(f.video.paused, true);
+    assert.equal(f.video.currentTime, 4);
+    // A receipt can reach the server even when its response is lost.
+    f.confirm(6); f.reconnect(); await f.advance(2000);
+    assert.equal(f.video.paused, false);
+    assert.equal(f.video.currentTime, 6);
+    assert.equal(f.button.disabled, true);
+  } finally { f.close(); }
+});
+
+test("reconnection respects a manual pause, background tab, another active tab and denied access", async () => {
+  for (const action of ["pause", "hide", "duplicate", "denied"]) {
+    const f = await fixture({ duration: 60, autoAdvance: true });
+    try {
+      await f.video.play(); await f.advance(4000);
+      f.disconnect(); await f.advance(4000);
+      if (action === "pause") f.video.pause();
+      await f.advance(1000);
+      if (action === "hide") f.hide();
+      if (action === "duplicate") f.otherTabTookOver();
+      if (action === "denied") f.refuseHeartbeat(403);
+      f.reconnect(); await f.advance(2000);
+      assert.equal(f.video.paused, true, action);
+      if (action === "denied") {
+        const count = f.requests.length;
+        await f.advance(16000);
+        assert.equal(f.requests.length, count);
+      }
+    } finally { f.close(); }
+  }
+});
+
+test("opening a lesson retries a temporary failure and cancels retries when the page closes", async () => {
+  for (const leave of [false, true]) {
+    const f = await fixture({ duration: 60, startFailures: 1 });
+    try {
+      await f.video.play();
+      assert.equal(f.video.paused, true);
+      if (leave) f.window.dispatchEvent(new f.window.Event("pagehide"));
+      await f.advance(1000);
+      assert.equal(f.requests.filter(r => r.url === "/start").length, leave ? 1 : 2);
+      assert.equal(f.video.paused, leave);
+    } finally { f.close(); }
+  }
 });
 
 test("a long advancing video continues beyond five minutes without manufacturing interactions", async () => {

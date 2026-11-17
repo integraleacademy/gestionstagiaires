@@ -99,14 +99,17 @@ Le stagiaire doit regarder chaque vidéo obligatoire jusqu’à la fin avant de
 terminer l’activité ou d’accéder aux suivantes, même par le sommaire ou une URL
 directe. Le serveur enregistre la portion regardée sans saut et vérifie la durée
 à partir des métadonnées connues, du temps réellement écoulé et d’une seule
-session active. Les variations de latence disposent d’un solde de temps déjà
-crédité, borné à 500 ms, qui ne se renouvelle pas à chaque requête.
+session active. Le serveur tolère jusqu’à deux secondes d’écart entre deux
+relevés de lecture. Il crédite la progression dans la limite du temps mesuré.
 Un événement `ended` isolé ou une ancienne activité terminée ne suffit pas.
 
 La pause, la reprise après rechargement et le retour sur un passage déjà regardé
 restent possibles. La vitesse reste normale jusqu’à validation. Quitter l’onglet
-ou perdre la connexion met la vidéo en pause ; la reprise utilise la dernière
-position confirmée. L’aperçu administrateur conserve une lecture libre sans
+met la vidéo en pause. Le lecteur réessaie automatiquement si le démarrage du
+suivi ou une sauvegarde échoue temporairement. Si la coupure se prolonge, il
+suspend la lecture. Au retour de la connexion, une vidéo qui était en lecture
+reprend à la position confirmée si l’onglet est toujours au premier plan.
+L’aperçu administrateur conserve une lecture libre sans
 enregistrer de progression stagiaire.
 
 Le MP4 et son affiche sont livrés dans `elearning_native/media/` et passent par
