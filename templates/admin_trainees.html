@@ -1167,6 +1167,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
     <div class="modal-body trainee-create-body">
       {% if session.afc_enabled %}{% include '_afc_candidate_picker.html' %}{% endif %}
+      {% if edof_prefill %}<p role="status">Informations préremplies depuis le dossier EDOF {{ edof_prefill.folder_id }}. Vérifiez et complétez les champs avant de sauvegarder. La convention sera proposée à l’étape suivante.</p>{% endif %}
+      {% if edof_prefill_error %}<p role="alert">{{ edof_prefill_error }}</p>{% endif %}
       <div class="form-grid trainee-create-grid">
         {% if ssiap_supported and session.ssiap_pathways %}<label><div class="label">Parcours</div><select id="tSsiapPathway"><option value="ssiap">SSIAP seul</option><option value="ssiap_sst" {% if not session.ssiap_pathways.sst_dates %}disabled{% endif %}>SSIAP + SST</option></select></label>{% endif %}
         <label>
@@ -3750,6 +3752,11 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     openModal("createTraineeModal");
   });
 
+  const edofPrefill = {{ edof_prefill|default(none)|tojson }};
+  const edofPrefillError = {{ edof_prefill_error|default('')|tojson }};
+  if (edofPrefill) applyImportedTraineeFields(edofPrefill);
+  if (edofPrefillError) document.getElementById('btnCreateTrainee').disabled = true;
+
   if (new URLSearchParams(window.location.search).get('openCreateTrainee') === '1') {
     document.getElementById('btnOpenCreateTrainee')?.click();
   }
@@ -3938,6 +3945,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           vtc_real_training_dates,
           carte_pro_ok,
           send_access,
+          ...(edofPrefill ? {edof_folder:edofPrefill.folder_id} : {}),
           ...(document.getElementById("tAfcStart") ? {training_date_start:document.getElementById("tAfcStart").value, afc_candidate_id:document.getElementById("afcSelectedCandidateId").value} : {}),
           ...(document.getElementById("tSsiapPathway") ? {ssiap_pathway:document.getElementById("tSsiapPathway").value} : {})
         })

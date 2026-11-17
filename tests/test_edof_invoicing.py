@@ -169,6 +169,20 @@ def test_lost_qonto_response_reconciles_one_invoice(tmp_path):
     assert app.creates==1 and app.finals==1 and ledger.get(tmp_path,spec['token'])['status']=='ready'
 
 
+def test_pending_receipt_can_be_rechecked_without_retransmission(tmp_path):
+    app,portal=Qonto(),Portal()
+    store,spec=prepare(tmp_path,app,portal)
+    portal.timeout=True
+    with pytest.raises(TimeoutError):
+        run(tmp_path,spec,portal)
+    ledger.update(tmp_path,spec['token'],retry_at=9999999999)
+    assert ledger.request_review(tmp_path,'admin',FOLDER)
+    job=ledger.next_job(store,cpf_provider.ProviderStore(tmp_path).state())
+    assert job['mode']=='invoice_check'
+    assert run(tmp_path,job,portal)['code']=='invoice_uncertain'
+    assert len(portal.sent)==1 and app.creates==1
+
+
 def test_rejected_edof_account_can_be_reexamined_after_qonto_accepts_it(tmp_path, monkeypatch):
     app, portal = Qonto(), Portal()
     store, spec = init(tmp_path)

@@ -211,13 +211,16 @@ def dashboard_rows(snapshot, data, operations, now):
         refusal_seen = kind == "ft_refused" and flags.get("seen_refusal") == refusal_marker(record)
         if refusal_seen:
             tags.discard("ft_refused")
-        if kind == "accepted" and folder not in links:
+        if flags.get("registration_ignored"):
+            tags.add("association_ignored")  # Shared, reversible hidden-dossiers view.
+        if kind == "accepted" and folder not in links and not flags.get("registration_ignored"):
             tags.add("to_register")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
                      "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
                      "comment": flags.get("comment", ""), "comment_version": flags.get("comment_version", 0),
                      "refusal_seen": refusal_seen, "refusal_marker": refusal_marker(record) if kind == "ft_refused" else "",
+                     "registration_ignored": bool(flags.get("registration_ignored")),
                      "associable": associable(record), "association_ignored": bool(flags.get("association_ignored")), "handled": bool(flags.get("handled")), "archived": bool(flags.get("archived")),
                      "draft": flags.get("draft"), "official_url": DETAIL_PREFIX + folder})
     return rows, counts
@@ -251,6 +254,8 @@ def operations_db(store):
                   archived INTEGER DEFAULT 0, draft TEXT, updated TEXT, actor TEXT)""")
     db.execute("""CREATE TABLE IF NOT EXISTS dossier_association_preferences
                   (folder TEXT PRIMARY KEY, ignored INTEGER NOT NULL DEFAULT 0, updated TEXT, actor TEXT)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS dossier_registration_preferences
+                  (folder TEXT PRIMARY KEY, ignored INTEGER NOT NULL DEFAULT 0, updated TEXT, actor TEXT)""")
     db.execute("""CREATE TABLE IF NOT EXISTS dossier_annotations (
         folder TEXT PRIMARY KEY, comment TEXT NOT NULL DEFAULT '', comment_version INTEGER NOT NULL DEFAULT 0,
         seen_refusal TEXT NOT NULL DEFAULT '')""")
@@ -278,6 +283,8 @@ def local_operations(store):
             result[row["folder"]] = {**dict(row), "draft": None if draft and draft.get("source") == "lms" else draft}
         for row in db.execute("SELECT folder,ignored FROM dossier_association_preferences"):
             result.setdefault(row["folder"], {})["association_ignored"] = bool(row["ignored"])
+        for row in db.execute("SELECT folder,ignored FROM dossier_registration_preferences"):
+            result.setdefault(row["folder"], {})["registration_ignored"] = bool(row["ignored"])
         for row in db.execute("SELECT folder,comment,comment_version,seen_refusal FROM dossier_annotations"):
             result.setdefault(row["folder"], {}).update(dict(row))
         return result
@@ -465,6 +472,22 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             return None
         return {"url":url_for("admin_trainee_page", session_id=link["session_id"], trainee_id=link["trainee_id"]),
                 "session_name":group.get("name") or "Session de formation"}
+
+    def registration_prefill(folder, session_id):
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        owner = results_owner()
+        row = folder_record(owner, folder)
+        if registration_link(folder, local_data()):
+            raise ValueError("Ce dossier est déjà inscrit. Ouvrez sa fiche stagiaire depuis EDOF.")
+        if category(row) != "accepted" or not any(str(s["id"]) == session_id for s in matching_sessions(local_data(), partner_id, row)):
+            raise ValueError("Choisissez une session disponible pour ce dossier accepté.")
+        fields = registration_fields(owner, row)
+        if not fields:
+            raise ValueError("La fiche complète EDOF doit être récupérée avant l’inscription. Reprenez le choix de session.")
+        return dict(fields)
+
+    app.extensions["edof_registration_prefill"] = registration_prefill
 
     def journey_progress(owner, folder, row=None):
         row = row or folder_record(owner, folder)
@@ -980,6 +1003,54 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         flash(message, "success")
         return back(group="all", tab="association_ignored" if not ignored else "unlinked")
 
+    @bp.post("/dossiers/<folder>/registration-preference")
+    @admin_required
+    def registration_preference(folder):
+        owner = results_owner()
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        check_csrf()
+        try:
+            folder_record(owner, folder)
+        except ValueError:
+            abort(404)
+        if request.form.get("ignore") not in {None, "1"}:
+            abort(400)
+        ignored = request.form.get("ignore") == "1"
+        with closing(operations_db(selection)) as db, db:
+            db.execute("""INSERT INTO dossier_registration_preferences VALUES(?,?,?,?)
+                ON CONFLICT(folder) DO UPDATE SET ignored=excluded.ignored, updated=excluded.updated, actor=excluded.actor""",
+                (folder, int(ignored), dt.datetime.now(PARIS).isoformat(), session.get("admin_username") or owner))
+        message = ("Dossier masqué de Acceptés à inscrire. Il reste accessible dans Dossiers masqués."
+                   if ignored else "Le dossier réapparaît dans Acceptés à inscrire s’il est toujours à inscrire.")
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(ok=True, ignored=ignored, message=message)
+        flash(message, "success")
+        return back(group="training", tab="to_register")
+
+    @bp.get("/dossiers/<folder>/facture")
+    @admin_required
+    def view_invoice(folder):
+        owner = results_owner()
+        try:
+            folder_record(owner, folder)
+        except ValueError:
+            abort(404)
+        record = next((r for r in invoicing.records(store.directory, owner) if r["folder"] == folder), None)
+        invoice_id = (record or {}).get("qonto_id")
+        if not invoice_id:
+            from integrale_edof_invoices import find_local_invoice, linked_registration
+            data = legacy.load_data(run_background_tasks=False)
+            invoice_id = find_local_invoice(data, folder, partner_id)
+            registration = linked_registration(data, folder, partner_id)
+            if not invoice_id and registration:
+                invoice = legacy._qonto_invoice_from_wedof_reference(*registration)
+                invoice_id = (invoice or {}).get("id")
+        if invoice_id:
+            return redirect(url_for("admin_qonto_invoice_pdf", invoice_id=invoice_id))
+        flash("La référence PDF de cette facture n’est pas encore rattachée au dossier. Vérifiez les factures de sa fiche stagiaire.", "error")
+        return back("state", group="billing", tab="all", folder=folder, _anchor="dossier")
+
     @bp.get("/dossiers/<folder>/inscriptions")
     @admin_required
     def association_options(folder):
@@ -1193,37 +1264,27 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
     @bp.post("/dossiers/<folder>/create-trainee")
     @admin_required
     def create_trainee(folder):
-        from edof_server_test import start_job
         owner = results_owner()
         if session.get("admin_role") == "viewer":
             abort(403)
         check_csrf()
         try:
-            row = folder_record(owner, folder)
             sid = request.form.get("session_id", "")
             existing = registration_link(folder, local_data())
-            if existing and request.accept_mimetypes.best == "application/json":
-                return jsonify(registered=True, link=existing, message="Ce dossier est déjà inscrit sur une session.")
-            if category(row) != "accepted" or not any(str(s["id"]) == sid for s in matching_sessions(local_data(), partner_id, row)):
-                raise ValueError("Choisissez une session disponible pour ce dossier accepté.")
-            fields = registration_fields(owner, row)
-            if fields:
-                create_registration(legacy, folder, sid, fields)
+            if existing:
                 if request.accept_mimetypes.best == "application/json":
-                    return jsonify(registered=True, link=registration_link(folder, local_data()),
-                                   message="Le stagiaire est inscrit et son dossier CPF est associé à la session.")
-                flash("Stagiaire enregistré et associé au dossier EDOF.", "success")
-            else:
-                if request.accept_mimetypes.best == "application/json":
-                    raise ValueError("La fiche complète EDOF doit être récupérée avant l’inscription. Reprenez le choix de session.")
-                start_job(store, owner, {"mode":"read", "folder_id":folder, "owner":owner, "first_name":row["first_name"],
-                                         "last_name":row["last_name"], "import_session":sid})
-                flash("Lecture de la fiche complète lancée. Le stagiaire sera créé dans la session choisie dès la lecture confirmée. Actualisez cette fiche pour vérifier le résultat.", "success")
+                    return jsonify(registered=True, link=existing)
+                return redirect(existing["url"], code=303)
+            registration_prefill(folder, sid)
+            destination = url_for("admin_trainees", session_id=sid, edof_folder=folder, openCreateTrainee=1)
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify(prefill_url=destination, registered=False)
+            return redirect(destination, code=303)
         except (ValueError, ProviderUnavailable) as exc:
             if request.accept_mimetypes.best == "application/json":
                 return jsonify(message=str(exc)), 409
             flash(str(exc), "error")
-        return back("requests", tab="accepted", folder=folder, _anchor="dossier")
+        return back("state", group="training", tab="to_register", folder=folder, _anchor="dossier")
 
     @bp.post("/dossiers/<folder>/hold")
     @admin_required

@@ -50,7 +50,7 @@
               <option value="40" {% if row.ran_hours == 40 %}selected{% endif %}>RAN partielle · 40 h</option>
               <option value="0" {% if row.ran_hours == 0 %}selected{% endif %}>Sans RAN · 0 h</option>
             </select></td>
-            <td data-row-start>—</td><td data-row-total>—</td>
+            <td><span data-row-start>—</span><details><summary>Date individuelle</summary><input type="date" data-start-override aria-label="Date d’entrée individuelle de {{ row.first_name }} {{ row.last_name }}" value="{{ row.start_override }}" min="{{ training.date_start }}" max="{{ training.date_end }}" {% if afc_state.read_only %}disabled{% endif %}><small>Laisser vide pour suivre la date du profil RAN.</small></details></td><td data-row-total>—</td>
           </tr>
           {% else %}<tr><td colspan="6">Aucun candidat inscrit dans cette session.</td></tr>{% endfor %}
         </tbody>

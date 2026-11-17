@@ -228,6 +228,12 @@
           {% if previewing %}<small>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</small>{% if matches[r.folder_id].status == 'exact_match' %}<small>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}</small>{% endif %}{% endif %}
         </div></td>
         <td data-label="Actions"><div class="edof-row-actions">{% if batch_entries and r.entry_choice %}<label class="edof-entry-choice"><input form="edof-effective-entries" type="checkbox" name="entry" value="{{ r.entry_choice }}"> Entrée le {{ date_fr(r.session_start_date) }}</label>{% endif %}<a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
+          {% if r.kind in ['invoiced', 'paid'] or (invoice_records.get(r.folder_id) and invoice_records[r.folder_id].qonto_id) %}<a class="btn btn-outline" href="{{ url_for('integrale_edof.view_invoice', folder=r.folder_id) }}" target="_blank" rel="noopener">Voir la facture</a>{% endif %}
+          {% if (tab == 'to_register' or r.registration_ignored) and session.get('admin_role') != 'viewer' %}
+          <form method="post" action="{{ url_for('integrale_edof.registration_preference',folder=r.folder_id) }}" class="edof-association-preference" data-association-preference>
+            {{ token() }}<label><input type="checkbox" name="ignore" value="1" {% if r.registration_ignored %}checked{% endif %}> Ne plus afficher dans Acceptés à inscrire</label>
+            <button type="submit" class="btn btn-outline" data-preference-submit>Enregistrer</button><small role="status" data-preference-status></small>
+          </form>{% endif %}
           {% if tab == 'ft_refused' and r.kind == 'ft_refused' and session.get('admin_role') != 'viewer' %}
             <label><input type="checkbox" data-edof-refusal="{{ r.refusal_marker }}" data-url="{{ url_for('integrale_edof.annotate', folder=r.folder_id) }}" data-csrf="{{ csrf }}"> Refus pris en compte</label><small role="status"></small>
           {% endif %}
@@ -266,7 +272,7 @@
     {% if invoice.invoice_number %}<p>Facture Qonto : <strong>{{ invoice.invoice_number }}</strong></p>{% endif %}
     {% if invoice.qonto_id %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_invoice_pdf', invoice_id=invoice.qonto_id) }}" target="_blank" rel="noopener">Voir la facture Qonto</a>{% endif %}
     {% if invoice.message %}<p class="wedof-notice is-warning">{{ invoice.message }}</p>{% endif %}
-    {% if invoice.status == 'review' and active %}<form method="post" action="{{ url_for('integrale_edof.review_invoice', folder=detail.record.folder_id) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn btn-outline" type="submit">Réexaminer la facturation</button></form>{% endif %}
+    {% if invoice.status in ['review', 'sending'] and active %}<form method="post" action="{{ url_for('integrale_edof.review_invoice', folder=detail.record.folder_id) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn btn-outline" type="submit">Vérifier la réception de la facture</button></form>{% endif %}
     {% if invoice.status == 'confirmed' %}<p>Le numéro et le montant ont été relus dans EDOF après la transmission.</p>{% endif %}
   </div></section>{% endif %}
   {% if detail.request or detail.proposal_job or detail.followable %}{% include "_edof_proposal.html" %}{% endif %}

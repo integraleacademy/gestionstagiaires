@@ -44,7 +44,7 @@ def revision(services, training, data=None):
     value = {"config": config(training), "start": training.get("date_start"),
              "end": training.get("date_end"), "scores": suggestion(services, training, data)["scores"], "trainees": [
                  {key: trainee.get(key) for key in (
-                     "id", "first_name", "last_name", "afc_ran_hours", "training_date_start")}
+                     "id", "first_name", "last_name", "afc_ran_hours", "training_date_start", "afc_start_override")}
                  for trainee in participants(services, training)]}
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
@@ -58,7 +58,7 @@ def view(services, training, data=None):
         hours = trainee.get("afc_ran_hours")
         if type(hours) is not int or hours not in PROFILES:
             hours = None
-        start = settings["dates"].get(str(hours), "")
+        start = trainee.get("afc_start_override") or settings["dates"].get(str(hours), "")
         actual_start = afc_schedule.effective_session(training, trainee).get("date_start", "")
         if hours is not None:
             counts[str(hours)] += 1
@@ -66,6 +66,7 @@ def view(services, training, data=None):
                      "last_name": services.normalize_last_name(trainee.get("last_name") or ""),
                      "first_name": services.normalize_first_name(trainee.get("first_name") or ""),
                      "ran_hours": hours, "start": start, "current_start": actual_start,
+                     "start_override": trainee.get("afc_start_override") or "",
                      "test": proposed["scores"].get(str(trainee["id"])),
                      "suggested_hours": (proposed["profiles"] or {}).get(str(trainee["id"])),
                      "date_conflict": hours is not None and start != actual_start})
@@ -116,17 +117,24 @@ def update(services, data, session_id, payload):
         choices = payload.get("profiles")
         if not isinstance(choices, dict) or set(choices) != {str(row["id"]) for row in rows}:
             raise ValueError("La liste des candidats a changé. Rechargez la page.")
+        overrides = payload.get("start_overrides", {})
+        if not isinstance(overrides, dict) or not set(overrides).issubset(choices):
+            raise ValueError("Les dates individuelles ne correspondent pas aux candidats.")
         changes = []
         for trainee in rows:
             hours = choices[str(trainee["id"])]
             if hours is not None and (type(hours) is not int or hours not in PROFILES):
                 raise ValueError("Choisissez 54 h, 40 h ou sans RAN pour chaque candidat.")
-            values = {"afc_ran_hours": hours}
+            override = afc_schedule.date(overrides.get(str(trainee["id"]), trainee.get("afc_start_override") or ""), "Date d’entrée individuelle")
+            if override and ((training.get("date_start") and override < training["date_start"])
+                             or (training.get("date_end") and override > training["date_end"])):
+                raise ValueError("La date individuelle doit être comprise dans la période de la session.")
+            values = {"afc_ran_hours": hours, "afc_start_override": override}
             if hours is not None:
                 if not dates[str(hours)]:
                     raise ValueError(f"Renseignez la date d’entrée du profil à {hours} h.")
                 values.update(afc_schedule.trainee_update(training, trainee, {
-                    "training_date_start": dates[str(hours)]}))
+                    "training_date_start": override or dates[str(hours)]}))
             changes.append((trainee, values))
     except ValueError as exc:
         return {"ok": False, "error": str(exc), "status": 400}

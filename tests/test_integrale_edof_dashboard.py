@@ -380,8 +380,8 @@ def test_trainee_import_requires_verified_detail_and_is_idempotent(site, monkeyp
     post = lambda folder: site.client.post(f"/admin/edof-test/dossiers/{folder}/create-trainee",
                                             data={"csrf":site.csrf,"session_id":"s1"}, follow_redirects=True)
     assert "Choisissez une session" in post("100002").text and not started
-    assert "Lecture de la fiche complète" in post("100000").text
-    assert started[0]["folder_id"] == "100000" and started[0]["import_session"] == "s1"
+    assert "La fiche complète EDOF doit être récupérée" in post("100000").text
+    assert not started
     data = json.loads(site.local.read_text())
     fields = {**site.vault.get(edof_directory.record_key(site.owner))["rows"]["100000"], "birth_date":"1986-03-12",
               "email":"edof@example.invalid","phone":"0600000000", "total_incl":"1250.00"}

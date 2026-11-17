@@ -25837,6 +25837,14 @@ def admin_trainees(session_id: str):
     if _is_wedof_leads_session(s):
         abort(404)
 
+    edof_prefill = None
+    edof_prefill_error = ""
+    if request.args.get("edof_folder"):
+        try:
+            edof_prefill = app.extensions["edof_registration_prefill"](request.args["edof_folder"], session_id)
+        except ValueError as exc:
+            edof_prefill_error = str(exc)
+
     # normalize session view
     session_view = {
         "id": s.get("id"),
@@ -26016,6 +26024,7 @@ def admin_trainees(session_id: str):
     prepared = time.monotonic()
     html_page = render_template(
         "admin_trainees.html",
+        edof_prefill=edof_prefill, edof_prefill_error=edof_prefill_error,
         cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
@@ -27755,6 +27764,15 @@ def api_create_trainee(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    edof_folder = str(payload.get("edof_folder") or "").strip()
+    edof_fields = None
+    if edof_folder:
+        if payload.get("afc_candidate_id") or payload.get("crm_prefill"):
+            return jsonify(ok=False, error="Une seule source d’inscription peut être utilisée."), 400
+        try:
+            edof_fields = app.extensions["edof_registration_prefill"](edof_folder, session_id)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
     afc_candidate_id = str(payload.get("afc_candidate_id") or "").strip()
     if afc_candidate_id:
         try:
@@ -27803,6 +27821,13 @@ def api_create_trainee(session_id: str):
         if not result["ok"]:
             return jsonify(result), result.get("status", 409)
         enrolled_at = result["enrolled_at"]
+    elif edof_folder:
+        from integrale_edof_registration import insert_registration
+        try:
+            _atomic_update_data(lambda current: insert_registration(
+                sys.modules[__name__], current, edof_folder, session_id, edof_fields, t))
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 409
     else:
         trainees = _session_trainees_list(s)
         trainees.insert(0, t)
@@ -27870,7 +27895,7 @@ def api_create_trainee(session_id: str):
     # laisser l’administrateur vérifier l’aperçu PDF avant toute transmission,
     # uniquement lorsque le module automatisations est actif pour le partenaire.
     automation_enabled = _automation_is_enabled(s)
-    if afc_candidate_id:
+    if afc_candidate_id or edof_folder:
         def finish_afc_import(current):
             current_session = find_session(current, session_id)
             current_trainee = find_trainee(current_session, trainee_id) if current_session else None
@@ -34937,7 +34962,7 @@ def public_trainee_space(token):
         aps_kickoff=aps_kickoff.view(sys.modules[__name__], s, t),
         desp_kickoff=desp_kickoff.view(sys.modules[__name__], s, t),
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
-        ssiap_success=ssiap_success_certificate.document_fields(sys.modules[__name__], s, t),
+        ssiap_success=ssiap_success_certificate.document_fields(sys.modules[__name__], s, t, data=data),
         a3p_attestations=a3p_documents.view(sys.modules[__name__], s, t, token),
         public_convocation_available=_public_convocation_has_record(t),
         document_upload_error=session.pop("document_upload_error", None),

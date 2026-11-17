@@ -316,10 +316,10 @@ def request_review(path,owner,folder):
     """A recheck may reconcile interrupted writes, never authorize their replay."""
     with closing(database(path)) as db,db:
         db.execute('BEGIN IMMEDIATE')
-        row=db.execute("SELECT * FROM cpf_invoices WHERE owner=? AND folder=? AND status='review'",(owner,folder)).fetchone()
+        row=db.execute("SELECT * FROM cpf_invoices WHERE owner=? AND folder=? AND status IN ('review','sending')",(owner,folder)).fetchone()
         if not row or not allowed(db,row):
             return False
-        status='sending' if row['send_started'] else 'draft' if row['qonto_id'] else 'creating' if row['create_started'] else 'queued'
+        status='sending' if row['status']=='sending' or row['send_started'] else 'draft' if row['qonto_id'] else 'creating' if row['create_started'] else 'queued'
         db.execute('UPDATE cpf_invoices SET status=?,retry_at=0,message=? WHERE token=?',(status,'Nouvelle vérification demandée.',row['token']))
         return True
 
