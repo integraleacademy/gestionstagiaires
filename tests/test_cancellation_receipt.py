@@ -7,7 +7,7 @@ import app
 def test_preview_and_optional_delivery_are_distinct_from_the_financial_summary(monkeypatch):
     t = {"id":"t", "first_name":"Camille", "email":"camille@example.invalid", "registration_cancelled":True,
          "registration_cancelled_at":"2026-11-16T17:00:00Z"}
-    data = {"sessions":[{"id":"s", "training_type":"SSIAP 1", "name":"SSIAP 1", "trainees":[t]}]}
+    data = {"sessions":[{"id":"s", "training_type":"APS", "date_start":"2026-11-02", "date_end":"2026-11-20", "trainees":[t]}]}
     monkeypatch.setattr(app, "load_data", lambda **kw: deepcopy(data))
     monkeypatch.setattr(app, "_atomic_update_data", lambda fn:fn(data))
     send = Mock(return_value={"ok":True})
@@ -18,7 +18,9 @@ def test_preview_and_optional_delivery_are_distinct_from_the_financial_summary(m
     url = "/api/sessions/s/stagiaires/t/accuse-annulation/"
     preview = client.post(url+"apercu").json
     assert preview["ok"] and not preview["already_sent"] and not send.called
-    for word in ("Camille", "CPF", "CNAPS", "7 jours ouvrés", "14 jours ouvrés", "RIB", "Clément VAILLANT", "clement-memoji.png"):
+    for word in ("Camille", "CPF", "CNAPS", "7 jours ouvrés", "14 jours ouvrés", "RIB", "Clément VAILLANT", "clement-memoji.png",
+                 "Agent de Prévention et de Sécurité (APS)", "prévue du 02/11/2026 au 20/11/2026",
+                 "Les suites de votre annulation", "aucun frais", "<strong>Si nous devons procéder"):
         assert word in preview["html"]
     assert client.post(url+"envoyer", json={}).status_code == 409
     proof = {"preview_token":preview["preview_token"]}

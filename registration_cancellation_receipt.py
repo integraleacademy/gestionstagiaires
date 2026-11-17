@@ -12,17 +12,22 @@ ACCOUNT = "https://www.moncompteformation.gouv.fr/"
 HELP = ACCOUNT + "espace-public/quelles-consequences-en-cas-dannulation-de-mon-inscription-a-une-formation"
 RULES = (
     ("Pendant la rétractation", "Vous disposez de 14 jours ouvrés après la validation de votre dossier, jusqu’au début de la formation. Si vous annulez dans ce délai, vos droits sont recrédités et vos versements personnels remboursés."),
-    ("Au moins 7 jours ouvrés avant le début", "Vous pouvez annuler sans frais ni justificatif. Vous récupérez vos droits CPF et les sommes versées sur la plateforme."),
-    ("Moins de 7 jours ouvrés avant le début, ou en cas d’absence", "Hors rétractation et force majeure, vos droits CPF sont débités. Le complément personnel reste disponible en avoir pour une autre formation. La participation financière obligatoire vous est remboursée."),
+    ("Au moins 7 jours ouvrés avant le début de formation", "Vous pouvez annuler sans frais ni justificatif. Vous récupérez vos droits CPF et les sommes versées sur la plateforme."),
+    ("Moins de 7 jours ouvrés avant le début de formation, ou en cas d’absence", "Hors rétractation et force majeure, vos droits CPF sont débités. Le complément personnel reste disponible en avoir pour une autre formation. La participation financière obligatoire vous est remboursée."),
     ("Après le début de la formation", "En cas d’abandon sans force majeure, vos droits restent débités et votre complément personnel n’est ni remboursé ni transformé en avoir."),
     ("En cas de force majeure", "Déclarez le motif dans votre espace personnel et joignez votre justificatif. Si le motif est reconnu, le remboursement porte sur la totalité avant le début et sur la part non réalisée après le début. En cas d’interruption, transmettez votre justificatif dans les 5 jours ouvrés suivant votre sortie."),
 )
-CENTRE = ("Si votre convention prévoit des pénalités d’annulation pour des sommes réglées directement au centre, "
-          "nous examinerons votre dossier et vous recontacterons pour vous indiquer le montant et son calcul, le cas échéant. "
-          "Si vous annulez parce que votre autorisation du CNAPS n’a pas été délivrée à temps, "
-          "Intégrale Academy n’appliquera aucune pénalité contractuelle.")
-REFUND = ("Si vous nous avez versé un trop-perçu ou si Intégrale Academy doit vous rembourser, "
-          "merci de nous transmettre un RIB à votre nom par retour de mail afin que nous puissions effectuer le virement.")
+CPF_ACTION = "Vous devez procéder à l’annulation de votre dossier sur votre Compte Personnel de Formation (CPF)."
+CPF_RULES_TITLE = "Les règles du Compte Personnel de Formation (CPF) :"
+FOLLOW_UP = (
+    "Si votre formation est financée entièrement ou partiellement par votre CPF, vous devez effectuer votre demande d'annulation directement depuis votre espace Mon Compte Formation.",
+    "Notre équipe va procéder à un examen de votre dossier conformément aux conditions d'annulation prévues dans votre contrat de formation et nos conditions générales de vente.",
+    "À l'issue de cette vérification, nous vous adresserons un e-mail récapitulatif vous précisant si des frais d'annulation sont applicables et, selon les sommes déjà versées, si un montant reste à régler de votre part ou si nous devons procéder à un remboursement.",
+)
+CNAPS = ("si votre annulation est liée à un refus d'autorisation du CNAPS (ministère de l'Intérieur), "
+         "ou si cette autorisation n'a pas été délivrée à temps, aucun frais d'annulation ne sera appliqué par Intégrale Academy.")
+REFUND = ("Si nous devons procéder à un remboursement, et pour gagner du temps, nous vous demandons de bien vouloir "
+          "nous faire parvenir un RIB par retour de mail")
 
 
 def message(host, group, trainee):
@@ -31,17 +36,28 @@ def message(host, group, trainee):
     greeting = f"Bonjour {who}," if who else "Bonjour,"
     course = host._registration_cancellation_training_label(group)
     subject = f"Votre demande d’annulation a bien été prise en compte – {course}"
-    intro = f"Nous avons bien pris en compte votre demande d’annulation pour la formation « {course} »."
+    try:
+        schedule = host._convention_training_session(group, trainee)
+    except ValueError:
+        # An individual VTC period may still be unknown when a trainee cancels.
+        schedule = {}
+    start = host._diploma_date_fr(host._session_get(schedule, "date_start", ""))
+    end = host._diploma_date_fr(host._session_get(schedule, "date_end", ""))
+    dates = f", prévue du {start} au {end}" if start and end else ""
+    intro = f"Nous avons bien pris en compte votre demande d’annulation concernan la formation « {course} »{dates}."
     steps = ("Connectez-vous à Mon Compte Formation, ouvrez « Dossiers » et sélectionnez la formation concernée. "
              "Cliquez sur « Annuler mon dossier », confirmez votre choix et conservez la confirmation.")
     info = ("Les jours ouvrés vont du lundi au vendredi, hors jours fériés. Les remboursements dus par la plateforme "
             "interviennent sous 30 jours calendaires. Les conditions applicables à votre dossier font foi.")
     body = render_template("emails/registration_cancellation_receipt.html", greeting=greeting, intro=intro,
-                           steps=steps, rules=RULES, info=info, centre=CENTRE, refund=REFUND, help_url=HELP,
+                           steps=steps, rules=RULES, info=info, cpf_action=CPF_ACTION, rules_title=CPF_RULES_TITLE,
+                           follow_up=FOLLOW_UP, cnaps=CNAPS, refund=REFUND, help_url=HELP,
                            account=ACCOUNT, email_base_url=PUBLIC_ASSETS, email_preheader=intro)
-    text = "\n\n".join([greeting, intro, "Si vous avez utilisé votre CPF", steps, ACCOUNT,
-                       *(f"{title}\n{detail}" for title, detail in RULES), info, HELP,
-                       "Votre dossier auprès du centre", CENTRE, REFUND,
+    text = "\n\n".join([greeting, intro, "Si vous avez utilisé votre CPF", CPF_ACTION, steps,
+                       f"Ouvrir Mon Compte Formation → {ACCOUNT}", CPF_RULES_TITLE,
+                       *(f"{title}\n{detail}" for title, detail in RULES), info, f"Consulter les règles de Mon Compte Formation : {HELP}",
+                       "Les suites de votre annulation :", *(f"{i}. {step}" for i, step in enumerate(FOLLOW_UP, 1)),
+                       f"À noter : {CNAPS}", REFUND,
                        "Clément VAILLANT\nDirecteur du centre de formation Intégrale Academy"])
     return recipient, subject, body, text
 

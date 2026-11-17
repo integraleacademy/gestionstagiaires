@@ -70,12 +70,14 @@ def render(fields, root):
     y = min(top-139, 252)
     paragraph(c, "Clément VAILLANT", M, y, size=12, bold=True)
     paragraph(c, "Directeur du centre de formation", M, y-19, size=10, color=MUTED)
-    for key, x, width, height in (("signature", M+3, 110, 58), ("stamp", W-M-176, 176, 58)):
+    for key, x, width, height in (("signature", M+3, 110, 58), ("stamp", M+120, 165, 58)):
         c.drawImage(ImageReader(io.BytesIO(assets[key])), x, y-106, width, height,
                     preserveAspectRatio=True, mask="auto")
-    c.line(M, 58, W-M, 58)
-    paragraph(c, "Intégrale Academy  ·  Intégrale Sécurité Formations  ·  SIRET 840 899 884 00026",
-              M, 43, size=8, color=MUTED)
+    c.line(M, 87, W-M, 87)
+    paragraph(c, "Agrément préfectoral SSIAP n° 83-23", M, 76, size=10, color=NAVY, bold=True)
+    paragraph(c, "Déclaration d’activité n° 93 83 06002 83", M, 57, size=9, color=MUTED)
+    paragraph(c, "Intégrale Sécurité Formations  ·  SIRET 840 899 884 00026  ·  RCS Fréjus 840 899 884",
+              M, 39, size=8, color=MUTED)
     return finish(c, stream)
 
 
