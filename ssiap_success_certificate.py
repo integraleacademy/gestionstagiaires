@@ -3,17 +3,19 @@ import io
 import os
 import re
 import unicodedata
+from pathlib import Path
 
 from flask import abort, redirect, request, send_file, url_for
 
 import ssiap_exam
 import ssiap_pathways
+import exam_retakes
 
 
-def document_fields(host, training, trainee):
+def document_fields(host, training, trainee, *, data=None):
     if training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID):
         return None
-    if host._ssiap_exam_status(trainee) != "certified" or host._trainee_registration_is_cancelled(trainee):
+    if host._trainee_registration_is_cancelled(trainee):
         return None
     kind = str(host._session_get(training, "training_type", "") or "")
     title = str(host._session_get(training, "name", "") or "")
@@ -25,12 +27,40 @@ def document_fields(host, training, trainee):
     settings = ssiap_exam.settings(ssiap_exam.for_family(training, "ssiap"))
     if settings.get("level") != "SSIAP 1":
         return None
-    first = host._ssiap_diploma_first_name(trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or trainee.get("prenom"))
-    last = host.normalize_last_name(trainee.get("ssiap_diploma_last_name") or trainee.get("last_name") or trainee.get("nom"))
+    exam_training, candidate = training, trainee
+    # A retake result belongs to the receiving exam, while the public space
+    # stays on the original enrolment. Resolve that explicit link, never names.
+    retake_db = Path(getattr(host, "PERSIST_DIR", ".")) / "exam_retakes" / "retakes.sqlite3"
+    if retake_db.is_file():
+        retakes = exam_retakes.Store(host).query(
+            "source_session=? AND trainee=? AND status='confirmed'",
+            (training.get("id"), trainee.get("id")))
+        successful = []
+        for retake in retakes:
+            if retake.get("kind") != "SSIAP 1" or not exam_retakes.convocation_confirmed(retake):
+                continue
+            if data is None:
+                data = host.load_data(run_background_tasks=False)
+            target = host.find_session(data, retake.get("target_session"))
+            if not target or target.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID):
+                continue
+            result = (target.get("ssiap_exam") or {}).get("retake_results", {}).get("retake-" + retake["id"], {})
+            if host._ssiap_exam_status(result) == "certified":
+                successful.append((retake.get("exam_date") or "", target, {
+                    **trainee, **result,
+                    "ssiap_diploma_exam_date": result.get("ssiap_diploma_exam_date") or retake.get("exam_date"),
+                }))
+        if successful:
+            _, exam_training, candidate = max(successful, key=lambda item: item[0])
+    if host._ssiap_exam_status(candidate) != "certified":
+        return None
+    trainee_identity = candidate
+    first = host._ssiap_diploma_first_name(trainee_identity.get("ssiap_diploma_first_name") or trainee_identity.get("first_name") or trainee_identity.get("prenom"))
+    last = host.normalize_last_name(trainee_identity.get("ssiap_diploma_last_name") or trainee_identity.get("last_name") or trainee_identity.get("nom"))
     schedule = ssiap_pathways.effective_session(training, trainee)
     start = host._diploma_date_fr(host._session_get(schedule, "date_start", ""))
     end = host._diploma_date_fr(host._session_get(schedule, "date_end", ""))
-    exam = host._ssiap_diploma_exam_date(training, trainee)
+    exam = host._ssiap_diploma_exam_date(exam_training, candidate)
     if all((first, last, start, end, exam)):
         return {"name": f"{first} {last}", "start": start, "end": end, "exam": exam}
     return None
@@ -86,8 +116,9 @@ def register(app, host):
     def public_ssiap_success(token):
         if not host._public_is_authed(token):
             return redirect(url_for("public_trainee_login", token=token))
-        group, trainee = host.find_session_and_trainee_by_token(host.load_data(run_background_tasks=False), token)
-        fields = document_fields(host, group, trainee) if group and trainee else None
+        data = host.load_data(run_background_tasks=False)
+        group, trainee = host.find_session_and_trainee_by_token(data, token)
+        fields = document_fields(host, group, trainee, data=data) if group and trainee else None
         if not fields:
             abort(404)
         response = send_file(io.BytesIO(render(fields, app.root_path)), mimetype="application/pdf",

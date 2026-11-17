@@ -30,8 +30,8 @@
     <p data-session-empty hidden>Aucune session ne correspond à votre recherche.</p>
     <p class="edof-session-dates" data-session-dates hidden>Les dates de cette session diffèrent de celles du dossier EDOF. Les dates EDOF restent utilisées pour le suivi CPF.</p>
     <p class="edof-enrolment-error" data-registration-error role="alert" hidden></p>
-    <button class="btn btn-blue edof-enrolment-submit" type="submit" {% if not fields %}disabled{% endif %}>Confirmer l’inscription dans cette session</button>
-    <small class="edof-enrolment-note">L’identité, les coordonnées disponibles et les informations CPF sont reprises automatiquement. Le dossier EDOF est associé à l’inscription.</small>
+    <button class="btn btn-blue edof-enrolment-submit" type="submit" {% if not fields %}disabled{% endif %}>Vérifier les informations du stagiaire</button>
+    <small class="edof-enrolment-note">Le formulaire habituel sera prérempli. Après votre vérification et la sauvegarde, vous pourrez compléter, prévisualiser et envoyer la convention.</small>
   </form>
   {% else %}
     <div class="edof-enrolment-empty"><h3>Aucune session compatible disponible</h3><p>Aucune session {{ family }} en cours ou à venir n’a été trouvée pour cette formation. Créez la session dans Gestion Stagiaires, puis rouvrez ce choix.</p></div>

@@ -78,7 +78,7 @@ def test_waiting_is_not_accepted_and_gets_never_contact_edof(site):
     assert not json.loads(site.local.read_text())['sessions'][0]['trainees']
 
 
-def test_cached_acceptance_and_prefilled_registration_are_atomic_and_idempotent(site):
+def test_cached_acceptance_opens_standard_form_without_creating_an_enrolment(site):
     prepare(site)
     result=site.client.get(BASE+'/registration')
     assert result.status_code==200 and result.json['ready']
@@ -90,14 +90,26 @@ def test_cached_acceptance_and_prefilled_registration_are_atomic_and_idempotent(
     assert site.client.post(BASE+'/create-trainee',data={**payload,'session_id':'a1'},headers=HEADERS).status_code==409
     for _ in range(2):
         response=site.client.post(BASE+'/create-trainee',data=payload,headers=HEADERS)
-        assert response.status_code==200 and response.json['registered']
-        assert response.json['link']['url']=='/session/v1/stagiaire/new-trainee'
+        assert response.status_code==200 and not response.json['registered']
+        assert response.json['prefill_url']
     saved=json.loads(site.local.read_text())
+    assert saved['sessions'][0]['trainees']==[] and not saved.get('wedof_links')
+    from integrale_edof_registration import insert_registration
+    with site.client.application.test_request_context():
+        from flask import session
+        session.update(admin_logged_in=True, admin_username='admin', edof_history_account=site.owner)
+        fields=site.client.application.extensions['edof_registration_prefill']('100000','v1')
+    learner={**fields,'id':'new-trainee','phone':'0699999999'}
+    insert_registration(site.legacy,saved,'100000','v1',fields,learner)
+    site.local.write_text(json.dumps(saved))
     assert len(saved['sessions'][0]['trainees'])==len(saved['wedof_links'])==1
     learner=saved['sessions'][0]['trainees'][0]
+    assert learner['phone']=='0699999999'
     assert learner['email']=='anne@example.invalid' and learner['training_price']=='1500.00'
     assert learner['financing_type']=='CPF'
     assert site.client.get(BASE+'/journey').json['link']['session_name']=='VTC janvier · Puget'
+    with pytest.raises(ValueError,match='déjà une association'):
+        insert_registration(site.legacy,saved,'100000','v1',fields,learner)
 
 
 def test_newer_cancellation_supersedes_cached_acceptance(site):

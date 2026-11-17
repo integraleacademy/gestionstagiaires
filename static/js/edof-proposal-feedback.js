@@ -151,10 +151,11 @@
       registering = true;
       submit.disabled = true;
       const errorBox = form.querySelector('[data-registration-error]'); errorBox.hidden = true;
-      feedback.journey(id, 'saving', {title:'Inscription en cours', phase:'Création du stagiaire et association CPF',
-        message:'Les informations EDOF sont reprises dans la session sélectionnée.'});
+      feedback.journey(id, 'saving', {title:'Préparation du formulaire', phase:'Ouverture de la création de stagiaire',
+        message:'Vous allez vérifier les informations puis compléter la convention.'});
       try {
         const result = await read(form.action, {method:'POST', body:new FormData(form)});
+        if (result.prefill_url) { window.location.assign(result.prefill_url); return; }
         if (!result.registered) throw Error('L’inscription n’a pas été confirmée.');
         registered(id, result.link);
         const updated = await read(section().dataset.journeyUrl);

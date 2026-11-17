@@ -58,3 +58,30 @@ def test_combined_ssiap_sst_uses_the_trainees_own_dates():
     assert success.document_fields(app, group, trainee)["start"] == "05/10/2026"
     trainee["ssiap_pathway"] = "ssiap_sst"
     assert success.document_fields(app, group, trainee)["start"] == "01/10/2026"
+
+
+def test_successful_retake_is_available_in_original_space_only(tmp_path, monkeypatch):
+    import exam_retakes
+    monkeypatch.setattr(app, "PERSIST_DIR", str(tmp_path))
+    original = cohort()
+    trainee = original["trainees"][0]
+    trainee["ssiap_exam_status"] = "failed"
+    target = {**cohort(), "id": "november", "exam_date": "2026-11-13", "trainees": [],
+              "ssiap_exam": {"retake_results": {"retake-r1": {"ssiap_exam_status": "certified"}}}}
+    data = {"sessions": [original, target]}
+    record = {"id": "r1", "source_session": "s", "trainee_id": "t", "target_session": "november",
+              "status": "confirmed", "kind": "SSIAP 1", "exam_date": "2026-11-13", "signed_at": "2026-11-01",
+              "total_cents": 0, "payment_status": "not_required"}
+    store = exam_retakes.Store(app)
+    store.save(record)
+    fields = success.document_fields(app, original, trainee, data=data)
+    assert fields["exam"] == "13/11/2026" and fields["start"] == "05/10/2026"
+    assert trainee["ssiap_exam_status"] == "failed"
+    other = {**trainee, "id": "other"}
+    assert success.document_fields(app, original, other, data=data) is None
+    target["ssiap_exam"]["retake_results"]["retake-r1"]["ssiap_exam_status"] = "failed"
+    assert success.document_fields(app, original, trainee, data=data) is None
+    target["ssiap_exam"]["retake_results"]["retake-r1"]["ssiap_exam_status"] = "certified"
+    record["status"] = "cancelled"
+    store.save(record)
+    assert success.document_fields(app, original, trainee, data=data) is None

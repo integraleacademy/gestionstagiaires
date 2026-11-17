@@ -260,7 +260,7 @@ def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(scre
     assert dialog.get_by_text('anne@example.invalid',exact=True).is_visible()
     assert dialog.locator('[data-session-option]').count()==2
     assert 'APS janvier' not in dialog.inner_text()
-    submit=dialog.get_by_role('button',name='Confirmer l’inscription dans cette session',exact=True)
+    submit=dialog.get_by_role('button',name='Vérifier les informations du stagiaire',exact=True)
     assert submit.is_enabled() and dialog.locator('[name="session_id"][value="v1"]').is_checked()
     dialog.locator('[data-session-search]').fill('février')
     assert not submit.is_enabled()
@@ -275,10 +275,9 @@ def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(scre
     page.locator('#edof-action-resume').click()
     assert dialog.locator('[name="session_id"][value="v1"]').is_checked()
     submit.click()
-    page.locator('#edof-action-dialog[data-journey="registered"]').wait_for()
-    assert dialog.get_by_role('button',name='Ouvrir la fiche stagiaire',exact=True).is_visible()
+    page.wait_for_url('**/navigation/admin_trainees')
     saved=json.loads(site.local.read_text())
-    assert len(saved['sessions'][0]['trainees'])==len(saved['wedof_links'])==1
+    assert saved['sessions'][0]['trainees']==[] and not saved.get('wedof_links')
     assert screen.posts==[f'/admin/edof-test/dossiers/{FOLDER}/create-trainee']
 
 

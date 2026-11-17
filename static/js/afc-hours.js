@@ -5,6 +5,7 @@
   let state = JSON.parse(document.getElementById('afcHoursState').textContent);
   const rows = [...root.querySelectorAll('[data-trainee]')];
   const dateFields = [...root.querySelectorAll('[data-entry-date]')];
+  const overrideFields = [...root.querySelectorAll('[data-start-override]')];
   const message = document.getElementById('afcHoursMessage');
   const exportButton = document.getElementById('afcHoursExport');
   const saveButton = document.getElementById('afcHoursSave');
@@ -37,7 +38,8 @@
         row.querySelector('[data-row-total]').textContent = '—';
       } else {
         counts[choice]++;
-        start.textContent = formatDate(currentDates[choice]);
+        const entryDate = row.querySelector('[data-start-override]')?.value || currentDates[choice];
+        start.textContent = formatDate(entryDate);
         row.querySelector('[data-row-total]').textContent = `${339 + Number(choice)} h`;
         if (!currentDates[choice]) missingDate = true;
       }
@@ -48,7 +50,7 @@
       root.querySelector(`[data-profile-card="${hours}"]`).classList.toggle('is-over', Boolean(state.target && counts[hours] > state.target[hours]));
     }
     const matches = !state.target || Object.keys(counts).every(key => counts[key] === state.target[key]);
-    const invalidDate = dateFields.some(input => !input.checkValidity());
+    const invalidDate = [...dateFields, ...overrideFields].some(input => !input.checkValidity());
     const conflicts = state.read_only && state.rows.some(row => row.date_conflict);
     const ready = rows.length > 0 && pending === 0 && !missingDate && !invalidDate && matches && !conflicts;
     exportButton.disabled = busy || !ready;
@@ -69,7 +71,8 @@
   async function save() {
     const response = await fetch(root.dataset.saveUrl, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({csrf: state.csrf, revision: state.revision, dates: dates(), profiles: profiles()})
+      body: JSON.stringify({csrf: state.csrf, revision: state.revision, dates: dates(), profiles: profiles(),
+        start_overrides: Object.fromEntries(rows.map(row => [row.dataset.trainee, row.querySelector('[data-start-override]')?.value || '']))})
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.ok) throw new Error(result?.error || 'Enregistrement impossible. Rechargez la page et réessayez.');
@@ -82,7 +85,7 @@
     busy = true;
     refresh();
     rows.forEach(row => { row.querySelector('select').disabled = true; });
-    dateFields.forEach(input => { input.disabled = true; });
+    [...dateFields, ...overrideFields].forEach(input => { input.disabled = true; });
     showMessage(exportFile ? 'Préparation du fichier Excel…' : 'Enregistrement des profils…');
     let error = null;
     try {
@@ -106,7 +109,7 @@
     finally {
       busy = false;
       rows.forEach(row => { row.querySelector('select').disabled = state.read_only; });
-      dateFields.forEach(input => { input.disabled = state.read_only; });
+      [...dateFields, ...overrideFields].forEach(input => { input.disabled = state.read_only; });
       const ready = refresh();
       if (error) showMessage(error, true);
       else if (exportFile) showMessage('Le fichier Excel a été téléchargé. Les profils et les dates sont enregistrés.');
@@ -115,7 +118,7 @@
     }
   }
   for (const row of rows) row.querySelector('select').addEventListener('change', () => { dirty = true; refresh(); });
-  for (const input of dateFields) input.addEventListener('change', () => { dirty = true; refresh(); });
+  for (const input of [...dateFields, ...overrideFields]) input.addEventListener('change', () => { dirty = true; refresh(); });
   fillButton?.addEventListener('click', () => {
     for (const row of rows) {
       const select = row.querySelector('select');

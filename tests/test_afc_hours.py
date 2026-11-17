@@ -79,6 +79,28 @@ def test_named_profiles_start_dates_and_xlsx(case):
     mail.assert_not_called()
 
 
+def test_individual_entry_survives_profile_saves_and_excel(case):
+    client, training, data, mail = case
+    values = payload(client, training)
+    values["start_overrides"] = {"T00": "2026-11-17"}
+    first = client.post(urls(training)[1], json=values)
+    assert first.status_code == 200
+    assert training["trainees"][0]["training_date_start"] == "2026-11-17"
+    assert training["trainees"][1]["training_date_start"] == "2026-11-16"
+    values = payload(client, training)
+    again = client.post(urls(training)[1], json=values)
+    assert again.status_code == 200
+    assert not afc_hours.export_error(again.json["state"])
+    book = load_workbook(io.BytesIO(client.get(urls(training)[2]).data))
+    assert book.active["G6"].value == dt.datetime(2026, 11, 17)
+    before = copy.deepcopy(data)
+    values = payload(client, training)
+    values["start_overrides"] = {"T00": "2027-03-01"}
+    assert client.post(urls(training)[1], json=values).status_code == 400
+    assert data == before
+    mail.assert_not_called()
+
+
 @pytest.mark.parametrize("kind", ["unknown_id", "missing_id", "invalid_hours", "boolean", "bad_date", "out_of_session", "order"])
 def test_invalid_input_changes_nothing(case, kind):
     client, training, data, mail = case
