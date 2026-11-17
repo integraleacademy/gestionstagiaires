@@ -37,6 +37,8 @@ class Portal:
     def get(self,url,**kwargs):
         self.reads.append(url)
         if url.endswith('/registration-folders/'+FOLDER):body=self.raw
+        elif '/bills/lite?' in url:body={'billId':self.bill.get('billId'),'billNumber':self.bill.get('billNumber'),
+            'currentState':getattr(self,'billing_state',self.raw.get('currentBillingState') or 'toBill')}
         elif '/bills?' in url:body=self.bill
         elif url.endswith('/collaborators/me'):body={'company':{'organisms':[{'siret':directory.SIRET,'corporateName':'Organisme test','address':{'streetName':'rue Exemple'}}]}}
         else:pytest.fail('Unexpected EDOF endpoint')
@@ -99,6 +101,38 @@ def test_full_flow_exact_amount_details_and_receipt(tmp_path):
     assert ledger.get(tmp_path,spec['token'])['status']=='confirmed'
     snap={'checked':0,'rows':{FOLDER:directory.project(RAW)}}
     assert ledger.with_receipts(snap,tmp_path,'admin')['rows'][FOLDER]['billing_state']=='billed'
+
+
+def test_separate_bill_status_confirms_receipt_while_training_stays_validated(tmp_path):
+    app,portal=Qonto(),Portal();store,spec=prepare(tmp_path,app,portal)
+    portal.bill.update(billNumber='FL-TEST-001',amountToInvoice=1260)
+    portal.billing_state='billed'
+    assert portal.raw['currentState']=='serviceDoneValidated'
+    assert run(tmp_path,{**spec,'mode':'invoice_check'},portal)['code']=='invoice_confirmed'
+    assert not portal.sent and app.creates==1
+    snapshot={'checked':ledger.time.time()+10,'rows':{FOLDER:directory.project(RAW)}}
+    assert ledger.with_receipts(snapshot,tmp_path,'admin')['rows'][FOLDER]['billing_state']=='billed'
+    snapshot['rows'][FOLDER]['billing_state']='toBill'
+    assert ledger.with_receipts(snapshot,tmp_path,'admin')['rows'][FOLDER]['billing_state']=='toBill'
+
+
+@pytest.mark.parametrize('change',['missing','different_bill','different_number','unknown_state'])
+def test_incomplete_authoritative_bill_read_cannot_confirm_or_send(tmp_path,change):
+    app,portal=Qonto(),Portal();store,spec=prepare(tmp_path,app,portal)
+    original=portal.get
+    def get(url,**kwargs):
+        response=original(url,**kwargs)
+        if '/bills/lite?' in url:
+            body=json.loads(response.body())
+            if change=='missing':body=None
+            elif change=='different_bill':body['billId']='another-bill'
+            elif change=='different_number':body['billNumber']='another-number'
+            else:body['currentState']='unknown'
+            response.body=lambda:json.dumps(body).encode()
+        return response
+    portal.get=get
+    assert run(tmp_path,spec,portal)['code']=='invoice_unavailable'
+    assert not portal.sent
 
 
 @pytest.mark.parametrize(('course', 'heading'), [
@@ -194,7 +228,7 @@ def test_manual_evening_window_only_checks_existing_transmissions(tmp_path):
     job=ledger.next_job(store,selection,check_only=True)
     assert job['mode']=='invoice_check'
     result=run(tmp_path,job,portal)
-    assert result['code']=='invoice_uncertain' and 'serviceDoneValidated' in result['invoice_message']
+    assert result['code']=='invoice_uncertain' and 'toBill' in result['invoice_message']
     assert len(portal.sent)==1 and app.creates==1
     store.manual_until=lambda owner:0
     assert ledger.next_job(store,selection,check_only=True) is None
