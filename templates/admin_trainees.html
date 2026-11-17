@@ -3758,7 +3758,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   if (edofPrefillError) document.getElementById('btnCreateTrainee').disabled = true;
 
   if (new URLSearchParams(window.location.search).get('openCreateTrainee') === '1') {
-    document.getElementById('btnOpenCreateTrainee')?.click();
+    openModal('createTraineeModal');
   }
 
   // =========================
