@@ -267,11 +267,23 @@ def perform(context, witness, spec, path, vault, origin, prefix):
     bill = read(bill_url)
     if not isinstance(bill,dict):
         return {'code':'invoice_unavailable'}
-    billed = directory.normalized(raw.get('currentBillingState') or '')=='billed' or directory.normalized(bill.get('currentState') or '')=='billed'
+    # The official portal reads /bills/lite for the authoritative invoice state.
+    # A registration-folder detail may remain serviceDoneValidated after billing.
+    lite = read(root+'organisms/current/bills/lite?'+urlencode({'idSuiviFinancement':funding}))
+    if (not isinstance(lite,dict) or not lite.get('billId')
+        or str(lite['billId']) != str(bill.get('billId') or '')
+        or (lite.get('billNumber') or '') != (bill.get('billNumber') or '')):
+        return {'code':'invoice_unavailable'}
+    billing_state = directory.normalized(lite.get('currentState') or '')
+    if billing_state not in {'billed','tobill'}:
+        return {'code':'invoice_unavailable'}
+    billed = billing_state=='billed'
     if billed:
-        if record['invoice_number'] and bill.get('billNumber')==record['invoice_number'] and money(bill.get('amountToInvoice'))==record['terms'].get('amount'):
+        if (record['invoice_number'] and lite.get('billNumber')==bill.get('billNumber')==record['invoice_number']
+            and str(lite['billId'])==record['terms'].get('bill_id')
+            and money(bill.get('amountToInvoice'))==record['terms'].get('amount')):
             update(path,record['token'],status='confirmed',receipt={'number':bill['billNumber'],'amount':money(bill['amountToInvoice']),
-                   'billing_at':directory.dates.first(raw,'billingDate'),'at':time.time()},message='')
+                   'billing_at':directory.dates.first(lite,'billDate') or directory.dates.first(raw,'billingDate'),'at':time.time()},message='')
             return {'code':'invoice_confirmed'}
         if record['qonto_id']:
             raise Review('Une autre facture est enregistrée dans EDOF. Aucun nouvel envoi effectué.')
@@ -290,7 +302,7 @@ def perform(context, witness, spec, path, vault, origin, prefix):
         except Review as exc:
             resume_note = ' '+str(exc)
         update(path,record['token'],receipt=proof)
-        state = str(raw.get('currentBillingState') or bill.get('currentState') or raw.get('currentState') or 'non renseigné')[:80]
+        state = str(lite.get('currentState') or 'non renseigné')[:80]
         number = str(bill.get('billNumber') or 'non renseigné')[:80]
         return {'code':'invoice_uncertain', 'invoice_message':
                 f'EDOF ne confirme pas encore la facturation. État relu : {state}. Numéro de facture relu : {number}.'+resume_note}
@@ -352,14 +364,15 @@ def perform(context, witness, spec, path, vault, origin, prefix):
 
 
 def with_receipts(snapshot,path,owner):
-    """Show authoritative receipts immediately, until the next complete EDOF list."""
+    """A newer general dossier read cannot erase a confirmed billing receipt."""
     if not snapshot:
         return snapshot
     rows=dict(snapshot['rows'])
     for record in records(path,owner):
         row=rows.get(record['folder'])
         receipt=record['receipt']
-        if (record['status']!='confirmed' or not row or receipt.get('at',0)<=max(snapshot.get('checked',0),row.get('observed_at',0))
+        if (record['status']!='confirmed' or not row
+            or (row.get('billing_state') and receipt.get('at',0)<=max(snapshot.get('checked',0),row.get('observed_at',0)))
             or any(row.get(k)!=record['identity'].get(k) for k in ('first_name','last_name','session_start_date','session_end_date'))):
             continue
         rows[record['folder']]={**row,'billing_state':'billed','billing_at':receipt.get('billing_at',''),'observed_at':receipt['at']}
