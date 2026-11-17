@@ -48,7 +48,9 @@ def option_codes(options, key, *patterns):
 
 def fill(values, options, session_terms=None):
     values["weeklyDuration"] = "35"
-    values["exam"] = "INCLUDED"
+    is_vtc = training_family(values.get("title")) == "VTC"
+    values["exam"] = "INCLUDED" if is_vtc else "NONE"
+    values["montantFraisCertificationInclus"] = "250" if is_vtc else ""
     if values.get("additionalFees") in ("0", "0.00") and not values.get("additionalFeesDetails"):
         values["additionalFees"] = ""
     key = course_key(values.get("title"))
@@ -96,7 +98,4 @@ def fill(values, options, session_terms=None):
                     choices = option_codes(options, field, label)
                     if choices:
                         values[field] = choices[0]
-    if key == "VTC" and str(values.get("sessionStartDate") or "").startswith("2026-"):
-        if values.get("montantFraisCertificationInclus") in (None, "", "0"):
-            values["montantFraisCertificationInclus"] = "241"
     return values

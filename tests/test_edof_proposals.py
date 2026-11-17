@@ -390,15 +390,15 @@ def test_workspace_read_wrong_holder_never_writes(conn):
 def test_academy_defaults_complete_a_2026_vtc_offer_without_adding_exam_twice():
     raw = official()
     raw["trainingActionInfo"].update(title="Chauffeur VTC complet", sessionStartDate="01/12/2026",
-                                    totalIncl=0, vat=0, doesPriceIncludeMontantFraisExam="NONE")
+                                    totalIncl=0, vat=0, doesPriceIncludeMontantFraisExam="INCLUDED", montantFraisCertificationInclus=241)
     source = offer.project(raw)
     v = offer.displayed(source, directory.project(raw), OPTIONS)
     assert (v["priceTotal"], v["indicativeDuration"], v["weeklyDuration"]) == ("1500", "105", "35")
-    assert (v["exam"], v["montantFraisCertificationInclus"], v["typeOfTrainingCourse"]) == ("INCLUDED", "241", "2")
+    assert (v["exam"], v["montantFraisCertificationInclus"], v["typeOfTrainingCourse"]) == ("INCLUDED", "250", "2")
     v.update(sessionStartDate=DAY, sessionEndDate=END)
     payload = offer.amended(raw, offer.validate(v, source, OPTIONS), OPTIONS)
     assert payload["trainingActionInfo"]["totalIncl"] == 1500
-    assert payload["trainingActionInfo"]["montantFraisCertificationInclus"] == 241
+    assert payload["trainingActionInfo"]["montantFraisCertificationInclus"] == 250
 
 
 @pytest.mark.parametrize("title,year,amount,hours,center", [
@@ -408,12 +408,13 @@ def test_academy_defaults_complete_a_2026_vtc_offer_without_adding_exam_twice():
     ("SSIAP 1 + SST", 2026, "1230", "81", "81"), ("SSIAP 1", 2026, "980", "67", "67"),
     ("Remise à niveau SSIAP 1", 2026, "", "21", "21"), ("Recyclage SSIAP 2", 2026, "", "14", "14"),
     ("SSIAP 3", 2026, "", "216", "216"), ("SST", 2026, "", "14", "14"),
-    ("VTC pratique + véhicule", 2026, "600", "", ""), ("A3P", 2027, "", "328", "328"),
+    ("VTC pratique + véhicule", 2026, "600", "", ""), ("VTC", 2027, "", "105", ""), ("A3P", 2027, "", "328", "328"),
 ])
 def test_catalogue_uses_stated_durations_and_only_2026_prices(title, year, amount, hours, center):
     v = offer.displayed(None, dict(title=title, session_start_date=f"{year}-12-01"))
     assert (v["priceTotal"], v["indicativeDuration"], v["hoursInCenter"], v["weeklyDuration"]) == (amount, hours, center, "35")
-    assert v["exam"] == "INCLUDED" and not v["montantFraisCertificationInclus"]
+    expected = ("INCLUDED", "250") if title.startswith("VTC") else ("NONE", "")
+    assert (v["exam"], v["montantFraisCertificationInclus"]) == expected
 
 
 def test_missing_official_totals_preserve_quote_or_session_specific_terms():
