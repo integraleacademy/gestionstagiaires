@@ -222,12 +222,22 @@ class RefreshExternalApiTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
+        self.original_atomic = gestion_app._atomic_update_data
+
+        def atomic(mutate):
+            data = gestion_app.load_data()
+            result = mutate(data)
+            gestion_app.save_data(data)
+            return result
+
+        gestion_app._atomic_update_data = atomic
         self.original_cnaps_lookup = gestion_app.fetch_cnaps_status_by_name
         self.original_hebergement_lookup = gestion_app.fetch_hebergement_status
 
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
+        gestion_app._atomic_update_data = self.original_atomic
         gestion_app.fetch_cnaps_status_by_name = self.original_cnaps_lookup
         gestion_app.fetch_hebergement_status = self.original_hebergement_lookup
 

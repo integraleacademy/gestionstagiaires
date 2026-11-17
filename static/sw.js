@@ -90,16 +90,20 @@ async function maintenanceResponse(originalResponse, networkError) {
     if (originalResponse) return originalResponse;
     throw networkError;
   }
+  const headers = new Headers({
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store, max-age=0',
+    'Retry-After': '12',
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  // Preserve the gateway's trace ID when substituting the offline document.
+  const requestId = originalResponse?.headers.get('Rndr-Id');
+  if (requestId) headers.set('Rndr-Id', requestId);
   return new Response(await fallback.text(), {
     status: 503,
     statusText: 'Service Unavailable',
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store, max-age=0',
-      'Retry-After': '12',
-      'Referrer-Policy': 'no-referrer',
-      'X-Content-Type-Options': 'nosniff',
-    },
+    headers,
   });
 }
 

@@ -70,6 +70,7 @@ const server = http.createServer((req, res) => {
   }
   if (navigation) {
     navigationRequests += 1;
+    res.setHeader('Rndr-Id', `trace-${navigationRequests}`);
     if (navigationDown || transientNavigationFailures > 0) {
       transientNavigationFailures = Math.max(0, transientNavigationFailures - 1);
       res.statusCode = 502;
@@ -124,6 +125,7 @@ const server = http.createServer((req, res) => {
       status = code;
       const response = await page.reload();
       assert.equal(response.status(), 503);
+      assert.equal(await response.headerValue('Rndr-Id'), `trace-${navigationRequests}`);
       await page.getByText('Reconnexion en cours…', { exact: true }).waitFor();
       assert.equal(await page.locator('#resume-note').isVisible(), true);
       assert.equal(page.url(), originalURL);
@@ -229,6 +231,7 @@ const server = http.createServer((req, res) => {
     transportDown = true;
     const offline = await page.reload();
     assert.equal(offline.status(), 503);
+    assert.equal(await offline.headerValue('Rndr-Id'), null);
     await page.getByText('Reconnexion en cours…', { exact: true }).waitFor();
     transportDown = false;
     await page.getByRole('heading', { name: 'Original page' }).waitFor({ timeout: 20000 });

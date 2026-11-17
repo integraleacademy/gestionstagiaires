@@ -631,7 +631,7 @@ async function refreshCnapsForRow(tr){
   const prenom = getCandidateFieldValue(tr, 'prenom');
   if(!nom || !prenom) return;
 
-  const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
+  const r = await window.cnapsRead(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
   if(!r.ok) throw new Error('lookup_failed');
   const body = await r.json();
   const status = (body.statut_cnaps || 'INCONNU').toUpperCase();
