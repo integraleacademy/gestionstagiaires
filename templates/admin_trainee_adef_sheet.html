@@ -26,7 +26,7 @@
       @page{size:A4;margin:8mm}
       body{background:#fff}
       .page{max-width:none;margin:0;padding:0;border-radius:0;box-shadow:none}
-      .toolbar{display:none}
+      .toolbar,[data-card-pro-refresh],[data-card-pro-message]{display:none}
       .row{break-inside:avoid}
     }
   </style>
@@ -59,21 +59,29 @@
       <div class="row"><div class="label">Code postal</div><div class="value">{{ adef.zip_code or "—" }}</div></div>
       <div class="row"><div class="label">Ville</div><div class="value">{{ adef.city or "—" }}</div></div>
       <div class="row"><div class="label">Numéro PRE ou CAR</div><div class="value">{{ adef.pre_or_car or "—" }}</div></div>
-      <div class="row" id="adefCnapsValidityRow">
+      {% set nub = extract_nub_from_pre_car(adef.pre_or_car) %}
+      {% set snapshot = cnaps_annuaire_snapshot(adef.last_name, nub) %}
+      <div class="row" id="adefCnapsValidityRow" data-nom="{{ adef.last_name or '' }}"
+           data-prenom="{{ adef.first_name or '' }}" data-nub="{{ nub or '' }}"
+           data-cnaps-snapshot="{{ snapshot.result|tojson|forceescape }}" data-cnaps-checked-at="{{ snapshot.checked_at or '' }}">
         <div class="label">Date de fin de validité</div>
-        <div class="value" id="adefCnapsValidity" aria-live="polite">Chargement de la validité CNAPS…</div>
+        <div class="value"><div id="adefCnapsValidity" aria-live="polite">{{ 'Aucune vérification enregistrée' if nub else 'NUB absent — validité CNAPS non vérifiable.' }}</div>
+          {% if nub %}<small data-card-pro-date></small>
+          <small data-card-pro-message aria-live="polite"></small>
+          <button class="btn" type="button" data-card-pro-refresh>Actualiser</button>{% endif %}
+        </div>
       </div>
     </div>
   </div>
   {% include "_mail_sent_badge.html" %}
 
+  <script src="{{ url_for('static', filename='js/cnaps-read.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/cnaps-card.js') }}"></script>
   <script>
-    const adefCnapsValidityPromise = (() => {
+    const pendingCnapsRefresh = (() => {
+      const row = document.getElementById("adefCnapsValidityRow");
+      if (!row.dataset.nub) return () => null;
       const output = document.getElementById("adefCnapsValidity");
-      const nub = {{ extract_nub_from_pre_car(adef.pre_or_car)|tojson }};
-      const nom = {{ (adef.last_name or "")|tojson }};
-      const prenom = {{ (adef.first_name or "")|tojson }};
-
       const formatFrenchDate = (rawDate) => {
         const value = String(rawDate || "").trim();
         const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|$)/);
@@ -91,43 +99,27 @@
         output.appendChild(note);
       };
 
-      if (!nub) {
-        showNote("NUB absent — validité CNAPS non vérifiable.");
-        return Promise.resolve();
-      }
+      return window.cnapsCards.bind(row, (payload) => {
+        const activeTitles = Array.isArray(payload.active_titles) ? payload.active_titles : [];
+        if (!activeTitles.length) {
+          showNote("Aucun titre CNAPS actif trouvé.");
+          return;
+        }
 
-      const params = new URLSearchParams({ nom, prenom, nub });
-      return fetch(`/api/cnaps_public_annuaire?${params.toString()}`, {
-        headers: { Accept: "application/json" },
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error(`CNAPS HTTP ${response.status}`);
-          return response.json();
-        })
-        .then((payload) => {
-          const activeTitles = Array.isArray(payload.active_titles) ? payload.active_titles : [];
-          if (!activeTitles.length) {
-            showNote("Aucun titre CNAPS actif trouvé.");
-            return;
-          }
-
-          output.replaceChildren();
-          activeTitles.forEach((title) => {
-            const status = title.display_status || title.status || "Titre actif";
-            const validUntil = formatFrenchDate(title.date_fin_validite || title.valid_until);
-            const item = document.createElement("div");
-            item.className = "cnaps-validity-item";
-            item.textContent = validUntil ? `${status} / Expire le ${validUntil}` : `${status} / Date d’expiration non renseignée`;
-            output.appendChild(item);
-          });
-        })
-        .catch(() => {
-          showNote("Validité CNAPS momentanément indisponible.");
+        output.replaceChildren();
+        activeTitles.forEach((title) => {
+          const status = title.display_status || title.status || "Titre actif";
+          const validUntil = formatFrenchDate(title.date_fin_validite || title.valid_until);
+          const item = document.createElement("div");
+          item.className = "cnaps-validity-item";
+          item.textContent = validUntil ? `${status} / Expire le ${validUntil}` : `${status} / Date d’expiration non renseignée`;
+          output.appendChild(item);
         });
+      });
     })();
 
     document.getElementById("btnPrintAdef").addEventListener("click", async () => {
-      await adefCnapsValidityPromise;
+      await pendingCnapsRefresh();
       window.print();
     });
   </script>

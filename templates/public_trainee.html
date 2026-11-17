@@ -6,6 +6,7 @@
 {% set token_safe = token or trainee.public_token or '' %}
 
 <style>
+  [data-permit-required][hidden], [data-permit-waived][hidden], [data-info-save-retry][hidden]{display:none!important}
 
   /* ✅ Empêche les champs de déborder dans un flex-row */
 .field > div { min-width: 0; }
@@ -1240,14 +1241,14 @@
       </div>
     </section>
 
-    {% if not trainee.public_hide_suivi %}<section class="trainee-overview-card tracking-card" aria-labelledby="trackingTitle"><div class="progress-head"><div><p class="card-kicker">Suivi de votre inscription</p><h2 id="trackingTitle" class="card-title">Votre parcours</h2></div><div class="progress-percent">Dossier complété à {{ progress_percent }} %</div></div><div class="progress-track" aria-hidden="true"><div class="progress-fill" style="width:{{ progress_percent }}%;"></div></div><div class="steps-list">
+    {% if not trainee.public_hide_suivi %}<section class="trainee-overview-card tracking-card" aria-labelledby="trackingTitle" data-tracking-other="{{ progress_count - (1 if dossier_done else 0) }}" data-tracking-total="{{ progress_total }}"><div class="progress-head"><div><p class="card-kicker">Suivi de votre inscription</p><h2 id="trackingTitle" class="card-title">Votre parcours</h2></div><div class="progress-percent">Dossier complété à {{ progress_percent }} %</div></div><div class="progress-track" aria-hidden="true"><div class="progress-fill" style="width:{{ progress_percent }}%;"></div></div><div class="steps-list">
       {% if not is_dirigeant_vae %}<div class="step-item done"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div><div class="step-title">Inscription validée</div></div><span class="pill green">Validée</span></div>{% endif %}
       <div class="step-item {{ 'done' if convention_done else ('current' if convention_action_required or convention_state == 'signing' else 'blocked' if convention_state in ['refused','expired'] else 'current') }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg></span><div><div class="step-title">Convention signée</div></div>{% if convention_done %}<span class="pill green">Signée</span>{% elif convention_action_required %}<span class="pill blue">À signer</span>{% elif convention_state == 'signing' %}<span class="pill blue">En attente</span>{% elif convention_state in ['refused','expired'] %}<span class="pill red">{{ 'Expirée' if convention_state == 'expired' else 'Refusée' }}</span>{% else %}<span class="pill gray">À venir</span>{% endif %}</div>
       {% if is_aps_or_a3p_training %}<div class="step-item {{ 'done' if test_fr_done else 'current' if trainee.test_fr_status in ['in_progress','relance'] else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></span><div><div class="step-title">Test de français</div></div>{{ pill_for('test_fr', trainee.test_fr_status or 'soon') }}</div>
       <div class="step-item {{ 'done' if cnaps_done else 'current' if cnaps_up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION','TRANSMIS','ENREGISTRE','ENREGISTRÉ'] else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span><div><div class="step-title">CNAPS</div></div>{{ pill_for('cnaps', trainee.cnaps or 'INCONNU') }}</div>{% endif %}
       {% if show_hosting %}<div class="step-item {{ 'done' if hosting_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span><div><div class="step-title">Hébergement</div>{% if not hosting_done %}<div class="step-desc">Aucun hébergement réservé</div>{% endif %}</div><div class="step-actions">{{ pill_for('hosting', trainee.hosting_status or 'unknown') }}{% if not hosting_done %}<a class="btn outline small" target="_blank" rel="noopener" href="https://assistance-alw9.onrender.com/hebergement">Réserver</a>{% endif %}</div></div>{% endif %}
 {% if not session.afc_enabled %}      <div class="step-item {{ 'done' if financement_done else 'current' if trainee.financement_status == 'in_review' else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span><div><div class="step-title">Financement validé</div></div>{% if financement_done %}<span class="pill green">Validé</span>{% elif trainee.financement_status == 'in_review' %}<span class="pill blue">En cours</span>{% else %}<span class="pill gray">À venir</span>{% endif %}</div>{% endif %}
-      <div class="step-item {{ 'done' if dossier_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><div class="step-title">Dossier complet</div></div>{{ pill_for('dossier', 'complete' if dossier_done else 'incomplete') }}</div>
+      <div id="dossierTrackingStep" class="step-item {{ 'done' if dossier_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><div class="step-title">Dossier complet</div></div>{{ pill_for('dossier', 'complete' if dossier_done else 'incomplete') }}</div>
     </div></section>{% endif %}
 
     {% if convention_done or convention_pdf_token or convention_action_required or public_convocation_available or is_aps_training or ('SSIAP' in tt) %}<section class="trainee-overview-card documents-card" aria-labelledby="documentsTitle"><div><p class="card-kicker">Vos documents</p><h2 id="documentsTitle" class="card-title">Documents de formation</h2></div><div class="documents-list">
@@ -1281,10 +1282,12 @@
   <div class="saas-card-header"><div class="saas-title-row"><span class="saas-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><div><p class="card-kicker">Informations obligatoires</p><h2 class="card-title">Infos à compléter</h2></div></div></div>
 {% endif %}
   <div class="saas-helper">
-    ✅ <strong>Tout ce que vous saisissez est enregistré automatiquement.</strong><br>
+    <strong>Vos modifications sont enregistrées automatiquement.</strong><br>
     ⚠️ Ces informations sont <strong>obligatoires</strong>. Les champs incomplets restent clairement signalés.
   </div>
 
+
+<span role="status" data-info-save-status></span> <button type="button" class="btn small outline" data-info-save-retry hidden>Réessayer</button>
 
 {% macro field(label, id, value, placeholder) %}
   {% set ok = value and value|length > 3 %}
@@ -1320,6 +1323,7 @@
   <div style="display:flex;gap:10px;align-items:center;">
     <input id="birth_date"
            type="date"
+           data-saved-value="{{ trainee.birth_date or '' }}"
            value="{{ trainee.birth_date or '' }}"
            style="flex:1;">
     <span id="ok_birth_date" class="saved show" style="min-width:110px;text-align:right;{% if (trainee.birth_date or '') %}color:#16a34a;{% else %}color:#dc2626;{% endif %}">
@@ -1346,7 +1350,7 @@
 <div class="field" style="border-left:4px solid {{ '#16a34a' if (trainee.tshirt_size or '')|upper in ['S','M','L','XL','XXL'] else '#dc2626' }};padding-left:10px;">
   <label class="label">Taille de t-shirt</label>
   <div style="display:flex;gap:10px;align-items:center;">
-    <select id="tshirt_size" style="flex:1;min-width:0;">
+    <select id="tshirt_size" data-saved-value="{{ trainee.tshirt_size or '' }}" style="flex:1;min-width:0;">
       <option value="">Sélectionner une taille</option>
       {% for size in ["S","M","L","XL","XXL"] %}
       <option value="{{ size }}" {% if (trainee.tshirt_size or '')|upper == size %}selected{% endif %}>{{ size }}</option>
@@ -1533,12 +1537,11 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
   {% set max_files = 2 if d.key == "id" else (0 if d.key in ["livret_2", "complementary_documents"] else 1) %}
   {% set can_add_more = (d.key in ["livret_2", "complementary_documents"]) or ((file_tokens|length) < max_files) %}
-{% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
+{% set permit_waived = d.key == "permis" and (trainee.no_permis|string|lower|trim in ["1", "true", "oui", "on"]) %}
+{% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) %}
 
     {% set row_cls = "" if is_optional_doc else "missing" %}
-    {% if d.key == "permis" and trainee.no_permis %}
-      {% set row_cls = "valid" %}
-    {% elif has_submission %}
+    {% if has_submission %}
       {% if up == "CONFORME" %}
         {% set row_cls = "valid" %}
       {% elif up == "NON CONFORME" %}
@@ -1576,13 +1579,18 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
       ] %}
     {% endif %}
 
-<details class="docrow {{ row_cls }}" id="doc_{{ d.key }}" data-doc-required="{{ 'false' if is_optional_doc else 'true' }}" data-doc-submitted="{{ 'true' if has_submission or (d.key == 'permis' and trainee.no_permis) else 'false' }}">
+<details class="docrow {{ 'valid' if permit_waived else row_cls }}" id="doc_{{ d.key }}"
+  {% if d.key == "permis" %}data-permit-class="{{ row_cls }}" data-permit-submitted="{{ 'true' if has_submission else 'false' }}"{% endif %} data-doc-required="{{ 'false' if is_optional_doc else 'true' }}" data-doc-submitted="{{ 'true' if has_submission or permit_waived else 'false' }}">
       <summary class="docrow-summary">
         <span class="docrow-summary-title">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}{% if is_optional_doc %} <span class="doctag" style="margin-left:8px;">Facultatif</span>{% endif %}</span>
         <span class="docrow-summary-status">
-          {% if d.key == "permis" and trainee.no_permis %}Permis non requis
-          {% elif has_submission %}{% if up == "CONFORME" %}Conforme{% elif up == "NON CONFORME" %}À corriger{% else %}Déposé{% endif %}
+          {% if d.key == "permis" %}
+            <span data-permit-waived {% if not permit_waived %}hidden{% endif %}>Permis non requis</span>
+            <span data-permit-required {% if permit_waived %}hidden{% endif %}>
+          {% endif %}
+          {% if has_submission %}{% if up == "CONFORME" %}Conforme{% elif up == "NON CONFORME" %}À corriger{% else %}Déposé{% endif %}
           {% else %}À déposer{% endif %}
+          {% if d.key == "permis" %}</span>{% endif %}
         </span>
       </summary>
       <div class="docmeta">
@@ -1655,18 +1663,19 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
     <input
       type="checkbox"
       id="no_permis_checkbox"
-      {% if trainee.no_permis %}checked{% endif %}
+      {% if permit_waived %}checked{% endif %}
     >
     Je n’ai pas le permis de conduire
   </label>
+  <span role="status" data-info-save-status></span> <button type="button" class="btn small outline" data-info-save-retry hidden>Réessayer</button>
 
   <div class="muted" style="margin-top:4px;">
     Cochez cette case si vous n'êtes pas titulaire du permis de conduire.
   </div>
 {% endif %}
 
-        {% if d.key == "permis" and trainee.no_permis %}
-  <div class="doctag"
+        {% if d.key == "permis" %}
+  <div data-permit-waived {% if not permit_waived %}hidden{% endif %} class="doctag"
        style="margin-top:8px;border-color:#bbf7d0;color:#065f46;">
     ✅ Permis non requis (déclaré)
   </div>
@@ -1686,8 +1695,8 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
           {% endif %}
         {% endif %}
 
-{% if not has_file and not (d.key == "permis" and trainee.no_permis) and d.key != "candidate_info_sheet" %}
-  <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
+{% if not has_file and d.key != "candidate_info_sheet" %}
+  <div {% if d.key == "permis" %}data-permit-required {% if permit_waived %}hidden{% endif %}{% endif %} class="doctag missing">📌 Document à déposer (obligatoire)</div>
 {% else %}
     {% if has_file %}
       {% if up == "CONFORME" %}
@@ -1714,6 +1723,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% if show_upload and d.key != "candidate_info_sheet" %}
 <form class="upload-form"
 id="upload_{{ d.key }}"
+  {% if d.key == "permis" %}data-permit-required {% if permit_waived %}hidden{% endif %}{% endif %}
   action="/espace/{{ token_safe }}/documents/{{ d.key }}/upload"
   method="post"
   enctype="multipart/form-data"
@@ -1745,12 +1755,12 @@ id="upload_{{ d.key }}"
          name="files"
          multiple
          accept="{{ accept }}"
-         {% if not (d.key == "permis" and trainee.no_permis) and not is_optional_doc %}required{% endif %}>
+         {% if not is_optional_doc %}required{% endif %}>
 {% else %}
   <input type="file"
          name="file"
          accept="{{ accept }}"
-         {% if not (d.key == "permis" and trainee.no_permis) and not is_optional_doc %}required{% endif %}>
+         {% if not is_optional_doc %}required{% endif %}>
 {% endif %}
 
 <button class="btn small upload-cta" type="submit">
@@ -2455,6 +2465,7 @@ id="upload_{{ d.key }}"
 </div>
 
 
+<script src="{{ url_for('static', filename='js/public-info-autosave.js', v='20261117-1') }}"></script>
 <script>
 
   
@@ -2846,123 +2857,63 @@ function digitsOnly(s){
 }
 
 
-function applyFormattingLive(){
-  // Sécu
-  const secu = document.getElementById("carte_vitale");
-  if(secu){
-    const d = digitsOnly(secu.value).slice(0, 15);
-    secu.value = formatSecuDisplay(d);
-  }
-
-  // PRE
-  const pre = document.getElementById("pre_number");
-  if(pre){
-    pre.value = normalizePRE(pre.value);
-  }
+const infoFields = {};
+for (const key of ["carte_vitale", "pre_number", "birth_date", "birth_city", "birth_country",
+                   "nationality", "tshirt_size", "address", "zip_code", "city", "no_permis"]) {
+  const field = document.getElementById(key === "no_permis" ? "no_permis_checkbox" : key);
+  if (field) infoFields[key] = field;
 }
-
-  function flashSaved(id){
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.classList.add("show");
-    setTimeout(()=>el.classList.remove("show"), 1200);
-  }
-
-function setFieldState(inputId){
-  const input = document.getElementById(inputId);
-  const ok = document.getElementById("ok_" + inputId);
-  const wrapper = input?.closest(".field"); // 👈 LA CLÉ EST LÀ
-  if(!input || !ok || !wrapper) return;
-
-  const v = (input.value || "").trim();
-  const valid = v.length > 0;
-
-  if(valid){
-    input.style.borderColor = "#bbf7d0";
-    ok.textContent = "✅";
-    ok.style.color = "#16a34a";
-    wrapper.style.borderLeft = "4px solid #16a34a"; // 🟢 LIVE
-  }else{
-    input.style.borderColor = "#fecdd3";
-    ok.textContent = "⚠️ À compléter";
-    ok.style.color = "#dc2626";
-    wrapper.style.borderLeft = "4px solid #dc2626"; // 🔴 LIVE
-  }
-}
-
-
-
-  let tmr = null;
-  function autosave(){
-    clearTimeout(tmr);
-    tmr = setTimeout(async ()=>{
-
-      applyFormatting();
-
-      const carte_vitale  = document.getElementById("carte_vitale")?.value || "";
-      const pre_number    = document.getElementById("pre_number")?.value || "";
-
-      const birth_date    = document.getElementById("birth_date")?.value || "";
-      const birth_city    = document.getElementById("birth_city")?.value || "";
-      const birth_country = document.getElementById("birth_country")?.value || "";
-      const nationality   = document.getElementById("nationality")?.value || "";
-      const tshirt_size   = document.getElementById("tshirt_size")?.value || "";
-
-      const address       = document.getElementById("address")?.value || "";
-      const zip_code      = document.getElementById("zip_code")?.value || "";
-      const city          = document.getElementById("city")?.value || "";
-
-      const r = await fetch(`/espace/${token}/infos/update`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-          carte_vitale, pre_number,
-          birth_date, birth_city, birth_country, nationality,
-          tshirt_size,
-          address, zip_code, city
-        })
-      });
-
-      if(r.ok){
-        // ✅ feedback minimal: on montre que c'est enregistré
-        flashSaved("ok_carte_vitale");
-        flashSaved("ok_pre_number");
-
-        // ✅ état “à compléter / ok” (on le fera joli après)
-        setFieldStateValidated("carte_vitale");
-        setFieldStateValidated("pre_number");
-        setFieldStateValidated("birth_date");
-        setFieldStateValidated("birth_city");
-        setFieldStateValidated("birth_country");
-        setFieldStateValidated("nationality");
-        setFieldStateValidated("tshirt_size");
-        setFieldStateValidated("address");
-        setFieldStateValidated("zip_code");
-        setFieldStateValidated("city");
-        updateInfosToCompleteWarning();
-  updateDocumentsWarning();
-
-      }
-    }, 400);
-  }
-
-  // listeners existants (garde-les si tu veux) + nouveaux
-  [
-  "carte_vitale",
-  "birth_date","birth_city","birth_country","nationality",
-  "tshirt_size",
-  "address","zip_code","city"
-].forEach(id=>{
-  const el = document.getElementById(id);
-  if(!el) return;
-
-  el.addEventListener("input", () => {
-    if (id === "city" || id === "birth_city") {
-      formatInputWithCaret(el, value => value.toLocaleUpperCase('fr-FR'));
+const readInfo = (key, field) => key === "no_permis" ? field.checked : field.value.trim();
+const infoSaver = createPublicInfoAutosave({
+  initial: Object.fromEntries(Object.entries(infoFields).map(([key, field]) =>
+    [key, field.dataset.savedValue ?? readInfo(key, field)])),
+  async send(payload) {
+    const response = await fetch(`/espace/${token}/infos/update`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload), cache: "no-store", keepalive: true
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) {
+      const error = new Error(result?.error || "Enregistrement impossible. Réessayez.");
+      error.rejected = !!result && response.status >= 400 && response.status < 500;
+      throw error;
     }
-    setFieldStateValidated(id);   // ✅ mise à jour live du trait rouge/vert
-    autosave();                   // ✅ sauvegarde différée
+    if (typeof result.dossier_complete === "boolean") {
+      showDossierProgress(document.getElementById("dossierTrackingStep"), result.dossier_complete);
+    }
+  },
+  notify(message, retry = false) {
+    document.querySelectorAll("[data-info-save-status]").forEach(el => el.textContent = message);
+    document.querySelectorAll("[data-info-save-retry]").forEach(el => el.hidden = !retry);
+  },
+  onPermitSaved(waived) {
+    showSavedPermit(document.getElementById("doc_permis"), waived);
+    updateDocumentsWarning();
+  }
+});
+for (const [key, field] of Object.entries(infoFields)) {
+  const eventName = key === "no_permis" || field.tagName === "SELECT" ? "change" : "input";
+  field.addEventListener(eventName, () => {
+    if (key === "city" || key === "birth_city") {
+      formatInputWithCaret(field, value => value.toLocaleUpperCase("fr-FR"));
+    } else if (key === "carte_vitale") {
+      formatInputWithCaret(field, value => formatSecuDisplay(digitsOnly(value).slice(0, 15)));
+    } else if (key === "pre_number") {
+      formatInputWithCaret(field, formatPreCarDisplay);
+    }
+    setFieldStateValidated(key);
+    updateInfosToCompleteWarning();
+    updateDocumentsWarning();
+    infoSaver.schedule(key, readInfo(key, field));
   });
+}
+document.querySelectorAll("[data-info-save-retry]").forEach(button => button.addEventListener("click", infoSaver.flush));
+window.addEventListener("online", infoSaver.flush);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && infoSaver.hasPending()) infoSaver.flush();
+});
+window.addEventListener("beforeunload", event => {
+  if (infoSaver.hasPending()) { event.preventDefault(); event.returnValue = ""; }
 });
 
 function formatInputWithCaret(el, formatter){
@@ -2982,25 +2933,6 @@ function formatInputWithCaret(el, formatter){
   const delta = after.length - beforeLen;
   const newPos = Math.max(0, Math.min(after.length, start + delta));
   try { el.setSelectionRange(newPos, newPos); } catch(e){}
-}
-
-// ✅ Formatage en direct pendant la saisie
-const secuEl = document.getElementById("carte_vitale");
-if(secuEl){
-  secuEl.addEventListener("input", ()=>{
-    // sécu: on reformate propre
-    const d = digitsOnly(secuEl.value).slice(0, 15);
-    secuEl.value = formatSecuDisplay(d);
-  });
-}
-
-const preEl = document.getElementById("pre_number");
-if(preEl){
-  preEl.addEventListener("input", ()=>{
-    formatInputWithCaret(preEl, formatPreCarDisplay);
-    setFieldStateValidated("pre_number");
-    autosave();
-  });
 }
 
   // premier passage pour mettre rouge/✅ dès l'ouverture
@@ -3044,24 +2976,7 @@ function isValidSecu(digits){
 function isValidPRE(v){
   if(!v) return false;
   const normalized = normalizePRE(v);
-  return /^(?:(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}|\d{4}-\d{7}-(PRE|CAR)-[A-Z0-9]{2}-\d{7})$/.test(normalized);
-}
-
-function applyFormatting(){
-  ["city", "birth_city"].forEach(id => {
-    const field = document.getElementById(id);
-    formatInputWithCaret(field, value => value.toLocaleUpperCase('fr-FR'));
-  });
-  const secu = document.getElementById("carte_vitale");
-  if(secu){
-    const d = digitsOnly(secu.value);
-    secu.value = formatSecuDisplay(d).slice(0, 23); // limite visuelle
-  }
-
-  const pre = document.getElementById("pre_number");
-  if(pre){
-    pre.value = normalizePRE(pre.value);
-  }
+  return /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11}|\d{4}-\d{7}-(PRE|CAR)-[A-Z0-9]{2}-\d{7})$/.test(normalized);
 }
 
 function setFieldStateValidated(inputId){
@@ -3097,50 +3012,6 @@ function setFieldStateValidated(inputId){
 }
 
  
-
-document.addEventListener("DOMContentLoaded", () => {
-  const cb = document.getElementById("no_permis_checkbox");
-  if (!cb) return;
-
-  cb.addEventListener("change", async () => {
-
-    // 1️⃣ Sauvegarde backend
-    const r = await fetch(`/espace/${token}/infos/update`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        no_permis: cb.checked
-      })
-    });
-
-    if (!r.ok) {
-      alert("Erreur lors de l’enregistrement du choix.");
-      return;
-    }
-
-    // 2️⃣ Mise à jour UI en live (sans refresh)
-    const permisRow = document.getElementById("upload_permis")?.closest(".docrow");
-    if (!permisRow) return;
-
-    if (cb.checked) {
-      // ➜ permis non requis
-      permisRow.querySelector("form")?.remove();
-      permisRow.querySelector(".doctag.missing")?.remove();
-
-      const tag = document.createElement("div");
-      tag.className = "doctag";
-      tag.style.borderColor = "#bbf7d0";
-      tag.style.color = "#065f46";
-      tag.style.marginTop = "8px";
-      tag.textContent = "✅ Permis non requis (déclaré)";
-      permisRow.querySelector(".docmeta")?.appendChild(tag);
-    } else {
-      // ➜ on recharge la page pour revenir à l’état initial
-      location.reload();
-    }
-  });
-});
-
 
 // --- PRE/CAR live formatter ---
 // attendu : PRE-013-2029-07-25-20240908920 ou CAR-013-2029-07-25-20240908920

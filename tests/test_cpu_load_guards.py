@@ -112,9 +112,9 @@ assert.equal(timers.size, 0);
         result = subprocess.run(["node", "--eval", script], capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("document.hidden?120000:30000", billing_page)
-        self.assertIn("if (document.hidden) return;", trainees_page)
-        self.assertIn("setInterval(autoRefreshExternalStatuses, 15 * 60 * 1000)", trainees_page)
-        self.assertIn("}, 60 * 1000);", trainees_page)
+        self.assertNotIn("autoRefreshExternalStatuses", trainees_page)
+        self.assertIn('querySelectorAll("[data-refresh-external]")', trainees_page)
+        self.assertIn('automatic ? "?automatic=1" : ""', trainees_page)
 
 
 if __name__ == "__main__":

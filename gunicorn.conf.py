@@ -17,6 +17,9 @@ if os.environ.get("RENDER_SERVICE_ID") in {"srv-d5oss66id0rc73avvne0", "srv-d928
     # OAuth callbacks carry short-lived authorization codes in their query.
     # Log only the path on the EDOF service; omit referrers as well.
     access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(m)s %(U)s %(H)s" %(s)s %(b)s "-" "%(a)s" duration_us=%(D)s'
+if os.environ.get("RENDER_SERVICE_ID") == "srv-d5oss66id0rc73avvne0":
+    # Render sends the same ID to the browser and to Gunicorn.
+    access_log_format += ' rndr_id=%({rndr-id}i)s'
 errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
 capture_output = True

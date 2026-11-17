@@ -52,6 +52,7 @@ import sqlite3
 import convocation_preview
 import training_convocations
 import convocation_jobs
+import cnaps_read_jobs
 import afc_documents
 import afc_enrolments
 import afc_training_mail
@@ -260,6 +261,7 @@ _install_shutdown_diagnostics()
 
 
 app = Flask(__name__)
+cnaps_read_jobs.initialize(app)
 app.jinja_env.globals["trainee_document_check_token"] = trainee_checks.form_token
 app.jinja_env.globals["document_format_label"] = trainee_checks.format_label
 app.jinja_env.globals["trainee_document_upload_accept"] = trainee_checks.upload_accept
@@ -7526,6 +7528,8 @@ def _cnaps_saved_result(status):
         return None
     if isinstance(status.get("result"), dict):
         return status["result"]
+    if not any(key in status for key in ("state_code", "display_status", "signature", "known", "checked_at")):
+        return None
     state = _cnaps_tracking_state_code(status)
     if state == "nub_missing":
         return None
@@ -7537,6 +7541,33 @@ def _cnaps_saved_result(status):
                 titles.append({"display_status": values[0], "label": values[0],
                                "date_fin_validite": next((v for v in values if re.fullmatch(r"\d{4}-\d{2}-\d{2}", v)), "")})
     return {"check_status": "success", "active_titles": titles, "checked_at": status.get("checked_at", "")}
+
+
+def _cnaps_annuaire_snapshots(data):
+    """Look up only trainees rendered by the current view, using its loaded data."""
+    statuses = data.get("cnaps_public_annuaire_statuses")
+    if not isinstance(statuses, dict):
+        statuses = {}
+    historical = None
+
+    def lookup(last_name, nub):
+        nonlocal historical
+        key = _cnaps_public_annuaire_status_key(last_name, nub)
+        saved = statuses.get(key)
+        if not isinstance(saved, dict):
+            if historical is None:
+                # Older monitor versions sometimes stored only a tracking identity.
+                historical = {
+                    _cnaps_public_annuaire_status_key(row["last_name"], row["nub"]): row
+                    for row in statuses.values()
+                    if isinstance(row, dict) and row.get("last_name") and row.get("nub")
+                }
+            saved = historical.get(key)
+        result = _cnaps_saved_result(saved)
+        checked_at = (result or {}).get("checked_at") or (saved or {}).get("checked_at") or ""
+        return {"result": result, "checked_at": checked_at}
+
+    return lookup
 
 
 def _record_cnaps_tracking_state(
@@ -22203,19 +22234,8 @@ def admin_afc():
     changed = False
     for candidate in candidates:
         candidate.setdefault("cnaps_priority", False)
-        if candidate.get("cnaps_priority"):
-            if _set_afc_candidate_cnaps_status(candidate, "ACCEPTE"):
-                changed = True
-        if not (candidate.get("cnaps_status") or "").strip():
-            cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
-            cnaps_status = cnaps_lookup.get("status")
-            if cnaps_status:
-                _set_afc_candidate_cnaps_status(candidate, cnaps_status)
-                candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
-                changed = True
-        if candidate.get("cnaps_priority") and (candidate.get("cnaps_status") or "").strip().upper() != "ACCEPTE":
-            if _set_afc_candidate_cnaps_status(candidate, "ACCEPTE"):
-                changed = True
+        if candidate.get("cnaps_priority") and _set_afc_candidate_cnaps_status(candidate, "ACCEPTE"):
+            changed = True
         candidate["has_positioning_test"] = _afc_find_latest_positioning_score(candidate, positioning_tests) is not None
     if changed:
         save_data(data)
@@ -25996,6 +26016,7 @@ def admin_trainees(session_id: str):
     prepared = time.monotonic()
     html_page = render_template(
         "admin_trainees.html",
+        cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
@@ -26099,6 +26120,7 @@ def admin_vtc_trainees_all():
     save_data(data)
     return render_template(
         "admin_trainees.html",
+        cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
         session=session_view,
         trainees=all_trainees,
         registered_trainees=_registered_trainees(all_trainees),
@@ -28574,59 +28596,82 @@ def admin_force_financement_validated(session_id: str, trainee_id: str):
 @admin_login_required
 @admin_write_required
 def api_refresh_trainee_external(session_id: str, trainee_id: str):
-    data = load_data()
-    s = find_session(data, session_id)
-    if not s:
-        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    if cnaps_read_jobs.requested():
+        return cnaps_read_jobs.defer(sys.modules[__name__], (session_id, trainee_id),
+                                     lambda: _refresh_trainee_external(session_id, trainee_id),
+                                     remember=True, reuse=request.args.get("automatic") == "1")
+    return _refresh_trainee_external(session_id, trainee_id)
 
-    trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id") == trainee_id), None)
-    if not t:
-        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
-    changed = False
-    original_last_name = t.get("last_name") or ""
-    original_first_name = t.get("first_name") or ""
-    ln = normalize_last_name(original_last_name)
-    fn = normalize_first_name(original_first_name)
-    if ln and ln != original_last_name:
-        t["last_name"] = ln
-        changed = True
-    if fn and fn != original_first_name:
-        t["first_name"] = fn
-        changed = True
-    email = (t.get("email") or "").strip().lower()
+def _refresh_trainee_external(session_id: str, trainee_id: str):
+    def locate(data):
+        training = find_session(data, session_id)
+        if not training:
+            abort(404, description="session_not_found")
+        trainees = _session_trainees_list(training)
+        trainee = next((item for item in trainees if item.get("id") == trainee_id), None)
+        if trainee is None:
+            abort(404, description="trainee_not_found")
+        return training, trainees, trainee
 
-    current_cnaps = (t.get("cnaps") or "").strip() or "INCONNU"
+    def inputs(training, trainee):
+        course = {key: _session_get(training, key, "") for key in ("training_type", "name", "date_start", "date_end")}
+        fields = {key: trainee[key] for key in ("last_name", "first_name", "email", "cnaps", "hosting_status")
+                  if key in trainee}
+        return course, fields
+
+    try:
+        training, trainees, trainee = locate(load_data())
+    except HTTPException as error:
+        return jsonify(ok=False, error=error.description), error.code
+    course, source = inputs(training, trainee)
+    del training, trainees, trainee
+    _invalidate_request_data_cache()
+    observed = dict(source)
+    ln = normalize_last_name(source.get("last_name") or "")
+    fn = normalize_first_name(source.get("first_name") or "")
+    email = (source.get("email") or "").strip().lower()
+    if ln:
+        observed["last_name"] = ln
+    if fn:
+        observed["first_name"] = fn
     if ln and fn:
-        cn = fetch_cnaps_status_by_name(ln, fn)
-        if cn:
-            cn_u = str(cn).strip().upper()
-            if cn_u not in ("INCONNU", "UNKNOWN", ""):
-                if _normalize_cnaps_status(cn_u) != _normalize_cnaps_status(current_cnaps):
-                    t["cnaps"] = cn_u
-                    record_cnaps_status_change(t, cn_u)
-                    changed = True
+        status = (fetch_cnaps_status_by_name(ln, fn) or "").strip().upper()
+        if status not in {"", "INCONNU", "UNKNOWN"} and _normalize_cnaps_status(status) != _normalize_cnaps_status(source.get("cnaps")):
+            observed["cnaps"] = status
 
-    training_type = _session_get(s, "training_type", "")
-    if training_type == "A3P":
-        if _refresh_trainee_hebergement_status(s, t):
-            changed = True
+    if course["training_type"] == "A3P":
+        if not _refresh_trainee_hebergement_status(course, observed) and "hosting_status" not in source:
+            observed.pop("hosting_status", None)
     else:
-        if "hosting_status" in t:
-            t.pop("hosting_status", None)
-            changed = True
+        observed.pop("hosting_status", None)
 
-    if changed:
-        t["updated_at"] = _now_iso()
-        s["trainees"] = trainees
-        s.pop("stagiaires", None)
-        save_data(data)
+    if source != observed:
+        def persist(latest):
+            current_training, current_trainees, current = locate(latest)
+            if inputs(current_training, current) != (course, source):
+                abort(409, description="Le dossier a changé pendant la vérification. Relancez-la.")
+            for key in ("last_name", "first_name", "cnaps", "hosting_status"):
+                if key in observed:
+                    current[key] = observed[key]
+                else:
+                    current.pop(key, None)
+            if source.get("cnaps") != observed.get("cnaps"):
+                record_cnaps_status_change(current, observed["cnaps"])
+            current["updated_at"] = _now_iso()
+            current_training["trainees"] = current_trainees
+            current_training.pop("stagiaires", None)
+            return {}
+
+        try:
+            _atomic_update_data(persist)
+        except HTTPException as error:
+            return jsonify(ok=False, error=error.description), error.code
 
     response_payload = {
         "ok": True,
-        "cnaps_status": t.get("cnaps") or "INCONNU",
-        "hosting_status": (t.get("hosting_status") or "unknown") if training_type == "A3P" else "",
+        "cnaps_status": observed.get("cnaps") or "INCONNU",
+        "hosting_status": (observed.get("hosting_status") or "unknown") if course["training_type"] == "A3P" else "",
     }
     _log_charles_hebergement_trace(
         "api_refresh_trainee_external",
@@ -28634,9 +28679,9 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
         email=email,
         last_name=ln,
         first_name=fn,
-        session_name=_session_get(s, "name", ""),
-        session_date_start=_session_get(s, "date_start", ""),
-        session_date_end=_session_get(s, "date_end", ""),
+        session_name=course["name"],
+        session_date_start=course["date_start"],
+        session_date_end=course["date_end"],
         response_payload=response_payload,
     )
     return jsonify(response_payload)
@@ -29199,7 +29244,17 @@ def api_cnaps_lookup():
     if not nom or not prenom:
         return jsonify({"ok": False, "error": "missing_nom_or_prenom"}), 400
 
-    lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
+    if cnaps_read_jobs.requested():
+        return cnaps_read_jobs.defer(sys.modules[__name__], _cnaps_tracking_match_key(nom, prenom),
+                                     lambda: _cnaps_lookup_response(nom, prenom, report_unavailable=True))
+    return _cnaps_lookup_response(nom, prenom)
+
+
+def _cnaps_lookup_response(nom, prenom, *, report_unavailable=False):
+    lookup = fetch_cnaps_lookup_by_name(nom, prenom)
+    if lookup is None and report_unavailable:
+        return jsonify(ok=False, error="CNAPSV3 indisponible. Vous pouvez réessayer."), 502
+    lookup = lookup or {}
     status = str(lookup.get("status") or "INCONNU").upper()
     history = lookup.get("statut_cnaps_history") or []
     return jsonify({
@@ -29221,7 +29276,17 @@ def api_cnaps_public_annuaire():
     tracking_id = (request.args.get("tracking_id") or "").strip()
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
-    if request.args.get("cache") != "bypass":
+    bypass = request.args.get("cache") == "bypass"
+    if cnaps_read_jobs.requested():
+        identity = (_cnaps_public_annuaire_status_key(nom, nub), _cnaps_tracking_normalize_key_part(prenom),
+                    tracking_id, bypass)
+        return cnaps_read_jobs.defer(sys.modules[__name__], identity,
+                                     lambda: _cnaps_public_annuaire_response(nom, prenom, nub, tracking_id, bypass))
+    return _cnaps_public_annuaire_response(nom, prenom, nub, tracking_id, bypass)
+
+
+def _cnaps_public_annuaire_response(nom, prenom, nub, tracking_id, bypass):
+    if not bypass:
         cached_data = load_data()
         statuses = cached_data.get("cnaps_public_annuaire_statuses") or {}
         saved = statuses.get(_cnaps_public_annuaire_status_key(nom, nub)) if isinstance(statuses, dict) else None
@@ -29248,6 +29313,7 @@ def api_cnaps_public_annuaire():
     notified = False
     data = None
     if result.get("check_status") == "success":
+        result.setdefault("checked_at", _now_iso())
         def record_result(latest):
             changed = _record_cnaps_public_annuaire_status(
                 latest, first_name=prenom, last_name=nom, nub=nub, result=result,
@@ -29260,6 +29326,12 @@ def api_cnaps_public_annuaire():
     if result.get("check_status") == "error":
         return jsonify({"ok": False, "notification_sent": False, "pending_status_changes_count": None, **result}), 502
     return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if data is not None else None, **result})
+
+
+@app.get("/api/cnaps/verifications/<job_id>")
+@admin_login_required
+def api_cnaps_verification_status(job_id):
+    return cnaps_read_jobs.status(sys.modules[__name__], job_id)
 
 
 @app.get("/api/cnaps_status_changes/pending")
@@ -35301,66 +35373,80 @@ def admin_upload_identity_photo(session_id: str, trainee_id: str):
 
 @app.post("/espace/<token>/infos/update")
 def public_infos_update(token: str):
-    data = load_data()
-    s, t = find_session_and_trainee_by_token(data, token)
-    if not s or not t:
-        return jsonify({"ok": False}), 404
+    if not _public_is_authed(token):
+        return jsonify(ok=False, error="Veuillez vous reconnecter pour enregistrer vos informations."), 403
 
-    payload = request.get_json(silent=True) or {}
-
-    # champs autorisés (sécurité)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or not isinstance(payload.get("_previous", {}), dict):
+        return jsonify(ok=False, error="Informations invalides."), 400
+    previous = payload.get("_previous", {})
     allowed = {
-        "carte_vitale",
-        "pre_number",
-        "tshirt_size",
-        "birth_date",
-        "birth_city",
-        "birth_country",
-        "nationality",
-        "address",
-        "zip_code",
-        "city",
-        "no_permis",
+        "carte_vitale", "pre_number", "tshirt_size", "birth_date", "birth_city", "birth_country",
+        "nationality", "address", "zip_code", "city", "no_permis",
     }
 
-    previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
+    def normalized(key, value):
+        if key == "no_permis":
+            return value is True or value == 1 or str(value).strip().lower() in {"1", "true", "on", "oui"}
+        text = str(value or "").strip()
+        if key in {"city", "birth_city"}:
+            return normalize_city(text)
+        if key == "tshirt_size":
+            return text.upper()
+        if key == "pre_number":
+            return _normalize_pre_car(text)
+        return text
 
-    for k, v in payload.items():
-        if k not in allowed:
+    changes = {}
+    for key in allowed.intersection(payload):
+        raw = payload[key]
+        if raw is None or isinstance(raw, (list, dict)):
             continue
+        if key == "no_permis" and not isinstance(raw, bool) and str(raw).strip().lower() not in {
+            "0", "1", "false", "true", "off", "on", "non", "oui",
+        }:
+            return jsonify(ok=False, error="Choix du permis invalide."), 400
+        value = normalized(key, raw)
+        if value == "" or (key == "tshirt_size" and value not in TSHIRT_SIZES):
+            continue
+        changes[key] = value
 
-        # no_permis = bool
-        if k == "no_permis":
-            t["no_permis"] = bool(v)
-            continue
-        if k == "tshirt_size":
-            size = str(v or "").strip().upper()
-            if size in TSHIRT_SIZES:
-                t["tshirt_size"] = size
-            continue
+    complete = False
 
-        # strings : on n'écrase PAS avec vide
-        if v is None:
-            continue
-        if isinstance(v, str):
-            vv = v.strip()
-            if vv == "":
+    def update(current):
+        nonlocal complete
+        training, trainee = find_session_and_trainee_by_token(current, token)
+        if not training or not trainee:
+            abort(make_response(jsonify(ok=False, error="Dossier introuvable."), 404))
+        pending = {}
+        for key, value in changes.items():
+            stored = normalized(key, trainee.get(key))
+            if stored == value:
                 continue
-            t[k] = normalize_city(vv) if k in {"city", "birth_city"} else vv
-        else:
-            # si jamais tu envoies autre chose
-            t[k] = v
+            if key in previous and stored != normalized(key, previous[key]):
+                abort(make_response(jsonify(ok=False, error="Ces informations ont été modifiées ailleurs. "
+                                            "Rechargez la page avant de réessayer."), 409))
+            pending[key] = value
+        if pending and not training.get("trainees") and training.get("stagiaires"):
+            # Keep every legacy field and token when adding the canonical names.
+            training["trainees"] = training.pop("stagiaires")
+            for legacy in training["trainees"]:
+                for name, value in _convert_old_stagiaire_to_trainee(legacy).items():
+                    legacy.setdefault(name, value)
+        trainee.update(pending)
+        complete = dossier_is_complete_total(trainee, _session_get(training, "training_type", ""),
+                                             _session_get(training, "date_start", ""))
+        if not pending:
+            raise _PublicSpaceAlreadyCurrent
+        trainee["dossier_status"] = "complete" if complete else "incomplete"
+        trainee["updated_at"] = _now_iso()
+        return {}
 
-    training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
-    t["updated_at"] = _now_iso()
-
-    # ✅ IMPORTANT : persister la session normalisée comme ailleurs
-    s["trainees"] = _session_trainees_list(s)
-    s.pop("stagiaires", None)
-    save_data(data)
-
-    return jsonify({"ok": True})
+    try:
+        _atomic_update_data(update)
+    except _PublicSpaceAlreadyCurrent:
+        pass
+    return jsonify(ok=True, dossier_complete=complete)
 
 
 @app.post("/espace/<token>/vtc-credentials")
@@ -40994,6 +41080,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     prepared = time.monotonic()
     html_page = render_template(
         "admin_trainee.html",
+        cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
         desp_project=desp_jury_projects.view(sys.modules[__name__], s, t),
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
@@ -54400,6 +54487,7 @@ def admin_trainee_adef_sheet(session_id: str, trainee_id: str):
 
     return render_template(
         "admin_trainee_adef_sheet.html",
+        cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
         session=s,
         trainee=t,
         adef=adef_data,

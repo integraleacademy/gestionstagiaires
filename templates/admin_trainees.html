@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<script src="{{ url_for('static', filename='js/cnaps-card.js') }}"></script>
 <style>
 #despKickoffDialog {width:min(680px,calc(100vw - 24px))}
 #despKickoffDialog .session-kickoff-actions {padding:20px 24px}
@@ -694,7 +695,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
-            <button class="mini-btn" data-refresh type="button" {{ read_only_attr }}>↻</button>
+            <button class="mini-btn" data-refresh-external type="button" {{ read_only_attr }}>↻</button>
           </div>
         </td>
         {% endif %}
@@ -703,13 +704,18 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% set card_pro_nub = extract_nub_from_pre_car(t.pre_number or t.cnaps_tracking_nub or '') %}
         <td class="col-card-pro-followup">
           {% if card_pro_nub %}
+            {% set snapshot = cnaps_annuaire_snapshot(t.last_name, card_pro_nub) %}
             <div class="card-pro-followup"
                  data-card-pro-followup
                  data-nom="{{ t.last_name or '' }}"
                  data-nub="{{ card_pro_nub }}"
-                 data-cnaps-status="{{ t.cnaps or '' }}"
-                 data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage">
-              <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
+                 data-prenom="{{ t.first_name or '' }}"
+                 data-cnaps-snapshot="{{ snapshot.result|tojson|forceescape }}"
+                 data-cnaps-checked-at="{{ snapshot.checked_at or '' }}">
+              <div class="card-pro-result" data-card-pro-result>Aucune vérification enregistrée</div>
+              <small data-card-pro-date></small>
+              <small aria-live="polite" data-card-pro-message></small>
+              <button type="button" class="mini-btn" data-card-pro-refresh>Actualiser</button>
             </div>
           {% else %}
             <span class="muted">NUB manquant{% if t.cnaps_tracking_nub %} (Suivi CNAPS indisponible){% endif %}</span>
@@ -2874,7 +2880,7 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
   });
 
 
-  async function refreshExternalForRow(tr, { silent = false } = {}) {
+  async function refreshExternalForRow(tr, automatic = false) {
     if (!tr) return;
 
     const traineeId = tr.getAttribute("data-trainee-id");
@@ -2886,21 +2892,17 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
       || "";
 
     if (!traineeId || !nom || !prenom) {
-      if (!silent) alert("Nom / prénom introuvables");
+      if (!automatic) alert("Nom / prénom introuvables");
       return;
     }
 
     const cnapsSpan = tr.querySelector("[data-cnaps]");
     const hostingSpan = tr.querySelector("[data-hosting]");
-    const currentStatus = (cnapsSpan?.textContent || "").trim().toUpperCase();
-    const currentHosting = (hostingSpan?.textContent || "").trim().toUpperCase();
-    if (silent && currentStatus === "CARTE PROFESSIONNELLE OK" && (!hostingSpan || currentHosting === "RÉSERVÉ")) {
-      return;
-    }
-
+    if (automatic && cnapsSpan?.textContent.trim().toUpperCase() === "CARTE PROFESSIONNELLE OK"
+        && (!hostingSpan || hostingSpan.textContent.trim().toUpperCase() === "RÉSERVÉ")) return;
     try {
       const traineeSessionId = tr.getAttribute("data-session-id") || sessionId;
-      const resp = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/refresh-external`, {
+      const resp = await window.cnapsRead(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/refresh-external${automatic ? "?automatic=1" : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
@@ -2918,40 +2920,52 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
         applyHostingBadge(hostingSpan);
       }
     } catch (err) {
-      if (!silent) alert("Erreur rafraîchissement statuts externes");
+      if (!automatic) alert("Erreur rafraîchissement statuts externes");
     }
   }
 
-  document.querySelectorAll("[data-refresh]").forEach(btn => {
+  document.querySelectorAll("[data-refresh-external]").forEach(btn => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const tr = btn.closest("tr");
       btn.disabled = true;
       try {
-        await refreshExternalForRow(tr, { silent: false });
+        await refreshExternalForRow(tr);
       } finally {
         btn.disabled = false;
       }
     });
   });
 
-  async function autoRefreshExternalStatuses() {
-    if (document.hidden) return;
-    const rows = Array.from(document.querySelectorAll("tr[data-trainee-id]"));
-    for (const tr of rows) {
-      await refreshExternalForRow(tr, { silent: true });
+  function scheduleExternalStatusChecks() {
+    const rows = Array.from(document.querySelectorAll("tr[data-trainee-id]")).filter(
+      row => row.querySelector("[data-cnaps], [data-hosting]")
+    );
+    if (!rows.length) return;
+    const spacing = Math.max(5000, Math.ceil(15 * 60 * 1000 / rows.length));
+    let index = 0;
+    let timer;
+    let running = false;
+    function schedule(delay) {
+      clearTimeout(timer);
+      if (!document.hidden && !running) timer = setTimeout(checkNext, delay);
     }
+    async function checkNext() {
+      if (document.hidden || running) return;
+      running = true;
+      try {
+        const row = rows[index];
+        index = (index + 1) % rows.length;
+        if (row.isConnected) await refreshExternalForRow(row, true);
+      } finally {
+        running = false;
+        schedule(spacing);
+      }
+    }
+    document.addEventListener("visibilitychange", () => schedule(60000));
+    schedule(60000);
   }
-
-  // Laisse le chargement initial respirer, puis vérifie automatiquement les
-  // statuts externes toutes les 15 minutes. Le bouton individuel reste immédiat.
-  {% if not is_read_only %}
-  if (new URLSearchParams(location.search).get("refresh_external") === "1") autoRefreshExternalStatuses();
-  setTimeout(() => {
-    autoRefreshExternalStatuses();
-    setInterval(autoRefreshExternalStatuses, 15 * 60 * 1000);
-  }, 60 * 1000);
-  {% endif %}
+  {% if not is_read_only %}scheduleExternalStatusChecks();{% endif %}
 
   // Bulk import menu
 const bulkImportDialog = document.getElementById("bulkImportDialog");
@@ -4339,117 +4353,10 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     resultEl.innerHTML = chips;
   }
 
-  function normalizedCardProActivity(value){
-    return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
-  }
-
-  function fallbackCardProFollowup(box){
-    const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
-    const normalizedLastName = (box.getAttribute("data-nom") || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toUpperCase();
-    const normalizedNub = (box.getAttribute("data-nub") || "").replace(/\D+/g, "").slice(-7);
-    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
-    const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
-    const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
-    const normalizedFallbackActivity = normalizedCardProActivity(fallbackActivity);
-    const rows = [];
-    if(normalizedLastName === "CHIOCCA" && normalizedNub === "1079213"){
-      rows.push({
-        activite: "Autorisation préalable - Surveillance humaine ou gardiennage",
-        validite_titre: "ACTIF",
-      });
-    }
-    if(fallbackActivity && !rows.some((row)=>normalizedCardProActivity(row.activite) === normalizedFallbackActivity)){
-      rows.push({
-        activite: fallbackActivity,
-        validite_titre: isAccepted ? "ACTIF" : "À vérifier",
-      });
-    }
-    if(isAccepted && isCartePro){
-      rows.push({
-        activite: "Carte professionnelle - Surveillance humaine ou gardiennage",
-        validite_titre: "ACTIF",
-      });
-    }
-    if(!rows.length) return null;
-    return {results: rows};
-  }
-
-  function withLocalCardProFallback(data, fallback){
-    if(!fallback) return data;
-    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
-    const fallbackRows = Array.isArray(fallback.results) && fallback.results.length ? fallback.results : [fallback];
-    fallbackRows.forEach((fallbackRow)=>{
-      const fallbackActivity = normalizedCardProActivity(fallbackRow.activite);
-      const alreadyDisplayed = rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity);
-      if(!alreadyDisplayed) rows.push(fallbackRow);
-    });
-    return {...data, results: rows};
-  }
-
-  const cnapsRequestCache = new Map();
-  const cnapsRequestQueue = [];
-  let cnapsActiveRequests = 0;
-  const CNAPS_MAX_CONCURRENT = 2;
-  const CNAPS_QUEUE_DELAY_MS = 250;
-
-  function enqueueCnapsRequest(task){
-    return new Promise((resolve, reject)=>{
-      cnapsRequestQueue.push({task, resolve, reject});
-      drainCnapsRequestQueue();
-    });
-  }
-
-  function drainCnapsRequestQueue(){
-    if(cnapsActiveRequests >= CNAPS_MAX_CONCURRENT || !cnapsRequestQueue.length) return;
-    const item = cnapsRequestQueue.shift();
-    cnapsActiveRequests += 1;
-    Promise.resolve().then(item.task).then(item.resolve, item.reject).finally(()=>{
-      cnapsActiveRequests -= 1;
-      window.setTimeout(drainCnapsRequestQueue, CNAPS_QUEUE_DELAY_MS);
-    });
-  }
-
-  async function refreshCardProFollowup(box, options = {}){
-    const resultEl = box.querySelector("[data-card-pro-result]");
-    const nom = box.getAttribute("data-nom") || "";
-    const nub = box.getAttribute("data-nub") || "";
-    if(!resultEl || !nom || !nub) return;
-    resultEl.className = "card-pro-result is-loading";
-    resultEl.textContent = "Chargement CNAPS…";
-    try{
-      const cacheKey = String(nub || "").replace(/\D+/g, "").slice(-7);
-      if(!options.bypassCache && cnapsRequestCache.has(cacheKey)){
-        renderCardProFollowupResult(resultEl, cnapsRequestCache.get(cacheKey), "remote");
-        return;
-      }
-      const data = await enqueueCnapsRequest(async ()=>{
-        const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}${options.bypassCache ? "&cache=bypass" : ""}`);
-        const payload = await r.json().catch(()=>({}));
-        if(!r.ok || !payload.ok) throw new Error(payload.error || "cnaps_unavailable");
-        return payload;
-      });
-      cnapsRequestCache.set(cacheKey, data);
-      renderCardProFollowupResult(resultEl, data, "remote");
-      return;
-    }catch(e){
-      // Si l'annuaire public bloque l'appel serveur, on affiche au moins les informations
-      // déductibles du dossier au lieu de laisser la colonne en erreur.
-    }
-    renderCardProFollowupResult(resultEl, {check_status: "error", active_titles: [], error: "cnaps_unavailable"}, "error");
-  }
-
-  document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{
-    refreshCardProFollowup(box);
-    box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box, {bypassCache: true}));
+  document.querySelectorAll("[data-card-pro-followup]").forEach(box => {
+    const result = box.querySelector("[data-card-pro-result]");
+    window.cnapsCards.bind(box, data => renderCardProFollowupResult(result, data, "remote"));
   });
-
-  // =========================
-  // CNAPS refresh
-  // =========================
-  async function cnapsLookup(nom, prenom){
-    const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
-    return await r.json();
-  }
 
 function renderDocBadges(){
   document.querySelectorAll("[data-doc-badges]").forEach(el=>{

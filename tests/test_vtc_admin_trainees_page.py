@@ -181,14 +181,12 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("Suivi carte pro", html)
         self.assertNotIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
         self.assertNotIn("🔎 Vérifier", html)
-        self.assertNotIn('data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro"', html)
         self.assertIn('data-card-pro-followup', html)
         self.assertIn('data-nom="NONVTC"', html)
         self.assertIn('data-nub="1050370"', html)
-        self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
-        self.assertIn('const fallbackRows = Array.isArray(fallback.results)', html)
-        self.assertIn('if(isAccepted && isCartePro)', html)
-        self.assertNotIn('normalizedFallbackActivity === "AP SH"', html)
+        self.assertIn('data-card-pro-refresh', html)
+        self.assertIn('data-cnaps-snapshot="null"', html)
+        self.assertIn("Aucune vérification enregistrée", html)
         self.assertNotIn("NUB : <strong>1050370</strong>", html)
         self.assertNotIn("Nom : <strong>NONVTC</strong>", html)
         self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
@@ -222,7 +220,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertEqual(trainee["cnaps_tracking_nub"], "1050370")
         self.assertNotIn("NUB manquant", html)
 
-    def test_aps_admin_trainees_forces_chiocca_ap_sh_active_by_name_and_nub(self):
+    def test_aps_admin_trainees_never_infers_an_active_title_from_an_identity(self):
         trainee = self.data["sessions"][2]["trainees"][0]
         trainee["last_name"] = "CHIOCCA"
         trainee["first_name"] = "Laurine"
@@ -235,8 +233,8 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('data-nom="CHIOCCA"', html)
         self.assertIn('data-nub="1079213"', html)
-        self.assertIn('normalizedLastName === "CHIOCCA" && normalizedNub === "1079213"', html)
-        self.assertIn('validite_titre: "ACTIF"', html)
+        self.assertIn('data-cnaps-snapshot="null"', html)
+        self.assertNotIn('normalizedLastName === "CHIOCCA"', html)
 
     def test_aps_admin_trainee_sheet_loads_annuaire_followup_without_static_cp_chip(self):
         trainee = self.data["sessions"][2]["trainees"][0]
@@ -250,7 +248,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('aria-label="Suivi carte professionnelle CNAPS"', html)
         self.assertIn('data-trainee-card-pro-followup', html)
         self.assertIn('data-trainee-card-pro-result', html)
-        self.assertIn('Chargement CNAPS…', html)
+        self.assertIn('Aucune vérification enregistrée', html)
         self.assertIn('.trainee-cnaps-followup__chip.is-cp,.trainee-cnaps-followup__chip.is-ap{background:#16a34a', with_sheet_assets(html))
         self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}', html)
         self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
@@ -287,7 +285,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("NUB : 1050370", html)
         self.assertIn('data-trainee-card-pro-followup', html)
         self.assertIn('data-nub="1050370"', html)
-        self.assertIn("Chargement CNAPS…", html)
+        self.assertIn("Aucune vérification enregistrée", html)
 
 
     def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):

@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  {% if is_admin_logged_in %}<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='js/cnaps-read.js', v='20261117') }}"></script>{% endif %}
   {% if is_admin_logged_in %}<script{% if g.edof_nonce %} nonce="{{ g.edof_nonce }}"{% endif %} src="{{ url_for('static', filename='js/admin-read-requests.js', v='20261006') }}"></script>{% endif %}
   <title>{{ title or ("Intégrale Academy • Espace stagiaire" if is_public_trainee_page else "Intégrale Connect • Gestion stagiaires") }}</title>
 

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<script src="{{ url_for('static', filename='js/cnaps-card.js') }}"></script>
 {% set read_only_attr = "disabled" if is_read_only else "" %}
 {% from '_cpf_france_travail.html' import funding_badge, funding_card %}
 {% set france_travail = (cpf_tracking.france_travail|default(none)) if cpf_tracking else none %}
@@ -497,15 +498,19 @@
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
           {% endif %}
           {% if trainee_nub %}
+            {% set snapshot = cnaps_annuaire_snapshot(trainee.last_name, trainee_nub) %}
             <div class="trainee-cnaps-followup"
                  data-trainee-card-pro-followup
                  data-nom="{{ trainee.last_name or '' }}"
                  data-prenom="{{ trainee.first_name or '' }}"
                  data-nub="{{ trainee_nub }}"
-                 data-cnaps-status="{{ trainee.cnaps or '' }}"
-                 data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"
+                 data-cnaps-snapshot="{{ snapshot.result|tojson|forceescape }}"
+                 data-cnaps-checked-at="{{ snapshot.checked_at or '' }}"
                  aria-label="Suivi carte professionnelle CNAPS">
-              <span class="hint" data-trainee-card-pro-result>Chargement CNAPS…</span>
+              <span class="hint" data-trainee-card-pro-result>Aucune vérification enregistrée</span>
+              <small data-card-pro-date></small>
+              <small aria-live="polite" data-card-pro-message></small>
+              <button type="button" class="mini-btn" data-card-pro-refresh>Actualiser</button>
             </div>
           {% endif %}
           {% set cnaps_history = trainee.cnaps_history or [] %}
@@ -2649,7 +2654,7 @@
 }|tojson }}
 </script>
 <script src="{{ url_for('static', filename='js/convocation-jobs.js', v='20261117-1') }}"></script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-convocations') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-cnaps') }}"></script>
   
 
 <!-- ===================== -->
@@ -2742,7 +2747,6 @@
     if(normalized.includes("ACTIF") || normalized.includes("VALIDE")) return "active";
     return "unknown";
   }
-  function normalizedCardProActivity(value){return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();}
   function formatCnapsDateFr(value){const x=String(value||"").trim();const m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:x;}
   const cardProTrainingStartDate = {{ (session.date_start or "")|tojson }};
   function isApShActiveExpiredBeforeTraining(value, expirationDate){
@@ -2754,98 +2758,41 @@
   function renderTraineeCardProResult(resultEl, data, mode){
     if(!resultEl) return;
     if(data && data.check_status === "error"){
-      resultEl.outerHTML = '<span class="trainee-cnaps-followup__chip is-unknown" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">Vérification CNAPS impossible</span></span>';
+      resultEl.innerHTML = '<span class="trainee-cnaps-followup__chip is-unknown"><span class="trainee-cnaps-followup__activity">Vérification CNAPS impossible</span></span>';
       return;
     }
     const activeTitles = Array.isArray(data?.active_titles) ? data.active_titles : [];
     if(data && data.check_status === "success" && !activeTitles.length){
-      resultEl.outerHTML = '<span class="trainee-cnaps-followup__chip is-unknown" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">Aucun titre CNAPS trouvé</span></span>';
+      resultEl.innerHTML = '<span class="trainee-cnaps-followup__chip is-unknown"><span class="trainee-cnaps-followup__activity">Aucun titre CNAPS trouvé</span></span>';
       return;
     }
     if(activeTitles.length){
-      resultEl.outerHTML = activeTitles.map((title)=>{
+      resultEl.innerHTML = activeTitles.map((title)=>{
         const activity = title.display_status || title.label;
         const expirationDate = title.date_fin_validite || title.valid_until;
         const colorClass = isApShActiveExpiredBeforeTraining(activity, expirationDate) ? "is-inactive" : cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
-        return `<span class="trainee-cnaps-followup__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
+        return `<span class="trainee-cnaps-followup__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}"><span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
       }).join("");
       return;
     }
     const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
-    resultEl.outerHTML = rows.map((row)=>{
+    resultEl.innerHTML = rows.map((row)=>{
       const activity = shortCardProActivity(row.activite);
       const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
       const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
       const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
       const colorClass = validityMode === "active" ? (isApShActiveExpiredBeforeTraining(`${activity} ${validity}`, row.date_validite_titre) ? "is-inactive" : cardProActivityColorClass(row.activite)) : `is-${validityMode}`;
-      return `<span class="trainee-cnaps-followup__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
+      return `<span class="trainee-cnaps-followup__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""}>` +
         `<span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>` +
         `<span class="trainee-cnaps-followup__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>` +
         `${row.date_validite_titre ? `<span class="trainee-cnaps-followup__validity">Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}</span>` : ""}` +
       `</span>`;
     }).join("");
   }
-  function fallbackCardProFollowup(box){
-    const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
-    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
-    const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
-    if(!fallbackActivity) return null;
-    return {results: [{activite: fallbackActivity, validite_titre: isAccepted ? "ACTIF" : "À vérifier"}]};
-  }
-  function withLocalCardProFallback(data, fallback){
-    if(!fallback) return data;
-    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
-    const fallbackRows = Array.isArray(fallback.results) && fallback.results.length ? fallback.results : [fallback];
-    fallbackRows.forEach((fallbackRow)=>{
-      const fallbackActivity = normalizedCardProActivity(fallbackRow.activite);
-      if(!rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity)) rows.push(fallbackRow);
-    });
-    return {...data, results: rows};
-  }
-  const traineeCnapsRequestCache = new Map();
-  const traineeCnapsRequestQueue = [];
-  let traineeCnapsActiveRequests = 0;
-  const TRAINEE_CNAPS_MAX_CONCURRENT = 2;
-  function enqueueTraineeCnapsRequest(task){
-    return new Promise((resolve, reject)=>{
-      traineeCnapsRequestQueue.push({task, resolve, reject});
-      drainTraineeCnapsRequestQueue();
-    });
-  }
-  function drainTraineeCnapsRequestQueue(){
-    if(traineeCnapsActiveRequests >= TRAINEE_CNAPS_MAX_CONCURRENT || !traineeCnapsRequestQueue.length) return;
-    const item = traineeCnapsRequestQueue.shift();
-    traineeCnapsActiveRequests += 1;
-    Promise.resolve().then(item.task).then(item.resolve, item.reject).finally(()=>{
-      traineeCnapsActiveRequests -= 1;
-      window.setTimeout(drainTraineeCnapsRequestQueue, 250);
-    });
-  }
-  async function refreshTraineeCardProFollowup(box, options = {}){
-    const resultEl = box.querySelector("[data-trainee-card-pro-result]");
-    const nom = box.getAttribute("data-nom") || "";
-    const prenom = box.getAttribute("data-prenom") || "";
-    const nub = box.getAttribute("data-nub") || "";
-    if(!resultEl || !nom || !nub) return;
-    try{
-      const cacheKey = String(nub || "").replace(/\D+/g, "").slice(-7);
-      if(!options.bypassCache && traineeCnapsRequestCache.has(cacheKey)){
-        renderTraineeCardProResult(resultEl, traineeCnapsRequestCache.get(cacheKey), "remote");
-        return;
-      }
-      const data = await enqueueTraineeCnapsRequest(async ()=>{
-        const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}&nub=${encodeURIComponent(nub)}${options.bypassCache ? "&cache=bypass" : ""}`);
-        const payload = await r.json().catch(()=>({}));
-        if(!r.ok || !payload.ok) throw new Error(payload.error || "cnaps_unavailable");
-        return payload;
-      });
-      traineeCnapsRequestCache.set(cacheKey, data);
-      renderTraineeCardProResult(resultEl, data, "remote");
-      return;
-    }catch(e){}
-    renderTraineeCardProResult(resultEl, {check_status: "error", active_titles: [], error: "cnaps_unavailable"}, "error");
-  }
-  document.querySelectorAll("[data-trainee-card-pro-followup]").forEach(box=>refreshTraineeCardProFollowup(box));
+  document.querySelectorAll("[data-trainee-card-pro-followup]").forEach(box => {
+    const result = box.querySelector("[data-trainee-card-pro-result]");
+    window.cnapsCards.bind(box, data => renderTraineeCardProResult(result, data, "remote"));
+  });
 })();
 </script>
 

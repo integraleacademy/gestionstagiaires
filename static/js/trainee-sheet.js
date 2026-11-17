@@ -1135,7 +1135,8 @@ function updateDocsRelanceState(status, plannedDateIso){
 
   // Refresh CNAPS
   async function cnapsLookup(nom, prenom){
-    const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
+    const r = await window.cnapsRead(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
+    if (!r.ok) throw new Error("lookup_failed");
     return await r.json();
   }
 

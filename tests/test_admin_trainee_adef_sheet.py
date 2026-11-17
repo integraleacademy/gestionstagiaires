@@ -27,8 +27,10 @@ def test_cnaps_validity_reuses_authenticated_annuaire_endpoint():
     source = _template_source()
 
     assert "extract_nub_from_pre_car(adef.pre_or_car)" in source
-    assert "/api/cnaps_public_annuaire" in source
-    assert "new URLSearchParams({ nom, prenom, nub })" in source
+    assert 'cnaps_annuaire_snapshot(adef.last_name, nub)' in source
+    assert 'cnapsCards.bind(row' in source
+    assert 'data-card-pro-refresh' in source
+    assert 'fetch(' not in source
     assert "payload.active_titles" in source
     assert "title.display_status" in source
     assert "title.date_fin_validite || title.valid_until" in source
@@ -44,7 +46,7 @@ def test_cnaps_validity_formats_expiration_and_handles_missing_data():
     assert "NUB absent — validité CNAPS non vérifiable." in source
     assert "Aucun titre CNAPS actif trouvé." in source
     assert "Date d’expiration non renseignée" in source
-    assert "Validité CNAPS momentanément indisponible." in source
+    assert "Aucune vérification enregistrée" in source
 
 
 def test_cnaps_validity_formatter_preserves_french_dates_and_converts_iso():
@@ -81,9 +83,9 @@ console.log(JSON.stringify([
     ]
 
 
-def test_print_waits_until_cnaps_lookup_has_finished():
+def test_print_waits_for_a_manually_requested_refresh():
     source = _template_source()
 
     assert 'id="btnPrintAdef"' in source
-    assert "await adefCnapsValidityPromise;" in source
-    assert source.index("await adefCnapsValidityPromise;") < source.index("window.print();")
+    assert "await pendingCnapsRefresh();" in source
+    assert source.index("await pendingCnapsRefresh();") < source.index("window.print();")
