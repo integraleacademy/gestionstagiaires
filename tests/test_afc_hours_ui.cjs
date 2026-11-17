@@ -35,7 +35,8 @@ function fixture({saved = false, readOnly = false, missing = false} = {}) {
   assert.equal(calls.length,0, 'Opening a proposal must not save it');
   const select=doc.querySelector('[data-trainee="T10"] select');
   select.value='54'; select.dispatchEvent(new window.Event('change'));
-  assert.equal(doc.getElementById('afcHoursExport').disabled,true);
+  assert.equal(doc.getElementById('afcHoursExport').disabled,false,'Individual adaptations must remain exportable');
+  assert.match(doc.getElementById('afcHoursMessage').textContent,/Répartition adaptée/);
   doc.getElementById('afcHoursSuggest').click();
   assert.equal(select.value,'0');
   doc.getElementById('afcHoursSave').click();

@@ -7,7 +7,7 @@
     <div><span class="afc-hours-eyebrow">PARCOURS AFC · APS + SSIAP 1</span><h1>Export Excel AFC</h1><p>{{ training.name }}</p></div>
     <div class="afc-hours-badge"><strong>{{ afc_state.rows|length }}</strong><span>candidats inscrits</span></div>
   </header>
-  <p class="afc-hours-intro">La répartition suit les résultats au test de positionnement : les 8 notes les plus faibles correspondent à 54 h, les 2 suivantes à 40 h et les 2 meilleures à 0 h. L’enregistrement applique aussi la date de début au dossier de chaque candidat.</p>
+  <p class="afc-hours-intro">La répartition proposée suit les résultats au test de positionnement : les 8 notes les plus faibles correspondent à 54 h, les 2 suivantes à 40 h et les 2 meilleures à 0 h. Adaptez chaque profil aux heures prévues pour le stagiaire, notamment en cas d’entrée décalée. L’enregistrement applique aussi la date de début au dossier de chaque candidat.</p>
   <div class="afc-hours-common" aria-label="Heures communes à tous les candidats">
     <div><strong>273 h</strong><span>Formation professionnelle</span></div>
     <div><strong>21 h</strong><span>Préparation à l’après-formation</span></div>
@@ -17,7 +17,7 @@
     {% for hours, title in [('54', 'RAN complète'), ('40', 'RAN partielle'), ('0', 'Sans RAN')] %}
     <div class="afc-hours-profile" data-profile-card="{{ hours }}">
       <div class="afc-hours-profile-top"><span>{{ title }}</span><strong>{{ hours }} h</strong></div>
-      <div class="afc-hours-count"><strong data-count="{{ hours }}">{{ afc_state.counts[hours] }}</strong>{% if afc_state.target %}<span>/ {{ afc_state.target[hours] }} candidats</span>{% else %}<span>candidats</span>{% endif %}</div>
+      <div class="afc-hours-count"><strong data-count="{{ hours }}">{{ afc_state.counts[hours] }}</strong>{% if afc_state.target %}<span>candidats · {{ afc_state.target[hours] }} prévus initialement</span>{% else %}<span>candidats</span>{% endif %}</div>
       <span class="afc-hours-entry" data-profile-date="{{ hours }}"></span>
     </div>
     {% endfor %}

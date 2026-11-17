@@ -98,8 +98,8 @@ def export_error(state):
         return "Choisissez un profil RAN pour chaque candidat avant l’export."
     if any(not row["start"] for row in state["rows"]):
         return "Renseignez la date de début de chaque profil utilisé."
-    if state["target"] and state["counts"] != state["target"]:
-        return "La répartition attendue est de 8 candidats à 54 h, 2 à 40 h et 2 sans RAN."
+    # The initial allocation is a planning reference. Individual entries and
+    # absences may reduce RAN hours without changing another trainee's profile.
     if any(row["date_conflict"] for row in state["rows"]):
         return "Une date individuelle a changé. Vérifiez les profils puis enregistrez avant l’export."
     return ""
