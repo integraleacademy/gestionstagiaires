@@ -30,6 +30,11 @@ def register(host):
         people = sorted((p for p in host._session_trainees_list(training)
                          if not host._trainee_registration_is_cancelled(p)),
                         key=lambda p: (str(p.get('last_name', '')).casefold(), str(p.get('first_name', '')).casefold()))
+        if uv.eligible(training):
+            # Authorize the session before opening its questionnaire storage.
+            # Group status/PDFs must use the same state as individual views,
+            # including completed attempts and resets absent from legacy JSON.
+            people = [uv.stored_trainee(host, training, person) for person in people]
         return training, partner, people
 
     @app.get('/api/admin/sessions/<session_id>/learning-documents')

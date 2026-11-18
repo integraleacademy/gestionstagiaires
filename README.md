@@ -121,6 +121,7 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 - Les fichiers supprimés par les routes sensibles sont déplacés dans `PERSIST_DIR/trash` quand c'est possible.
 - L'endpoint `GET /api/health` expose le nombre de sauvegardes présentes pour vérification rapide.
 - Un rapport complet est disponible dans `SECURITY_AUDIT.md`.
+- Les réponses aux questionnaires de fin d’UV utilisent une base SQLite dédiée sur le disque persistant. Des copies autonomes accompagnent les sauvegardes administratives ; conserver cette base en plus du JSON. La migration, la sauvegarde, la restauration et le test de 24 stagiaires sont décrits dans [le guide UV](docs/uv_questionnaires.md#stockage-des-réponses-et-concurrence).
 
 
 ## Notifications push iPhone (Safari)

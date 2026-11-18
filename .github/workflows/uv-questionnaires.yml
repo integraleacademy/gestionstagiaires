@@ -1,0 +1,77 @@
+name: UV questionnaires
+
+on:
+  pull_request:
+    paths:
+      - 'app.py'
+      - 'uv_questionnaires.py'
+      - 'uv_questionnaire_store.py'
+      - 'admin_learning_documents.py'
+      - 'static/js/uv-questionnaire.js'
+      - 'templates/uv_questionnaire.html'
+      - 'tests/test_uv*.py'
+      - 'scripts/benchmark_uv_questionnaires.py'
+      - '.github/workflows/uv-questionnaires.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uv-questionnaires-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression-and-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PERSIST_DIR: ${{ runner.temp }}/uv-questionnaire-tests
+      SECRET_KEY: uv-ci-synthetic-secret-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /**
+            !/**/*.mp4
+            !/**/*.mp3
+            !/**/*.webm
+            !/**/*.wav
+            !/**/*.mov
+            !/**/*.zip
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install application and test dependencies
+        run: python -m pip install -r requirements.txt pytest beautifulsoup4 playwright
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Verify state, access, retries, PDFs, transfers and backups
+        run: >-
+          python -m pytest -q
+          tests/test_uv_questionnaires.py
+          tests/test_uv_questionnaire_store.py
+          tests/test_uv_questionnaire_concurrency.py
+          tests/test_uv_learning_documents_storage.py
+          tests/test_uv_storage_integration.py
+          tests/test_uv_storage_read_only.py
+          tests/test_admin_learning_documents.py
+          tests/test_admin_trainee_transfer.py
+          tests/test_session_performance.py
+          tests/test_cpu_load_guards.py
+          tests/test_backup_retention_chronology.py
+      - name: Simulate 24 learners in the full application
+        run: >-
+          python scripts/benchmark_uv_questionnaires.py
+          --full-app --clients 24 --padding-mib 8 --save-delay-ms 0
+          --json-output uv-full-app-24.json
+      - name: Publish concurrency report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-concurrency-report
+          path: uv-full-app-24.json
+          if-no-files-found: ignore

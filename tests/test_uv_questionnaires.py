@@ -1,6 +1,7 @@
 import copy
 import datetime as dt
 import hashlib
+import json
 from html import unescape
 from io import BytesIO
 from unittest.mock import Mock
@@ -12,6 +13,16 @@ import app
 import uv_questionnaires as uv
 
 
+@pytest.fixture(autouse=True)
+def isolated_uv_database(tmp_path, monkeypatch):
+    monkeypatch.setitem(app.app.config, 'UV_QUESTIONNAIRE_DB_PATH',
+                        str(tmp_path / 'uv-questionnaires.sqlite3'))
+
+
+def persisted(training, trainee):
+    return uv.stored_trainee(app, training, trainee)
+
+
 @pytest.fixture
 def case(monkeypatch):
     trainee = {'id':'T1','first_name':'Camille','last_name':'MARTIN','public_token':'token-test'}
@@ -19,7 +30,7 @@ def case(monkeypatch):
                 'aps_in_person_start':'2026-11-09','date_end':'2026-12-18','trainees':[trainee]}
     data={'sessions':[training]}
     monkeypatch.setattr(app,'load_data',lambda **kwargs:data)
-    monkeypatch.setattr(app,'_atomic_update_data',lambda mutate:mutate(data))
+    monkeypatch.setattr(app, '_atomic_update_data', lambda mutate: mutate(data))
     monkeypatch.setattr(uv,'today',lambda:dt.date(2026,11,9))
     monkeypatch.setattr(uv,'clock',lambda:1000.0)
     client=app.app.test_client()
@@ -88,18 +99,20 @@ def test_revised_content_and_archived_bank_are_consistent():
 
 
 def test_old_attempt_finishes_with_its_original_questions_and_correction(case):
-    client, _, trainee, _ = case
+    client, training, trainee, _ = case
     old = uv.unit('aps', 2, '20261024')
     trainee['uv_questionnaire_attempts'] = {'aps': {'2': dict(
         version='20261024', answers={}, index=0, deadline=1045,
         started_at='2026-10-26T09:00:00')}}
+    legacy_before = copy.deepcopy(trainee)
     state = post(client).json
     for q in old['questions']:
         assert state['question']['prompt'] == q['prompt']
         assert 'answer' not in state['question'] and 'explanation' not in state['question']
         state = post(client, 'answer', question_id=q['id'], answer=q['answer']).json
     assert state == {'completed': True, 'score': 20}
-    assert trainee['uv_questionnaires']['aps']['2']['version'] == '20261024'
+    assert persisted(training, trainee)['uv_questionnaires']['aps']['2']['version'] == '20261024'
+    assert trainee == legacy_before  # Migration never rewrites the administrative snapshot.
     page = client.get(PATH).text
     assert old['questions'][0]['explanation'] in page
     assert uv.unit('aps', 2)['questions'][0]['explanation'] not in page
@@ -133,7 +146,7 @@ def test_a3p_new_questions_true_false_and_four_choices_are_graded(case):
             answer = q['answer']
         state = submit('answer', question_id=q['id'], answer=answer).json
     assert state == {'completed': True, 'score': 19}
-    assert trainee['uv_questionnaires']['a3p']['6']['version'] == '20261026'
+    assert persisted(training, trainee)['uv_questionnaires']['a3p']['6']['version'] == '20261026'
     assert questions[5]['explanation'] in unescape(client.get(path).text)
 
 
@@ -176,7 +189,7 @@ def test_gate_dates_and_afc_original_session_not_later_individual_start(case):
 
 
 def test_single_question_no_answers_leaked_and_final_score_is_immutable(case):
-    client,_,trainee,_=case
+    client,training,trainee,_=case
     page=client.get(PATH)
     assert page.status_code==200
     for q in uv.unit('aps',2)['questions']:
@@ -188,16 +201,29 @@ def test_single_question_no_answers_leaked_and_final_score_is_immutable(case):
     assert 'answer' not in first['question'] and 'explanation' not in first['question']
     result=complete(client,wrong=True)
     assert result=={'completed':True,'score':19}
-    saved=copy.deepcopy(trainee['uv_questionnaires']['aps']['2'])
+    saved=persisted(training, trainee)['uv_questionnaires']['aps']['2']
     assert saved['in_class'] and saved['seconds_per_question']==45
     assert b'Bonne r' in client.get(PATH).data
     post(client,'start',in_class='yes')
     post(client,'answer',question_id='q01',answer='A')
-    assert trainee['uv_questionnaires']['aps']['2']==saved
+    assert persisted(training, trainee)['uv_questionnaires']['aps']['2']==saved
+
+
+def test_completed_questionnaire_never_uses_the_general_json_writer(case, monkeypatch):
+    client, training, trainee, _ = case
+    legacy = copy.deepcopy(trainee)
+    monkeypatch.setattr(app, '_atomic_update_data', Mock(side_effect=AssertionError(
+        'UV answers must never acquire the general JSON writer.')))
+    assert complete(client) == {'completed': True, 'score': 20}
+    assert trainee == legacy
+    saved = persisted(training, trainee)['uv_questionnaires']['aps']['2']
+    assert len(saved['answers']) == 20
+    assert all(saved['answers'].values())
+    assert post(client).json == {'completed': True, 'score': 20}
 
 
 def test_deadline_survives_reload_and_late_answer_is_not_counted(case,monkeypatch):
-    client,_,trainee,_=case
+    client,training,trainee,_=case
     first=post(client,'start',in_class='yes').json
     monkeypatch.setattr(uv,'clock',lambda:1030)
     assert post(client).json['remaining_ms']==15000
@@ -205,26 +231,26 @@ def test_deadline_survives_reload_and_late_answer_is_not_counted(case,monkeypatc
     monkeypatch.setattr(uv,'clock',lambda:1045)
     next_state=post(client,'answer',question_id=first['question']['id'],answer=uv.unit('aps',2)['questions'][0]['answer']).json
     assert next_state['index']==2 and next_state['remaining_ms']==45000
-    attempt=trainee['uv_questionnaire_attempts']['aps']['2']
+    attempt=persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']
     assert attempt['answers']['q01']==''
     assert post(client,'answer',question_id='q01',answer='A').json['index']==2
 
 
 def test_all_timeouts_finish_and_score_zero(case,monkeypatch):
-    client,_,trainee,_=case
+    client,training,trainee,_=case
     post(client,'start',in_class='yes')
     for i in range(20):
         monkeypatch.setattr(uv,'clock',lambda i=i:1000+(i+1)*45)
         result=post(client).json
     assert result=={'completed':True,'score':0}
-    assert len(trainee['uv_questionnaires']['aps']['2']['answers'])==20
+    assert len(persisted(training, trainee)['uv_questionnaires']['aps']['2']['answers'])==20
 
 
 @pytest.mark.parametrize('payload',[{'action':'start'}, {'action':'unknown'}, {'action':'answer','question_id':'q01','answer':'A'}])
 def test_invalid_start_does_not_persist(case,payload):
-    client,_,trainee,_=case
+    client,training,trainee,_=case
     assert client.post(PATH,json={'csrf':'csrf-test',**payload}).status_code==400
-    assert not trainee.get('uv_questionnaire_attempts')
+    assert not persisted(training, trainee).get('uv_questionnaire_attempts')
 
 
 def test_auth_csrf_dates_and_sst_enforced_on_post(case):
@@ -238,14 +264,18 @@ def test_auth_csrf_dates_and_sst_enforced_on_post(case):
     assert client.get('/admin/sessions/S1/stagiaires/T1/questionnaires-uv/1.pdf').status_code==404
 
 
-def test_atomic_save_rechecks_cancelled_registration(case,monkeypatch):
-    client,_,trainee,data=case
-    def update(mutate):
-        trainee['registration_cancelled']=True
-        return mutate(data)
-    monkeypatch.setattr(app,'_atomic_update_data',update)
-    assert post(client,'start',in_class='yes').status_code==409
-    assert not trainee.get('uv_questionnaire_attempts')
+def test_cancelled_registration_cannot_answer_a_started_question(case):
+    client, training, trainee, _ = case
+    first = post(client, 'start', in_class='yes').json
+    before = copy.deepcopy(persisted(training, trainee))
+    trainee['registration_cancelled'] = True
+    response = post(client, 'answer', question_id=first['question']['id'],
+                    answer=first['question']['options'][0]['id'])
+    assert response.status_code == 403
+    assert post(client).status_code == client.get(PATH).status_code == 403
+    after = persisted(training, trainee)
+    assert after['uv_questionnaire_attempts'] == before['uv_questionnaire_attempts']
+    assert after['uv_questionnaire_attempts']['aps']['2']['answers'] == {}
 
 
 def test_admin_pdf_blank_and_correction(case):
@@ -313,28 +343,33 @@ def test_hidden_until_answering_available_but_admin_can_try_demo(case,monkeypatc
 
 
 def test_on_time_arrival_waiting_for_storage_and_actual_remaining_time(case, monkeypatch):
-    client, _, trainee, data = case
+    client, training, trainee, _ = case
     question = post(client, 'start', in_class='yes').json['question']
     now = [1044.0]
     monkeypatch.setattr(uv, 'clock', lambda: now[0])
+    store = uv._store(app)
+    original_write = store.mutate
 
-    def slow_write(mutate):
-        now[0] = 1050.0  # The time limit elapsed while waiting for the write lock.
-        state = mutate(data)
-        now[0] = 1052.0  # Serializing the file before acknowledging takes two seconds.
+    def slow_write(key, seed, mutate):
+        now[0] = 1050.0  # The time limit elapsed while waiting for storage.
+        state = original_write(key, seed, mutate)
+        now[0] = 1052.0  # Acknowledgement must report the actual time remaining.
         return state
 
-    monkeypatch.setattr(app, '_atomic_update_data', slow_write)
+    monkeypatch.setattr(store, 'mutate', slow_write)
+    monkeypatch.setattr(uv, '_store', lambda _services: store)
     chosen = question['options'][0]['id']
     state = post(client, 'answer', question_id=question['id'], answer=chosen).json
-    assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == {'q01': chosen}
+    assert persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers'] == {'q01': chosen}
     assert state['index'] == 2 and state['remaining_ms'] == 43000
 
 
 def test_syncs_do_not_write_and_lost_acknowledgement_cannot_skip_another_question(case, monkeypatch):
-    client, _, trainee, _ = case
-    writer = Mock(wraps=app._atomic_update_data)
-    monkeypatch.setattr(app, '_atomic_update_data', writer)
+    client, training, trainee, _ = case
+    store = uv._store(app)
+    writer = Mock(wraps=store.mutate)
+    monkeypatch.setattr(store, 'mutate', writer)
+    monkeypatch.setattr(uv, '_store', lambda _services: store)
     assert post(client).json == {'started': False, 'completed': False}
     writer.assert_not_called()
     q = post(client, 'start', in_class='yes').json['question']
@@ -346,12 +381,12 @@ def test_syncs_do_not_write_and_lost_acknowledgement_cannot_skip_another_questio
     monkeypatch.setattr(uv, 'clock', lambda: 1090)
     assert post(client, 'answer', question_id=q['id'], answer=chosen).json['index'] == 2
     assert post(client, 'sync', question_id=q['id']).json['index'] == 2
-    assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == {'q01': chosen}
+    assert persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers'] == {'q01': chosen}
 
 
 @pytest.mark.parametrize('last_question', [False, True])
 def test_on_time_answer_survives_another_tab_expiring_first(case, monkeypatch, last_question):
-    client, _, trainee, data = case
+    client, training, trainee, _ = case
     questions = uv.unit('aps', 2)['questions']
     state = post(client, 'start', in_class='yes').json
     if last_question:
@@ -361,23 +396,25 @@ def test_on_time_answer_survives_another_tab_expiring_first(case, monkeypatch, l
     assert state['question']['id'] == q['id']
     now = [1044.0]
     monkeypatch.setattr(uv, 'clock', lambda: now[0])
-    original_write = app._atomic_update_data
+    store = uv._store(app)
+    original_write = store.mutate
+    monkeypatch.setattr(uv, '_store', lambda _services: store)
 
-    def timeout_before_answer(mutate):
+    def timeout_before_answer(key, seed, mutate):
         now[0] = 1045.0
-        monkeypatch.setattr(app, '_atomic_update_data', original_write)
+        monkeypatch.setattr(store, 'mutate', original_write)
         expired = post(client, 'sync', question_id=q['id']).json
         assert expired['completed'] is last_question
-        return mutate(data)
+        return original_write(key, seed, mutate)
 
-    monkeypatch.setattr(app, '_atomic_update_data', timeout_before_answer)
+    monkeypatch.setattr(store, 'mutate', timeout_before_answer)
     res = post(client, 'answer', question_id=q['id'], answer=q['answer'])
     assert res.status_code == 200
-    attempt = trainee['uv_questionnaire_attempts']['aps']['2']
+    attempt = persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']
     assert attempt['answers'][q['id']] == q['answer']
     if last_question:
         assert res.json == {'completed': True, 'score': 20}
-        assert trainee['uv_questionnaires']['aps']['2']['score'] == 20
+        assert persisted(training, trainee)['uv_questionnaires']['aps']['2']['score'] == 20
     assert post(client, 'answer', question_id=q['id'], answer=q['options'][0]['id']).json == res.json
 
 
@@ -392,10 +429,16 @@ def test_reset_one_uv_and_reject_old_tabs_and_duplicate_reset(case, finished, mo
         post(client, 'start', in_class='yes')
     other_uv = PATH.rsplit('/', 1)[0] + '/3'
     client.post(other_uv, json={'action': 'start', 'csrf': 'csrf-test', 'in_class': 'yes'})
-    other_progress = copy.deepcopy(trainee['uv_questionnaire_attempts']['aps']['3'])
-    other_trainee = copy.deepcopy(dict(trainee, id='T2', public_token='token-T2'))
+    other_progress = persisted(training, trainee)['uv_questionnaire_attempts']['aps']['3']
+    other_trainee = copy.deepcopy(dict(persisted(training, trainee), id='T2', public_token='token-T2'))
     training['trainees'].append(other_trainee)
-    peer_progress = copy.deepcopy(other_trainee['uv_questionnaire_attempts'])
+    with client.session_transaction() as cookie:
+        cookie['public_auth_token-T2'] = True
+    peer_q = uv.unit('aps', 3)['questions'][0]
+    assert client.post('/espace/token-T2/questionnaires-uv/3', json={
+        'action': 'answer', 'csrf': 'csrf-test', 'question_id': peer_q['id'],
+        'answer': peer_q['answer']}).status_code == 200
+    peer_progress = persisted(training, other_trainee)['uv_questionnaire_attempts']
     sheet = '/admin/sessions/S1/stagiaires/T1'
     reset = sheet + '/questionnaires-uv/2/reinitialiser'
     assert client.post(reset).status_code == 302
@@ -419,18 +462,18 @@ def test_reset_one_uv_and_reject_old_tabs_and_duplicate_reset(case, finished, mo
     receipt = client.post(reset, data=params, follow_redirects=True)
     opened = BeautifulSoup(receipt.data, 'html.parser').select_one('details#questionnaires-uv[open]')
     assert opened and 'Le questionnaire UV 02 a été remis à zéro.' in opened.text
-    assert '2' not in trainee['uv_questionnaire_attempts']['aps']
-    assert not trainee.get('uv_questionnaires', {}).get('aps', {}).get('2')
+    assert '2' not in persisted(training, trainee)['uv_questionnaire_attempts']['aps']
+    assert not persisted(training, trainee).get('uv_questionnaires', {}).get('aps', {}).get('2')
     assert client.get(sheet + '/questionnaires-uv/2.pdf?mode=answers').status_code == 404
-    generation = trainee['uv_questionnaire_resets']['aps']['2']
+    generation = persisted(training, trainee)['uv_questionnaire_resets']['aps']['2']
     assert post(client, 'sync', generation=generation).json['started'] is False
     assert post(client, 'start', in_class='yes', generation=generation).json['index'] == 1
     assert post(client, 'answer', question_id='q01', answer='1').json == {'reset': True}
     assert post(client, 'start', in_class='yes').status_code == 409
     assert client.post(reset, data=params).status_code == 303
-    assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == {}
-    assert trainee['uv_questionnaire_attempts']['aps']['3'] == other_progress
-    assert other_trainee['uv_questionnaire_attempts'] == peer_progress
+    assert persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers'] == {}
+    assert persisted(training, trainee)['uv_questionnaire_attempts']['aps']['3'] == other_progress
+    assert persisted(training, other_trainee)['uv_questionnaire_attempts'] == peer_progress
 
 
 def test_unrelated_save_cannot_erase_an_answer_or_restore_a_reset(tmp_path, monkeypatch):
@@ -442,27 +485,34 @@ def test_unrelated_save_cannot_erase_an_answer_or_restore_a_reset(tmp_path, monk
     data = {'sessions': [{'id': 'S1', 'training_type': 'APS', 'date_start': '2026-10-26',
                           'aps_in_person_start': '2026-11-09', 'trainees': [person]}]}
     app.save_data(data)
-    stale = copy.deepcopy(data)
+    unchanged_json = data_file.read_bytes()
+    stale = json.loads(unchanged_json)
     client = app.app.test_client()
     with client.session_transaction() as cookie:
         cookie.update({'public_auth_token-test': True, 'uv_questionnaire_csrf': 'csrf-test',
                        'uv_reset_csrf': 'reset-test', 'admin_logged_in': True, 'admin_role': 'admin'})
     monkeypatch.setattr(uv, 'today', lambda: dt.date(2026, 11, 10))
-    post(client, 'start', in_class='yes')
+    assert post(client, 'start', in_class='yes').status_code == 200
     q = uv.unit('aps', 2)['questions'][0]
-    post(client, 'answer', question_id=q['id'], answer=q['answer'])
+    assert post(client, 'answer', question_id=q['id'], answer=q['answer']).status_code == 200
+    # The real HTTP handlers save only to SQLite, even when the JSON needs normalization.
+    assert data_file.read_bytes() == unchanged_json
     stale['sessions'][0]['trainees'][0]['first_name'] = 'Maya'
     app.save_data(stale)
     saved = app._load_valid_json_payload(str(data_file))
-    person = saved['sessions'][0]['trainees'][0]
-    assert person['uv_questionnaire_attempts']['aps']['2']['answers'] == {q['id']: q['answer']}
+    training = saved['sessions'][0]
+    person = training['trainees'][0]
+    assert not person.get('uv_questionnaire_attempts')
+    assert persisted(training, person)['uv_questionnaire_attempts']['aps']['2']['answers'] == {q['id']: q['answer']}
     assert person['first_name'] == 'Maya'
     assert client.post('/admin/sessions/S1/stagiaires/T1/questionnaires-uv/2/reinitialiser',
                        data={'csrf': 'reset-test', 'generation': ''}).status_code == 303
     app.save_data(saved)
-    latest = app._load_valid_json_payload(str(data_file))['sessions'][0]['trainees'][0]
+    latest_training = app._load_valid_json_payload(str(data_file))['sessions'][0]
+    latest = persisted(latest_training, latest_training['trainees'][0])
     assert latest['uv_questionnaire_resets']['aps']['2']
     assert '2' not in latest['uv_questionnaire_attempts']['aps']
+    assert post(client, 'start', in_class='yes').status_code == 409
 
 
 def test_browser_retries_the_same_choice_after_disconnect_lost_receipt_and_reload(case):
@@ -472,7 +522,7 @@ def test_browser_retries_the_same_choice_after_disconnect_lost_receipt_and_reloa
     from urllib.parse import urlsplit
 
     playwright = pytest.importorskip('playwright.sync_api')
-    client, _, trainee, _ = case
+    client, training, trainee, _ = case
     posted = []
     delayed = []
     page_errors = []
@@ -531,6 +581,6 @@ def test_browser_retries_the_same_choice_after_disconnect_lost_receipt_and_reloa
         route.fulfill(status=result.status_code, content_type=result.content_type, body=result.data)
         playwright.expect(page.locator('#uq-question')).to_have_text(questions[3]['prompt'])
         assert posted == [first, first, second, second, third]
-        assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == dict([first, second, third])
+        assert persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers'] == dict([first, second, third])
         assert not page_errors
         browser.close()

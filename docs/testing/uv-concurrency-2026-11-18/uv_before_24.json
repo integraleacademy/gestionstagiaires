@@ -1,0 +1,63 @@
+{
+  "scope": "local HTTP harness; real UV routes/storage; synthetic business access checks/data",
+  "full_app": false,
+  "module_file": "/workspace/scratch/0d61aeeb8496/uv_questionnaires_before.py",
+  "module_sha256": "fd8a657937a845cc818643dcef6cefe2bdb146aaca94b14cf8df67bbc54d1a17",
+  "source_hashes": {},
+  "sources_unchanged_during_run": true,
+  "gunicorn": {
+    "workers": 1,
+    "threads": 4,
+    "worker_class": "gthread",
+    "keepalive_seconds": 90
+  },
+  "clients": 24,
+  "questions_per_client": 20,
+  "expected_persisted_answers": 480,
+  "padding_mib": 8.0,
+  "general_json_bytes": 8410175,
+  "artificial_general_save_delay_ms": 0.0,
+  "artificial_background_lock_hold_ms": 120,
+  "duration_seconds": 94.767,
+  "completed_clients": 24,
+  "errors": [],
+  "http_status_counts": {
+    "200": 624
+  },
+  "all_requests": {
+    "count": 624,
+    "p50_ms": 1888.01,
+    "p95_ms": 8973.88,
+    "p99_ms": 13569.54,
+    "max_ms": 14187.91
+  },
+  "by_action": {
+    "answer": {
+      "count": 480,
+      "p50_ms": 1489.38,
+      "p95_ms": 6883.71,
+      "p99_ms": 12255.77,
+      "max_ms": 13692.95
+    },
+    "answer_replay": {
+      "count": 120,
+      "p50_ms": 2311.36,
+      "p95_ms": 13033.8,
+      "p99_ms": 14033.14,
+      "max_ms": 14187.91
+    },
+    "start": {
+      "count": 24,
+      "p50_ms": 2603.5,
+      "p95_ms": 3690.37,
+      "p99_ms": 3741.16,
+      "max_ms": 3754.05
+    }
+  },
+  "dedicated_database": false,
+  "general_saves_from_uv": 624,
+  "background_saves": 90,
+  "general_json_contains_uv_states": true,
+  "persistence_failures": [],
+  "passed": true
+}
