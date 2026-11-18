@@ -310,3 +310,227 @@ def test_hidden_until_answering_available_but_admin_can_try_demo(case,monkeypatc
     assert 'id="questionnaires-uv"' in client.get('/espace/token-test').text
     trainee['registration_cancelled']=True
     assert 'id="questionnaires-uv"' not in client.get('/espace/token-test').text
+
+
+def test_on_time_arrival_waiting_for_storage_and_actual_remaining_time(case, monkeypatch):
+    client, _, trainee, data = case
+    question = post(client, 'start', in_class='yes').json['question']
+    now = [1044.0]
+    monkeypatch.setattr(uv, 'clock', lambda: now[0])
+
+    def slow_write(mutate):
+        now[0] = 1050.0  # The time limit elapsed while waiting for the write lock.
+        state = mutate(data)
+        now[0] = 1052.0  # Serializing the file before acknowledging takes two seconds.
+        return state
+
+    monkeypatch.setattr(app, '_atomic_update_data', slow_write)
+    chosen = question['options'][0]['id']
+    state = post(client, 'answer', question_id=question['id'], answer=chosen).json
+    assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == {'q01': chosen}
+    assert state['index'] == 2 and state['remaining_ms'] == 43000
+
+
+def test_syncs_do_not_write_and_lost_acknowledgement_cannot_skip_another_question(case, monkeypatch):
+    client, _, trainee, _ = case
+    writer = Mock(wraps=app._atomic_update_data)
+    monkeypatch.setattr(app, '_atomic_update_data', writer)
+    assert post(client).json == {'started': False, 'completed': False}
+    writer.assert_not_called()
+    q = post(client, 'start', in_class='yes').json['question']
+    assert post(client).json['index'] == 1
+    assert post(client, 'start', in_class='yes').json['remaining_ms'] == 45000
+    assert writer.call_count == 1
+    chosen = q['options'][0]['id']
+    assert post(client, 'answer', question_id=q['id'], answer=chosen).json['index'] == 2
+    monkeypatch.setattr(uv, 'clock', lambda: 1090)
+    assert post(client, 'answer', question_id=q['id'], answer=chosen).json['index'] == 2
+    assert post(client, 'sync', question_id=q['id']).json['index'] == 2
+    assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == {'q01': chosen}
+
+
+@pytest.mark.parametrize('last_question', [False, True])
+def test_on_time_answer_survives_another_tab_expiring_first(case, monkeypatch, last_question):
+    client, _, trainee, data = case
+    questions = uv.unit('aps', 2)['questions']
+    state = post(client, 'start', in_class='yes').json
+    if last_question:
+        for q in questions[:-1]:
+            state = post(client, 'answer', question_id=q['id'], answer=q['answer']).json
+    q = questions[-1] if last_question else questions[0]
+    assert state['question']['id'] == q['id']
+    now = [1044.0]
+    monkeypatch.setattr(uv, 'clock', lambda: now[0])
+    original_write = app._atomic_update_data
+
+    def timeout_before_answer(mutate):
+        now[0] = 1045.0
+        monkeypatch.setattr(app, '_atomic_update_data', original_write)
+        expired = post(client, 'sync', question_id=q['id']).json
+        assert expired['completed'] is last_question
+        return mutate(data)
+
+    monkeypatch.setattr(app, '_atomic_update_data', timeout_before_answer)
+    res = post(client, 'answer', question_id=q['id'], answer=q['answer'])
+    assert res.status_code == 200
+    attempt = trainee['uv_questionnaire_attempts']['aps']['2']
+    assert attempt['answers'][q['id']] == q['answer']
+    if last_question:
+        assert res.json == {'completed': True, 'score': 20}
+        assert trainee['uv_questionnaires']['aps']['2']['score'] == 20
+    assert post(client, 'answer', question_id=q['id'], answer=q['options'][0]['id']).json == res.json
+
+
+@pytest.mark.parametrize('finished', [False, True])
+def test_reset_one_uv_and_reject_old_tabs_and_duplicate_reset(case, finished, monkeypatch):
+    from bs4 import BeautifulSoup
+    client, training, trainee, _ = case
+    monkeypatch.setattr(app, 'save_data', lambda *_args, **_kwargs: None)
+    if finished:
+        complete(client)
+    else:
+        post(client, 'start', in_class='yes')
+    other_uv = PATH.rsplit('/', 1)[0] + '/3'
+    client.post(other_uv, json={'action': 'start', 'csrf': 'csrf-test', 'in_class': 'yes'})
+    other_progress = copy.deepcopy(trainee['uv_questionnaire_attempts']['aps']['3'])
+    other_trainee = copy.deepcopy(dict(trainee, id='T2', public_token='token-T2'))
+    training['trainees'].append(other_trainee)
+    peer_progress = copy.deepcopy(other_trainee['uv_questionnaire_attempts'])
+    sheet = '/admin/sessions/S1/stagiaires/T1'
+    reset = sheet + '/questionnaires-uv/2/reinitialiser'
+    assert client.post(reset).status_code == 302
+    assert 'Remettre à zéro' not in client.get(PATH).text
+    admin(client)
+    form = BeautifulSoup(client.get(sheet).data, 'html.parser').find('form', action=reset)
+    assert form and 'Remettre à zéro' in form.text and 'Camille' in form['data-confirmation']
+    params = {item['name']: item['value'] for item in form.find_all('input')}
+    assert client.post(reset, data={**params, 'csrf': ''}).status_code == 403
+    assert client.get(reset).status_code == 405
+    with client.session_transaction() as auth:
+        auth['admin_role'] = 'viewer'
+    assert client.post(reset, data=params).status_code == 403
+    assert not BeautifulSoup(client.get(sheet).data, 'html.parser').find('form', action=reset)
+    with client.session_transaction() as auth:
+        auth.update(admin_role='partner_admin', partner_id='another-training-centre')
+    assert client.post(reset, data=params).status_code == 404
+    with client.session_transaction() as auth:
+        auth.pop('partner_id')
+    admin(client)
+    receipt = client.post(reset, data=params, follow_redirects=True)
+    opened = BeautifulSoup(receipt.data, 'html.parser').select_one('details#questionnaires-uv[open]')
+    assert opened and 'Le questionnaire UV 02 a été remis à zéro.' in opened.text
+    assert '2' not in trainee['uv_questionnaire_attempts']['aps']
+    assert not trainee.get('uv_questionnaires', {}).get('aps', {}).get('2')
+    assert client.get(sheet + '/questionnaires-uv/2.pdf?mode=answers').status_code == 404
+    generation = trainee['uv_questionnaire_resets']['aps']['2']
+    assert post(client, 'sync', generation=generation).json['started'] is False
+    assert post(client, 'start', in_class='yes', generation=generation).json['index'] == 1
+    assert post(client, 'answer', question_id='q01', answer='1').json == {'reset': True}
+    assert post(client, 'start', in_class='yes').status_code == 409
+    assert client.post(reset, data=params).status_code == 303
+    assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == {}
+    assert trainee['uv_questionnaire_attempts']['aps']['3'] == other_progress
+    assert other_trainee['uv_questionnaire_attempts'] == peer_progress
+
+
+def test_unrelated_save_cannot_erase_an_answer_or_restore_a_reset(tmp_path, monkeypatch):
+    data_file = tmp_path / 'data.json'
+    monkeypatch.setattr(app, 'PERSIST_DIR', str(tmp_path))
+    monkeypatch.setattr(app, 'DATA_FILE', str(data_file))
+    monkeypatch.setattr(app, 'BACKUP_DIR', str(tmp_path / 'backups'))
+    person = {'id': 'T1', 'public_token': 'token-test'}
+    data = {'sessions': [{'id': 'S1', 'training_type': 'APS', 'date_start': '2026-10-26',
+                          'aps_in_person_start': '2026-11-09', 'trainees': [person]}]}
+    app.save_data(data)
+    stale = copy.deepcopy(data)
+    client = app.app.test_client()
+    with client.session_transaction() as cookie:
+        cookie.update({'public_auth_token-test': True, 'uv_questionnaire_csrf': 'csrf-test',
+                       'uv_reset_csrf': 'reset-test', 'admin_logged_in': True, 'admin_role': 'admin'})
+    monkeypatch.setattr(uv, 'today', lambda: dt.date(2026, 11, 10))
+    post(client, 'start', in_class='yes')
+    q = uv.unit('aps', 2)['questions'][0]
+    post(client, 'answer', question_id=q['id'], answer=q['answer'])
+    stale['sessions'][0]['trainees'][0]['first_name'] = 'Maya'
+    app.save_data(stale)
+    saved = app._load_valid_json_payload(str(data_file))
+    person = saved['sessions'][0]['trainees'][0]
+    assert person['uv_questionnaire_attempts']['aps']['2']['answers'] == {q['id']: q['answer']}
+    assert person['first_name'] == 'Maya'
+    assert client.post('/admin/sessions/S1/stagiaires/T1/questionnaires-uv/2/reinitialiser',
+                       data={'csrf': 'reset-test', 'generation': ''}).status_code == 303
+    app.save_data(saved)
+    latest = app._load_valid_json_payload(str(data_file))['sessions'][0]['trainees'][0]
+    assert latest['uv_questionnaire_resets']['aps']['2']
+    assert '2' not in latest['uv_questionnaire_attempts']['aps']
+
+
+def test_browser_retries_the_same_choice_after_disconnect_lost_receipt_and_reload(case):
+    import os
+    import shutil
+    from pathlib import Path
+    from urllib.parse import urlsplit
+
+    playwright = pytest.importorskip('playwright.sync_api')
+    client, _, trainee, _ = case
+    posted = []
+    delayed = []
+    page_errors = []
+
+    def handle(route):
+        req = route.request
+        url = urlsplit(req.url)
+        if url.hostname != 'uv.test':
+            return route.abort()
+        payload = req.post_data_json if req.method == 'POST' else None
+        if payload and payload['action'] == 'answer':
+            posted.append((payload['question_id'], payload['answer']))
+            if len(posted) == 1:  # The first copy never reached Flask.
+                return route.abort()
+        res = client.open(url.path, method=req.method, json=payload)
+        if payload and payload['action'] == 'answer':
+            if len(posted) == 3:  # Flask committed, but its reply was lost.
+                return route.abort()
+            if len(posted) == 5:
+                delayed.append((route, res))
+                return
+        route.fulfill(status=res.status_code, content_type=res.content_type, body=res.data)
+
+    with playwright.sync_playwright() as driver:
+        executable = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH') or shutil.which('chromium') or driver.chromium.executable_path
+        if not Path(executable).exists():
+            pytest.skip('Chromium indisponible')
+        browser = driver.chromium.launch(executable_path=executable, args=['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'])
+        page = browser.new_page()
+        page.on('pageerror', lambda error: page_errors.append(str(error)))
+        page.route('**/*', handle)
+        page.clock.install()
+        page.goto('https://uv.test' + PATH)
+        page.locator('#uq-in-class').check()
+        page.locator('#uq-start').click()
+        questions = uv.unit('aps', 2)['questions']
+
+        def select_question(i):
+            question = questions[i]
+            playwright.expect(page.locator('#uq-question')).to_have_text(question['prompt'])
+            page.locator('label.uq-option').first.click()
+            page.locator('#uq-next').click()
+            return question['id'], question['options'][0]['id']
+
+        first = select_question(0)
+        playwright.expect(page.locator('#uq-error')).to_be_visible()
+        page.locator('#uq-retry').click()
+        second = select_question(1)
+        playwright.expect(page.locator('#uq-error')).to_be_visible()
+        page.reload()
+        third = select_question(2)
+        playwright.expect(page.locator('#uq-status')).to_contain_text('Enregistrement')
+        page.clock.fast_forward(17500)
+        playwright.expect(page.locator('#uq-error')).to_be_hidden()
+        route, result = delayed.pop()
+        route.fulfill(status=result.status_code, content_type=result.content_type, body=result.data)
+        playwright.expect(page.locator('#uq-question')).to_have_text(questions[3]['prompt'])
+        assert posted == [first, first, second, second, third]
+        assert trainee['uv_questionnaire_attempts']['aps']['2']['answers'] == dict([first, second, third])
+        assert not page_errors
+        browser.close()

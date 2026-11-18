@@ -1,4 +1,5 @@
 """Versioned end-of-UV knowledge checks, separate from certification exams."""
+from copy import deepcopy
 from datetime import date, datetime
 from functools import lru_cache
 from io import BytesIO
@@ -11,7 +12,7 @@ import secrets
 import time
 from xml.sax.saxutils import escape
 
-from flask import abort, jsonify, redirect, render_template, request, send_file, session, url_for
+from flask import abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 import afc_schedule
 
@@ -78,8 +79,39 @@ def available(services, training, trainee):
                 and not services._trainee_registration_is_cancelled(trainee))
 
 
+def _entry(trainee, field, course, number):
+    return ((trainee.get(field) or {}).get(course) or {}).get(str(number))
+
+
 def _result(trainee, course, number):
-    return ((trainee.get('uv_questionnaires') or {}).get(course) or {}).get(str(number))
+    return _entry(trainee, 'uv_questionnaires', course, number)
+
+
+def _generation(trainee, course, number):
+    return _entry(trainee, 'uv_questionnaire_resets', course, number) or ''
+
+
+def preserve_state(payload, canonical, trainees, default_partner):
+    """Only the UV transactions own these fields. Ignore older form snapshots."""
+    fields = ('uv_questionnaire_attempts', 'uv_questionnaires', 'uv_questionnaire_resets')
+    saved = {
+        (training.get('partner_id') or default_partner, str(training.get('id')), str(person.get('id'))): person
+        for training in canonical.get('sessions', [])
+        for person in trainees(training)
+        if any(field in person for field in fields)
+    }
+    if not saved:
+        return
+    for training in payload.get('sessions', []):
+        scope = (training.get('partner_id') or default_partner, str(training.get('id')))
+        for person in trainees(training):
+            current = saved.get((*scope, str(person.get('id'))))
+            if current is not None:
+                for field in fields:
+                    if field not in current:
+                        person.pop(field, None)
+                    elif person.get(field) != current[field]:
+                        person[field] = deepcopy(current[field])
 
 
 def unit(course, number, version=VERSION):
@@ -97,10 +129,13 @@ def view(services, training, trainee):
         if not unit(course, row['number']):
             continue
         result = _result(trainee, course, row['number'])
+        attempt = _entry(trainee, 'uv_questionnaire_attempts', course, row['number'])
         rows.append(dict(number=row['number'], title=row['title'],
                          score=result.get('score') if result else None,
                          submitted_at=result.get('submitted_at') if result else '',
-                         completed=bool(result)))
+                         completed=bool(result),
+                         in_progress=bool(attempt and not result),
+                         generation=_generation(trainee, course, row['number'])))
     return dict(course=course, label=course.upper(), title=TITLE, notice=NOTICE, units=rows,
                 completed_count=sum(row['completed'] for row in rows),
                 available=available(services, training, trainee),
@@ -133,6 +168,8 @@ def clock():
 
 def advance(services, trainee, course, number, attempt, row, answer, now):
     question = row['questions'][attempt['index']]
+    if not answer:
+        attempt.setdefault('expired_deadlines', {})[question['id']] = attempt['deadline']
     attempt['answers'][question['id']] = answer
     attempt['index'] += 1
     if attempt['index'] == len(row['questions']):
@@ -145,7 +182,7 @@ def advance(services, trainee, course, number, attempt, row, answer, now):
         attempt['deadline'] = now + QUESTION_SECONDS
 
 
-def attempt_state(services, trainee, course, number, attempt, row, now):
+def attempt_state(trainee, course, number, attempt, row):
     result = _result(trainee, course, number)
     if result:
         return dict(completed=True, score=result['score'])
@@ -153,84 +190,136 @@ def attempt_state(services, trainee, course, number, attempt, row, now):
         return dict(started=False, completed=False)
     question = row['questions'][attempt['index']]
     return dict(started=True, completed=False, index=attempt['index'] + 1,
-                total=len(row['questions']), remaining_ms=max(0, int((attempt['deadline']-now)*1000)),
+                total=len(row['questions']), deadline=attempt['deadline'],
                 question=dict(id=question['id'], prompt=question['prompt'], options=question['options']))
 
 
+def _valid_answer(question, payload):
+    answer = payload.get('answer')
+    if answer not in [option['id'] for option in question['options']]:
+        abort(400, description='Sélectionnez une réponse avant de valider.')
+    return answer
+
+
+def _apply_action(services, trainee, course, number, row, attempt, payload, received_at):
+    action = payload['action']
+    question_id = payload.get('question_id')
+    result = _result(trainee, course, number)
+    # A timeout from another tab may acquire the lock ahead of an on-time answer.
+    expired_deadlines = (attempt or {}).get('expired_deadlines', {})
+    previous_deadline = expired_deadlines.get(question_id)
+    if (action == 'answer' and previous_deadline is not None
+            and previous_deadline - QUESTION_SECONDS <= received_at < previous_deadline):
+        question = next(q for q in row['questions'] if q['id'] == question_id)
+        attempt['answers'][question_id] = _valid_answer(question, payload)
+        del expired_deadlines[question_id]
+        if result:
+            result['answers'][question_id] = attempt['answers'][question_id]
+            result['score'] = grade(row['questions'], result['answers'])
+    elif not result:
+        if not attempt:
+            if action == 'sync':
+                return dict(started=False, completed=False)
+            if action != 'start' or payload.get('in_class') != 'yes':
+                abort(400, description='Confirmez votre présence en cours avec le formateur avant de commencer.')
+            attempt = dict(version=VERSION, answers={}, index=0, deadline=clock()+QUESTION_SECONDS,
+                           started_at=services._now_iso())
+            trainee.setdefault('uv_questionnaire_attempts', {}).setdefault(course, {})[str(number)] = attempt
+        else:
+            question = row['questions'][attempt['index']]
+            # A replay for an earlier question must never expire the current one.
+            if question_id == question['id'] or (not question_id and action in {'sync', 'start'}):
+                if received_at >= attempt['deadline']:
+                    advance(services, trainee, course, number, attempt, row, '', clock())
+                elif action == 'answer' and received_at >= attempt['deadline'] - QUESTION_SECONDS:
+                    advance(services, trainee, course, number, attempt, row, _valid_answer(question, payload), clock())
+    state = attempt_state(trainee, course, number, attempt, row)
+    if action == 'answer' and question_id in (attempt or {}).get('expired_deadlines', {}):
+        state['answer_expired'] = True
+    return state
+
+
 def register(app, services):
-    def public_pair(token, data):
+    def reset_csrf():
+        return session.setdefault('uv_reset_csrf', secrets.token_urlsafe(32))
+
+    app.jinja_env.globals['uv_reset_csrf'] = reset_csrf
+
+    def public_context(token, number, data, access_status=403):
         training, trainee = services.find_session_and_trainee_by_token(data, token)
         if not training or not trainee or not eligible(training):
             abort(404)
-        return training, trainee
+        if not available(services, training, trainee):
+            abort(access_status, description='Ces questionnaires sont accessibles pendant les cours en présentiel.')
+        course = course_for(training)
+        attempt = _entry(trainee, 'uv_questionnaire_attempts', course, number)
+        result = _result(trainee, course, number)
+        row = unit(course, number, (result or attempt or {}).get('version', VERSION))
+        if not row:
+            abort(404)
+        return training, trainee, course, row, attempt, result
 
     @app.route('/espace/<token>/questionnaires-uv/<int:number>', methods=['GET', 'POST'])
     def public_uv_questionnaire(token, number):
+        received_at = clock()
         if not services._public_is_authed(token):
             return redirect(url_for('public_trainee_login', token=token))
-        training, trainee = public_pair(token, services.load_data(run_background_tasks=False))
-        course = course_for(training)
-        if not available(services, training, trainee):
-            abort(403, description='Ces questionnaires sont accessibles à partir du début du présentiel, pendant les cours et en présence du formateur.')
-        result = _result(trainee, course, number)
-        row = unit(course, number, result['version'] if result else VERSION)
-        if not row:
-            abort(404)
         csrf = session.setdefault('uv_questionnaire_csrf', secrets.token_urlsafe(32))
-        if request.method == 'POST':
-            payload = request.get_json(silent=True) or request.form
-            if not hmac.compare_digest(str(payload.get('csrf') or ''), csrf):
-                abort(403)
-            action = payload.get('action')
-            if action not in {'start', 'answer', 'sync'}:
-                return jsonify(error='Rechargez le questionnaire pour continuer.'), 400
-            def mutate(current):
-                current_training, current_trainee = public_pair(token, current)
-                if course_for(current_training) != course or not available(services, current_training, current_trainee):
-                    abort(409, description='Les conditions d’accès ont changé. Actualisez votre espace.')
-                saved = _result(current_trainee, course, number)
-                if saved:
-                    return dict(completed=True, score=saved['score'])
-                attempts = current_trainee.get('uv_questionnaire_attempts', {}).get(course, {})
-                attempt = attempts.get(str(number))
-                now = clock()
-                if not attempt:
-                    if action == 'sync':
-                        return dict(started=False, completed=False)
-                    if action != 'start' or payload.get('in_class') != 'yes':
-                        abort(400, description='Confirmez votre présence en cours avec le formateur avant de commencer.')
-                    attempt = dict(version=VERSION, answers={}, index=0, deadline=now+QUESTION_SECONDS,
-                                   started_at=services._now_iso())
-                    current_trainee.setdefault('uv_questionnaire_attempts', {}).setdefault(course, {})[str(number)] = attempt
-                active_row = unit(course, number, attempt['version'])
-                if not active_row:
-                    abort(409)
-                question = active_row['questions'][attempt['index']]
-                # Reloads and concurrent tabs cannot reset the deadline or overwrite a previous answer.
-                expired = now >= attempt['deadline']
-                if expired:
-                    advance(services, current_trainee, course, number, attempt, active_row, '', now)
-                elif action == 'answer' and payload.get('question_id') == question['id']:
-                    answer = payload.get('answer')
-                    if answer not in {o['id'] for o in question['options']}:
-                        abort(400, description='Sélectionnez une réponse avant de valider.')
-                    advance(services, current_trainee, course, number, attempt, active_row, answer, now)
-                return attempt_state(services, current_trainee, course, number, attempt, active_row, now)
-            response = jsonify(services._atomic_update_data(mutate))
-        else:
+        if request.method == 'GET':
+            training, trainee, course, row, _, result = public_context(
+                token, number, services.load_data(run_background_tasks=False))
             response = app.make_response(render_template('uv_questionnaire.html',
                 training=training, trainee=trainee, course=course, number=number, title=row['title'],
                 questionnaire_title=TITLE, questions=row['questions'] if result else [],
                 result=result, correction=bool(result), admin_preview=False, notice=NOTICE,
-                csrf=csrf, seconds_per_question=QUESTION_SECONDS,
+                csrf=csrf, generation=_generation(trainee, course, number), seconds_per_question=QUESTION_SECONDS,
                 back_url=url_for('public_trainee_space', token=token), token=token))
+        else:
+            payload = request.get_json(silent=True) or request.form
+            if not isinstance(payload, dict) or not hmac.compare_digest(str(payload.get('csrf') or '').encode(), csrf.encode()):
+                abort(403)
+            action = payload.get('action')
+            if action not in ('start', 'answer', 'sync') or not isinstance(payload.get('question_id', ''), str):
+                abort(400)
+            state = None
+            if action in ('start', 'sync'):
+                _, trainee, course, row, attempt, result = public_context(
+                    token, number, services.load_data(run_background_tasks=False))
+                if (payload.get('generation') or '') != _generation(trainee, course, number):
+                    return jsonify(reset=True), 409
+                # Opening a page, returning to a tab and ordinary syncs need no write.
+                if result or not attempt:
+                    needs_write = not result and action == 'start'
+                else:
+                    current_id = row['questions'][attempt['index']]['id']
+                    needs_write = received_at >= attempt['deadline'] and payload.get('question_id') in (None, current_id)
+                if not needs_write:
+                    state = attempt_state(trainee, course, number, attempt, row)
+            if state is None:
+                def mutate(current):
+                    _, person, course, row, attempt, _ = public_context(token, number, current, 409)
+                    if (payload.get('generation') or '') != _generation(person, course, number):
+                        return dict(reset=True)
+                    return _apply_action(services, person, course, number, row, attempt, payload, received_at)
+                state = services._atomic_update_data(mutate)
+                if state.get('reset'):
+                    return jsonify(state), 409
+            if 'deadline' in state:
+                # The shared JSON write can take seconds after the mutation returns.
+                state['remaining_ms'] = max(0, int((state.pop('deadline') - clock()) * 1000))
+            response = jsonify(state)
         response.headers['Cache-Control'] = 'private, no-store'
         return response
 
-    def admin_pair(session_id, trainee_id, number):
-        training, _, trainee = services._find_session_trainee(
-            services.load_data(run_background_tasks=False), session_id, trainee_id)
+    def admin_pair(session_id, trainee_id, number, data=None):
+        if data is None:
+            data = services.load_data(run_background_tasks=False)
+        training, _, trainee = services._find_session_trainee(data, session_id, trainee_id)
         if not training or not trainee or not eligible(training):
+            abort(404)
+        owner = training.get('partner_id') or services.INTEGRALE_PARTNER_ID
+        unrestricted = services._is_super_admin_session() and not session.get('assist_partner_id')
+        if not unrestricted and owner != (services._current_partner_id() or services.INTEGRALE_PARTNER_ID):
             abort(404)
         course = course_for(training)
         result = _result(trainee, course, number)
@@ -238,6 +327,33 @@ def register(app, services):
         if not row:
             abort(404)
         return training, trainee, course, row, result
+
+    @app.post('/admin/sessions/<session_id>/stagiaires/<trainee_id>/questionnaires-uv/<int:number>/reinitialiser')
+    @services.admin_login_required
+    @services.admin_write_required
+    def admin_uv_questionnaire_reset(session_id, trainee_id, number):
+        expected = session.get('uv_reset_csrf')
+        if not expected or not hmac.compare_digest(request.form.get('csrf', '').encode(), expected.encode()):
+            abort(403)
+
+        def reset(current):
+            _, trainee, course, _, result = admin_pair(session_id, trainee_id, number, current)
+            if request.form.get('generation') != _generation(trainee, course, number):
+                return False
+            if not result and not _entry(trainee, 'uv_questionnaire_attempts', course, number):
+                return False
+            for field in ('uv_questionnaires', 'uv_questionnaire_attempts'):
+                trainee.get(field, {}).get(course, {}).pop(str(number), None)
+            trainee.setdefault('uv_questionnaire_resets', {}).setdefault(course, {})[str(number)] = secrets.token_urlsafe(16)
+            return True
+
+        changed = services._atomic_update_data(reset)
+        if changed:
+            flash(f'Le questionnaire UV {number:02} a été remis à zéro.', 'uv_reset')
+        else:
+            flash('Cette tentative a déjà été remise à zéro.', 'uv_reset')
+        return redirect(url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id,
+                                _anchor='questionnaires-uv'), code=303)
 
     @app.get('/admin/sessions/<session_id>/stagiaires/<trainee_id>/questionnaires-uv/<int:number>')
     @services.admin_login_required
