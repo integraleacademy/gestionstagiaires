@@ -553,7 +553,9 @@ class HealthProbe:
                     response = client.get(self.url, timeout=(min(1, self.budget), self.budget),
                                           allow_redirects=False)
                     sample["status"] = response.status_code
-                    sample["ok"] = response.status_code == 200 and response.json().get("ok") is True
+                    body = response.json()
+                    sample["ok"] = (response.status_code == 200 and isinstance(body, dict)
+                                    and body.get("ok") is True)
                 except (requests.RequestException, ValueError) as exc:
                     sample.update(ok=False, error=type(exc).__name__)
                 sample["seconds"] = time.perf_counter() - started
@@ -864,7 +866,7 @@ def main(argv=None):
                 "legacy_duplicate_registrations": args.legacy_duplicates,
                 "raw_registration_rows_at_end": persisted["raw_registration_rows"],
                 "background_mode": args.background_mode,
-                "artificial_general_save_delay_ms": args.save_delay_ms,
+                "artificial_general_save_delay_ms": args.save_delay_ms if not args.full_app else 0,
                 "artificial_background_lock_hold_ms": (args.background_hold_ms
                                                        if args.background_mode in ("save", "once") else None),
                 "background_lock_hold_scope": ("per_save" if args.background_mode in ("save", "once")
