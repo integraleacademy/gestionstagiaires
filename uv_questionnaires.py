@@ -16,6 +16,7 @@ from xml.sax.saxutils import escape
 from flask import abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 import afc_schedule
+from uv_questionnaire_context import UnversionedSource, index_for
 from uv_questionnaire_store import UV_FIELDS, UVQuestionnaireStore
 
 VERSION = '20261026'
@@ -102,6 +103,35 @@ def _store_path(services):
 
 def _store(services):
     return UVQuestionnaireStore(_store_path(services))
+
+
+def _public_pair(services, token, *, original_loader=None):
+    """Read one UV context without normalizing/copying all business records."""
+    loader = services.load_data
+    path = getattr(services, 'DATA_FILE', None)
+    postgres = getattr(services, '_partner_postgres_active', lambda: False)()
+    # An injected provider or a scoped tenant keeps its authorized reader.
+    use_index = (path and original_loader is not None and loader is original_loader
+                 and not getattr(services, '_is_partner_data_scope_session', lambda: False)())
+    if use_index:
+        try:
+            training, trainee = index_for(path).lookup(token)
+            internal = getattr(services, 'INTEGRALE_PARTNER_ID', None)
+            # Active PostgreSQL replaces only external tenants and appends their
+            # rows after the JSON rows. A first internal match remains canonical.
+            # Missing/external tokens must still resolve through the PG overlay.
+            if not postgres or (training and internal
+                                and (training.get('partner_id') or internal) == internal):
+                return training, trainee
+        except UnversionedSource:
+            pass
+        except (OSError, ValueError):
+            # Never serve a stale cached token. In active mode the existing
+            # reader can still resolve authoritative external PostgreSQL data.
+            if not postgres:
+                abort(503, description='Le contexte du questionnaire est momentanément indisponible. Réessayez.')
+    data = loader(run_background_tasks=False, persist_normalization=False)
+    return services.find_session_and_trainee_by_token(data, token)
 
 
 def backup_state(services, reason='manual'):
@@ -321,13 +351,15 @@ def _apply_action(services, trainee, course, number, row, attempt, payload, rece
 
 
 def register(app, services):
+    original_loader = services.load_data
+
     def reset_csrf():
         return session.setdefault('uv_reset_csrf', secrets.token_urlsafe(32))
 
     app.jinja_env.globals['uv_reset_csrf'] = reset_csrf
 
-    def public_context(token, number, data, access_status=403):
-        training, trainee = services.find_session_and_trainee_by_token(data, token)
+    def public_context(token, number, access_status=403):
+        training, trainee = _public_pair(services, token, original_loader=original_loader)
         if not training or not trainee or not eligible(training):
             abort(404)
         if not available(services, training, trainee):
@@ -345,8 +377,7 @@ def register(app, services):
             return redirect(url_for('public_trainee_login', token=token))
         csrf = session.setdefault('uv_questionnaire_csrf', secrets.token_urlsafe(32))
         if request.method == 'GET':
-            training, trainee, course, row, _, result = public_context(
-                token, number, services.load_data(run_background_tasks=False, persist_normalization=False))
+            training, trainee, course, row, _, result = public_context(token, number)
             response = app.make_response(render_template('uv_questionnaire.html',
                 training=training, trainee=trainee, course=course, number=number, title=row['title'],
                 questionnaire_title=TITLE, questions=row['questions'] if result else [],
@@ -360,8 +391,7 @@ def register(app, services):
             action = payload.get('action')
             if action not in ('start', 'answer', 'sync') or not isinstance(payload.get('question_id', ''), str):
                 abort(400)
-            training, trainee, course, row, attempt, result = public_context(
-                token, number, services.load_data(run_background_tasks=False, persist_normalization=False))
+            training, trainee, course, row, attempt, result = public_context(token, number)
             if (payload.get('generation') or '') != _generation(trainee, course, number):
                 return jsonify(reset=True), 409
             state = None

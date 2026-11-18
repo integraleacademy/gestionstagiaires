@@ -29,6 +29,7 @@ import ipaddress
 import json
 import os
 from pathlib import Path
+import resource
 import secrets
 import socket
 import subprocess
@@ -49,8 +50,17 @@ UV_NUMBER = 2
 FIELDS = ("uv_questionnaire_attempts", "uv_questionnaires", "uv_questionnaire_resets")
 
 
-def synthetic_data(clients: int, padding_mib: float = 0, legacy_duplicates=False) -> dict:
-    """Return synthetic data with a realistic non-UV payload size, no PII."""
+def synthetic_data(clients: int, padding_mib: float = 0, legacy_duplicates=False,
+                   trainee_records: int = 0) -> dict:
+    """Build synthetic records; padding alone does not model normalization cost.
+
+    ``trainee_records`` is the total number of distinct registrations, including
+    the active cohort. Historical records include nested documents and billing
+    histories so JSON decoding, billing snapshots and roster scans do real work.
+    None of these records has a deliverable email address or telephone number.
+    """
+    if trainee_records and trainee_records < clients:
+        raise ValueError("trainee_records must include every active client")
     people = [
         {"id": f"BENCH-{i:03}", "public_token": f"bench-token-{i:03}",
          "first_name": "Synthetic", "last_name": f"Learner {i}"}
@@ -60,7 +70,7 @@ def synthetic_data(clients: int, padding_mib: float = 0, legacy_duplicates=False
         for person in people:
             person["created_at"] = "2026-10-26T08:00:00Z"
         people += [{**person, "first_name": "Divergent legacy copy"} for person in people]
-    return {
+    data = {
         "sessions": [{"id": TRAINING, "partner_id": PARTNER, "training_type": "APS",
                       "name": "Synthetic UV load test", "date_start": "2026-10-26",
                       "aps_in_person_start": "2026-10-26", "date_end": "2099-12-31",
@@ -68,6 +78,46 @@ def synthetic_data(clients: int, padding_mib: float = 0, legacy_duplicates=False
         "benchmark_padding": "x" * int(padding_mib * 1024 * 1024),
         "benchmark_revision": 0,
     }
+    if not trainee_records:
+        return data
+    data.update(billing_lines=[], activity_logs=[], notifications_vtc_books=[])
+    for ordinal in range(clients, trainee_records):
+        group = (ordinal - clients) // 24
+        if (ordinal - clients) % 24 == 0:
+            course = ("APS", "SSIAP1", "A3P", "VTC")[group % 4]
+            training = {"id": f"ARCHIVE-SESSION-{group:05}", "partner_id": PARTNER,
+                        "training_type": course, "name": f"Synthetic archive {group}",
+                        "date_start": "2025-01-01", "date_end": "2025-06-30", "trainees": []}
+            data["sessions"].append(training)
+        identifier = f"ARCHIVE-LEARNER-{ordinal:06}"
+        person = {"id": identifier, "partner_id": PARTNER,
+                  "public_token": f"synthetic-archive-token-{ordinal:06}",
+                  "first_name": "Fictitious", "last_name": f"Record {ordinal}",
+                  "birth_date": "1990-01-01", "created_at": "2025-01-01T08:00:00Z",
+                  "email": "", "phone": "", "vae_action_dates": {},
+                  "documents": [
+                      {"key": f"synthetic-{ordinal}-{number}", "name": f"Fictitious document {number}",
+                       "status": "received", "filename": f"missing-synthetic-{number}.pdf",
+                       "uploaded_at": "2025-01-01T08:00:00Z",
+                       "checks": {"format": "pdf", "status": "accepted", "synthetic": True}}
+                      for number in range(8)]}
+        training["trainees"].append(person)
+        for number in range(3):
+            data["billing_lines"].append({
+                "id": f"SYNTHETIC-BILL-{ordinal}-{number}", "partner_id": PARTNER,
+                "session_id": training["id"], "trainee_id": identifier,
+                "label": "Synthetic archived billing record", "amount": 100,
+                "invoiceStatus": "not_invoiced", "paymentStatus": "not_applicable",
+                "billingHistory": [{"at": "2025-01-01T08:00:00Z", "action": "synthetic",
+                                    "details": {"position": item, "label": "Non-production history"}}
+                                   for item in range(12)]})
+        data["activity_logs"].append({"id": f"SYNTHETIC-ACTIVITY-{ordinal}", "partner_id": PARTNER,
+                                      "action": "synthetic fixture", "trainee_id": identifier})
+        if training["training_type"] == "VTC":
+            data["notifications_vtc_books"].append({
+                "id": f"SYNTHETIC-NOTICE-{ordinal}", "partner_id": PARTNER, "done": True,
+                "meta": {"session_id": training["id"], "trainee_id": identifier}})
+    return data
 
 
 def _load_module(path: Path):
@@ -175,6 +225,8 @@ class SyntheticServices(SimpleNamespace):
             return result
 
     def start_background(self):
+        if self.background_mode == "none":
+            return
         if self.background_thread is not None:
             return
 
@@ -193,6 +245,8 @@ class SyntheticServices(SimpleNamespace):
                         time.sleep(self.background_hold)
                         self._replace(data)
                         self.background_saves += 1
+                    if self.background_mode == "once":
+                        return
                 except Exception as exc:
                     self.background_error = repr(exc)
                     return
@@ -249,6 +303,8 @@ class FullAppControls(SyntheticServices):
         self.write_lock = services._data_lock
         self.other_general_saves = 0
         self.uv_side_effect_writes = 0
+        self.uv_load_data_seconds = []
+        self.uv_context_seconds = []
         self.counter_lock = threading.Lock()
         original_write = services._write_json_with_backups
 
@@ -268,6 +324,8 @@ class FullAppControls(SyntheticServices):
         services._write_json_with_backups = counted_write
 
     def start_background(self):
+        if self.background_mode == "none":
+            return
         if self.background_thread is not None:
             return
         if self.background_mode == "hold":
@@ -283,6 +341,8 @@ class FullAppControls(SyntheticServices):
                     # general payload, takes backups and fsyncs the replacement.
                     self.real_services._atomic_update_data(mutate)
                     self.background_saves += 1
+                    if self.background_mode == "once":
+                        return
                 except Exception as exc:
                     self.background_error = repr(exc)
                     return
@@ -301,6 +361,18 @@ def create_harness(config: dict):
     if full_app:
         os.environ["PERSIST_DIR"] = str(Path(config["data_file"]).parent)
         os.environ["SECRET_KEY"] = config["secret"]
+        # Freeze the UV modules under their canonical import names before
+        # app.py imports them. Concurrent review edits cannot change this run.
+        for name in ("uv_questionnaire_context", "uv_questionnaires"):
+            frozen = config.get("frozen_uv_modules", {}).get(name)
+            if not frozen:
+                continue
+            spec = importlib.util.spec_from_file_location(name, frozen)
+            frozen_module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = frozen_module
+            spec.loader.exec_module(frozen_module)
+            if name == "uv_questionnaires":
+                frozen_module.BANK_DIR = ROOT / "uv_questionnaires"
         # Do not import the CRM until the temporary storage and network guard
         # are in place. No Gunicorn production lifecycle hooks are loaded.
         import crm_app
@@ -311,6 +383,32 @@ def create_harness(config: dict):
         module.today = lambda: datetime(2026, 11, 18).date()
         services = FullAppControls(real_services, config.get("background_hold_ms", 120),
                                    config.get("background_mode", "save"))
+        if config.get("legacy_context"):
+            if not hasattr(module, "_public_pair"):
+                raise RuntimeError("--legacy-context requires the cached-context implementation")
+
+            def legacy_pair(host, token, **_kwargs):
+                began = time.perf_counter()
+                try:
+                    payload = host.load_data(run_background_tasks=False, persist_normalization=False)
+                    return host.find_session_and_trainee_by_token(payload, token)
+                finally:
+                    with services.counter_lock:
+                        services.uv_load_data_seconds.append(time.perf_counter() - began)
+
+            module._public_pair = legacy_pair
+        if hasattr(module, "_public_pair"):
+            original_pair = module._public_pair
+
+            def timed_pair(host, token, **kwargs):
+                began = time.perf_counter()
+                try:
+                    return original_pair(host, token, **kwargs)
+                finally:
+                    with services.counter_lock:
+                        services.uv_context_seconds.append(time.perf_counter() - began)
+
+            module._public_pair = timed_pair
     else:
         module = _load_module(Path(config.get("module_file") or ROOT / "uv_questionnaires.py"))
         app = Flask("uv-load-harness", template_folder=str(ROOT / "templates"),
@@ -340,6 +438,10 @@ def create_harness(config: dict):
         return jsonify(csrf=session["uv_questionnaire_csrf"], generation="")
 
     if not full_app:
+        @app.get("/healthz", endpoint="uv_benchmark_public_health")
+        def public_health():
+            return jsonify(ok=True)
+
         @app.get("/login/<token>", endpoint="public_trainee_login")
         def learner_login(token):
             return jsonify(error="Not authenticated"), 401
@@ -389,6 +491,13 @@ def create_harness(config: dict):
                        uv_side_effect_writes=getattr(services, "uv_side_effect_writes", None),
                        raw_registration_rows=len(training["trainees"]),
                        background_error=services.background_error,
+                       legacy_context_load_data=latency_summary([{"seconds": value} for value in
+                                                     getattr(services, "uv_load_data_seconds", [])]),
+                       uv_context_lookup=latency_summary([{"seconds": value} for value in
+                                                     getattr(services, "uv_context_seconds", [])]),
+                       worker_peak_rss_mib=round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 2),
+                       uv_context_index_builds=(module.index_for(config["data_file"]).build_count
+                                                if hasattr(module, "index_for") else None),
                        json_contains_uv_states=any(any(field in t for field in FIELDS)
                            for t in data["sessions"][0]["trainees"]))
 
@@ -422,6 +531,59 @@ def latency_summary(samples):
             "max_ms": round(max(values), 2) if values else None}
 
 
+class HealthProbe:
+    """Exercise the real HTTP liveness route while all four threads are busy."""
+
+    def __init__(self, base_url, budget_seconds=5, interval_seconds=.5):
+        self.url = base_url + "/healthz"
+        self.budget = budget_seconds
+        self.interval = interval_seconds
+        self.samples = []
+        self.stopping = threading.Event()
+        self.thread = threading.Thread(target=self._run, name="synthetic-health-probe", daemon=True)
+
+    def _run(self):
+        import requests
+
+        with requests.Session() as client:
+            while not self.stopping.is_set():
+                started = time.perf_counter()
+                sample = {"status": None}
+                try:
+                    response = client.get(self.url, timeout=(min(1, self.budget), self.budget),
+                                          allow_redirects=False)
+                    sample["status"] = response.status_code
+                    body = response.json()
+                    sample["ok"] = (response.status_code == 200 and isinstance(body, dict)
+                                    and body.get("ok") is True)
+                except (requests.RequestException, ValueError) as exc:
+                    sample.update(ok=False, error=type(exc).__name__)
+                sample["seconds"] = time.perf_counter() - started
+                sample["within_deadline"] = sample["seconds"] < self.budget
+                self.samples.append(sample)
+                self.stopping.wait(self.interval)
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        self.stopping.set()
+        self.thread.join(timeout=self.budget + 3)
+        if self.thread.is_alive():
+            raise RuntimeError("The bounded local health probe did not stop")
+
+    def report(self):
+        failed = sum(not sample["ok"] for sample in self.samples)
+        missed = sum(not sample["within_deadline"] for sample in self.samples)
+        return {"path": "/healthz", "budget_seconds": self.budget,
+                "interval_seconds": self.interval, **latency_summary(self.samples),
+                "failed_requests": failed, "missed_deadlines": missed,
+                "passed": bool(self.samples) and not failed and not missed,
+                "samples": [{**{key: value for key, value in sample.items() if key != "seconds"},
+                             "duration_ms": round(sample["seconds"] * 1000, 2)}
+                            for sample in self.samples]}
+
+
 def validate_persisted_states(result, questions, clients, *, require_background_saves=True):
     failures = []
     expected = {question["id"]: question["answer"] for question in questions}
@@ -444,13 +606,15 @@ def validate_persisted_states(result, questions, clients, *, require_background_
     return failures
 
 
-def run_http_workload(base_url, clients, questions):
+def run_http_workload(base_url, clients, questions, *, health_budget_seconds=5,
+                      health_interval_seconds=.5):
     import requests
 
     barrier = threading.Barrier(clients)
     samples = []
     errors = []
     sample_lock = threading.Lock()
+    health = HealthProbe(base_url, health_budget_seconds, health_interval_seconds)
 
     def learner(index):
         client = requests.Session()
@@ -464,15 +628,20 @@ def run_http_workload(base_url, clients, questions):
             response = client.post(path, json={"csrf": csrf, "generation": "", "action": action,
                                                **payload}, timeout=60, allow_redirects=False)
             elapsed = time.perf_counter() - started
+            sample = {"action": label or action, "seconds": elapsed,
+                      "status": response.status_code, "learner": index,
+                      "question_id": payload.get("question_id")}
             with sample_lock:
-                samples.append({"action": label or action, "seconds": elapsed,
-                                "status": response.status_code})
+                samples.append(sample)
             if response.status_code != 200:
                 raise AssertionError(f"learner {index}: HTTP {response.status_code} ({action}), "
                                      f"location={response.headers.get('Location', '')}")
             if "application/json" not in response.headers.get("Content-Type", ""):
                 raise AssertionError(f"learner {index}: UV route returned non-JSON content ({action})")
             state = response.json()
+            if "server_processing_ms" in state:
+                sample["server_processing_seconds"] = state["server_processing_ms"] / 1000
+                sample["outside_handler_seconds"] = max(0, elapsed - sample["server_processing_seconds"])
             if state.get("answer_expired"):
                 raise AssertionError(f"learner {index}: on-time answer expired")
             return state
@@ -513,18 +682,27 @@ def run_http_workload(base_url, clients, questions):
 
     started = time.perf_counter()
     completed = []
-    with ThreadPoolExecutor(max_workers=clients) as pool:
-        futures = [pool.submit(learner, i) for i in range(clients)]
-        for future in as_completed(futures):
-            try:
-                completed.append(future.result())
-            except Exception as exc:
-                errors.append(f"{type(exc).__name__}: {exc}")
+    health.start()
+    try:
+        with ThreadPoolExecutor(max_workers=clients) as pool:
+            futures = [pool.submit(learner, i) for i in range(clients)]
+            for future in as_completed(futures):
+                try:
+                    completed.append(future.result())
+                except Exception as exc:
+                    errors.append(f"{type(exc).__name__}: {exc}")
+    finally:
+        health.stop()
     return {"duration_seconds": round(time.perf_counter() - started, 3),
             "completed_clients": len(completed), "errors": errors,
             "http_status_counts": {str(code): sum(s["status"] == code for s in samples)
                                    for code in sorted({s["status"] for s in samples})},
             "all_requests": latency_summary(samples),
+            "health": health.report(),
+            "server_processing": latency_summary([{"seconds": s["server_processing_seconds"]}
+                                                     for s in samples if "server_processing_seconds" in s]),
+            "outside_handler": latency_summary([{"seconds": s["outside_handler_seconds"]}
+                                                   for s in samples if "outside_handler_seconds" in s]),
             "by_action": {action: latency_summary([s for s in samples if s["action"] == action])
                           for action in sorted({s["action"] for s in samples})}}
 
@@ -533,33 +711,47 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--clients", type=int, default=24)
     parser.add_argument("--padding-mib", type=float, default=8)
+    parser.add_argument("--trainee-records", type=int, default=0,
+                        help="Total structured registrations, including active clients; zero keeps the small fixture")
     parser.add_argument("--save-delay-ms", type=float, default=75,
                         help="Artificial delay per legacy general save, explicitly recorded in report")
     parser.add_argument("--background-hold-ms", type=float, default=120)
-    parser.add_argument("--background-mode", choices=("save", "hold"), default="save",
-                        help="Real saves, or hold the general writer lock for the entire workload")
+    parser.add_argument("--background-mode", choices=("none", "once", "save", "hold"), default="save",
+                        help="No writer, one real save, repeated saves, or hold the general writer lock")
     parser.add_argument("--legacy-duplicates", action="store_true",
                         help="Add divergent old copies of each registration to exercise read-only normalization")
     parser.add_argument("--module-file", type=Path, default=ROOT / "uv_questionnaires.py")
     parser.add_argument("--full-app", action="store_true",
                         help="Exercise crm_app with real access checks/load_data and its real general writer")
+    parser.add_argument("--legacy-context", action="store_true",
+                        help="In full-app mode, force pre-cache load_data for every public UV lookup")
+    parser.add_argument("--health-budget-seconds", type=float, default=5,
+                        help="Maximum acceptable HTTP /healthz latency during the workload")
+    parser.add_argument("--health-interval-seconds", type=float, default=.5)
     parser.add_argument("--json-output", type=Path)
     args = parser.parse_args(argv)
     if args.clients < 2 or args.clients > 100:
         parser.error("--clients must be between 2 and 100")
     if min(args.padding_mib, args.save_delay_ms, args.background_hold_ms) < 0:
         parser.error("Sizes and artificial delays must be nonnegative")
+    if args.trainee_records and not args.clients <= args.trainee_records <= 10000:
+        parser.error("--trainee-records must be zero or between --clients and 10000")
+    if args.health_budget_seconds <= 0 or args.health_interval_seconds <= 0:
+        parser.error("Health deadlines and intervals must be positive")
+    if args.legacy_context and not args.full_app:
+        parser.error("--legacy-context requires --full-app")
     module_file = args.module_file.resolve()
     if args.full_app and module_file != ROOT / "uv_questionnaires.py":
         parser.error("--full-app uses this checkout's real application; it cannot load an alternate UV module")
     module_source = module_file.read_bytes()
     module_sha256 = hashlib.sha256(module_source).hexdigest()
-    dependencies = (["app.py", "crm_app.py", "uv_questionnaires.py", "uv_questionnaire_store.py"]
+    dependencies = (["app.py", "crm_app.py", "uv_questionnaires.py", "uv_questionnaire_store.py",
+                     "uv_questionnaire_context.py"]
                     if args.full_app else (["uv_questionnaire_store.py"]
                                           if b"uv_questionnaire_store" in module_source else []))
-    source_hashes = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-                     for name in dependencies
-                     if (ROOT / name).exists()}
+    source_bytes = {name: (module_source if name == "uv_questionnaires.py" else (ROOT / name).read_bytes())
+                    for name in dependencies if (ROOT / name).exists()}
+    source_hashes = {name: hashlib.sha256(contents).hexdigest() for name, contents in source_bytes.items()}
     import requests
 
     with tempfile.TemporaryDirectory(prefix="uv-load-") as directory:
@@ -568,14 +760,30 @@ def main(argv=None):
         # and the server must execute exactly the source identified in report.
         frozen_module = temporary / "uv_questionnaires_target.py"
         frozen_module.write_bytes(module_source)
+        frozen_uv_modules = {}
+        if args.full_app:
+            for name in ("uv_questionnaire_context", "uv_questionnaires"):
+                if name + ".py" in source_bytes:
+                    path = temporary / (name + ".py")
+                    path.write_bytes(source_bytes[name + ".py"])
+                    frozen_uv_modules[name] = str(path)
         module = _load_module(frozen_module)
         questions = module.unit("aps", UV_NUMBER)["questions"]
         data_file = temporary / "data.json"
-        data_file.write_text(json.dumps(synthetic_data(args.clients, args.padding_mib, args.legacy_duplicates),
-                                       separators=(",", ":")), encoding="utf-8")
+        fixture = synthetic_data(args.clients, args.padding_mib, args.legacy_duplicates, args.trainee_records)
+        fixture_dimensions = {"distinct_trainees": args.trainee_records or args.clients,
+                              "sessions": len(fixture["sessions"]),
+                              "billing_lines": len(fixture.get("billing_lines", [])),
+                              "documents_per_historical_trainee": 8 if args.trainee_records else 0,
+                              "history_entries_per_billing_line": 12 if args.trainee_records else 0}
+        data_file.write_text(json.dumps(fixture, separators=(",", ":")), encoding="utf-8")
+        initial_data_bytes = data_file.stat().st_size
+        del fixture
         config = {"data_file": str(data_file), "db_path": str(temporary / "uv-questionnaires.sqlite3"),
                   "module_file": str(frozen_module), "clients": args.clients,
                   "full_app": args.full_app,
+                  "legacy_context": args.legacy_context,
+                  "frozen_uv_modules": frozen_uv_modules,
                   "background_mode": args.background_mode,
                   "save_delay_ms": args.save_delay_ms, "background_hold_ms": args.background_hold_ms,
                   "secret": secrets.token_hex(32)}
@@ -614,52 +822,72 @@ def main(argv=None):
                     time.sleep(.05)
             control = requests.Session()
             control.post(base_url + "/benchmark/background/start", timeout=30).raise_for_status()
-            workload = run_http_workload(base_url, args.clients, questions)
+            workload = run_http_workload(base_url, args.clients, questions,
+                                         health_budget_seconds=args.health_budget_seconds,
+                                         health_interval_seconds=args.health_interval_seconds)
             control.post(base_url + "/benchmark/background/stop", timeout=30).raise_for_status()
             result = control.get(base_url + "/benchmark/results", timeout=30)
             result.raise_for_status()
             persisted = result.json()
             control.close()
             failures = validate_persisted_states(persisted, questions, args.clients,
-                                                require_background_saves=args.background_mode == "save")
+                                                require_background_saves=args.background_mode in ("save", "once"))
+            if args.background_mode == "once" and persisted.get("background_saves") != 1:
+                failures.append("The single concurrent general save did not execute exactly once")
             if args.background_mode == "hold" and persisted.get("background_holds") != 1:
                 failures.append("The general writer lock was not held throughout the workload")
             if args.legacy_duplicates and args.background_mode == "hold" and persisted["raw_registration_rows"] != 2 * args.clients:
                 failures.append("The old duplicate rows did not remain present for the entire lock test")
             if args.full_app and (not persisted["dedicated_database"] or persisted["uv_side_effect_writes"]):
                 failures.append("Full-app UV requests must use SQLite without general or archive writes")
-            unchanged = all(hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest
+            execution_paths = {name: Path(frozen_uv_modules.get(name.removesuffix(".py"), ROOT / name))
+                               for name in source_hashes}
+            unchanged = all(hashlib.sha256(execution_paths[name].read_bytes()).hexdigest() == digest
                             for name, digest in source_hashes.items())
+            changed_checkout_files = [name for name, digest in source_hashes.items()
+                                      if hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != digest]
             if not unchanged:
                 failures.append("Application sources changed during the run; rerun on a stable checkout")
             report = {
                 "scope": ("local HTTP full crm_app; real access checks, load_data, UV persistence and general writer; synthetic data"
                           if args.full_app else "local HTTP harness; real UV routes/storage; synthetic business access checks/data"),
                 "full_app": args.full_app,
+                "public_context_mode": "legacy_normalization" if args.legacy_context else "checkout_implementation",
                 "module_file": str(module_file), "module_sha256": module_sha256,
                 "source_hashes": source_hashes, "sources_unchanged_during_run": unchanged,
+                "frozen_source_modules": sorted(frozen_uv_modules),
+                "live_checkout_files_changed": changed_checkout_files,
                 "gunicorn": {"workers": 1, "threads": 4, "worker_class": "gthread", "keepalive_seconds": 90},
                 "clients": args.clients, "questions_per_client": len(questions),
                 "expected_persisted_answers": args.clients * len(questions),
+                "fixture": fixture_dimensions,
+                "initial_general_json_bytes": initial_data_bytes,
                 "padding_mib": args.padding_mib, "general_json_bytes": data_file.stat().st_size,
                 "legacy_duplicate_registrations": args.legacy_duplicates,
                 "raw_registration_rows_at_end": persisted["raw_registration_rows"],
                 "background_mode": args.background_mode,
-                "artificial_general_save_delay_ms": args.save_delay_ms,
+                "artificial_general_save_delay_ms": args.save_delay_ms if not args.full_app else 0,
                 "artificial_background_lock_hold_ms": (args.background_hold_ms
-                                                       if args.background_mode == "save" else None),
-                "background_lock_hold_scope": ("per_save" if args.background_mode == "save"
-                                               else "entire_workload"),
+                                                       if args.background_mode in ("save", "once") else None),
+                "background_lock_hold_scope": ("per_save" if args.background_mode in ("save", "once")
+                                               else "entire_workload" if args.background_mode == "hold" else "none"),
                 **workload,
                 "dedicated_database": persisted["dedicated_database"],
                 "general_saves_from_uv": persisted["general_saves"],
                 "background_saves": persisted["background_saves"],
                 "background_lock_holds": persisted["background_holds"],
                 "uv_side_effect_writes": persisted["uv_side_effect_writes"],
+                "uv_context_lookup": persisted["uv_context_lookup"],
+                "legacy_context_load_data": persisted["legacy_context_load_data"],
+                "worker_peak_rss_mib": persisted["worker_peak_rss_mib"],
+                "uv_context_index_builds": persisted["uv_context_index_builds"],
                 "general_json_contains_uv_states": persisted["json_contains_uv_states"],
                 "persistence_failures": failures,
+                "performance_failures": ([] if workload["health"]["passed"]
+                                         else ["The /healthz liveness probe exceeded its deadline or failed"]),
             }
             report["passed"] = (not workload["errors"] and not failures
+                                and workload["health"]["passed"]
                                 and workload["completed_clients"] == args.clients)
             encoded = json.dumps(report, ensure_ascii=False, indent=2)
             if args.json_output:
