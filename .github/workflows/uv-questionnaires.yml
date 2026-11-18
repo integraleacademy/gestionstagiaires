@@ -6,6 +6,7 @@ on:
       - 'app.py'
       - 'uv_questionnaires.py'
       - 'uv_questionnaire_store.py'
+      - 'uv_questionnaire_context.py'
       - 'admin_learning_documents.py'
       - 'static/js/uv-questionnaire.js'
       - 'templates/uv_questionnaire.html'
@@ -58,15 +59,18 @@ jobs:
           tests/test_uv_learning_documents_storage.py
           tests/test_uv_storage_integration.py
           tests/test_uv_storage_read_only.py
+          tests/test_uv_questionnaire_context.py
           tests/test_admin_learning_documents.py
           tests/test_admin_trainee_transfer.py
           tests/test_session_performance.py
           tests/test_cpu_load_guards.py
           tests/test_backup_retention_chronology.py
-      - name: Simulate 24 learners in the full application
+      - name: Simulate 24 learners with 2500 records and continuous health checks
         run: >-
           python scripts/benchmark_uv_questionnaires.py
-          --full-app --clients 24 --padding-mib 8 --save-delay-ms 0
+          --full-app --clients 24 --trainee-records 2500 --padding-mib 0
+          --health-budget-seconds 5 --health-interval-seconds 0.5
+          --background-mode once --save-delay-ms 0
           --json-output uv-full-app-24.json
       - name: Publish concurrency report
         if: always()
