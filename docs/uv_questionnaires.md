@@ -14,7 +14,9 @@ Le bouton **Tester le questionnaire** ouvre le même parcours chronométré en m
 
 Le stagiaire confirme sa présence en cours avec le formateur avant de commencer. Cette déclaration ne constitue pas une vérification technique de sa présence physique. Le serveur conserve une tentative sous `uv_questionnaire_attempts`, avec la version, l’index, les réponses validées et une échéance de 45 secondes pour la question affichée. Une seule question, sans réponse correcte ni explication, est transmise à la fois.
 
-Recharger la page ne réinitialise pas le délai. À expiration, la question est enregistrée sans réponse ; la suivante dispose de 45 secondes dès sa mise à disposition. Une réponse arrivée après l’échéance n’est pas comptabilisée. Les requêtes concurrentes ou répétées ne remplacent pas une réponse déjà enregistrée. En cas de coupure réseau, la reprise se fait à partir de l’état conservé côté serveur.
+Le serveur vérifie l’heure de réception de la réponse avant l’attente d’écriture. Le chrono affiche le temps restant après l’enregistrement. Une question dont le délai expire sans réponse reçue vaut zéro. Une reconnexion ou un rechargement dans le même onglet permet de renvoyer le choix en attente de confirmation. Le serveur reconnaît la question et conserve la réponse déjà enregistrée.
+
+Sur la fiche stagiaire, l’équipe peut utiliser **Remettre à zéro** pour une UV en cours ou terminée. Après confirmation, le stagiaire peut recommencer cette UV à la première question. Un onglet ouvert avant la remise à zéro recharge le nouveau questionnaire. Les autres UV et les autres stagiaires conservent leurs résultats.
 
 Après la vingtième question, le score et la remise définitive sont enregistrés atomiquement sous `trainee.uv_questionnaires[course][uv]`. La correction expliquée devient alors accessible. Il n’existe pas de seuil de certification associé au score. Les PDF sont générés à la demande sans fichier public permanent.
 

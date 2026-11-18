@@ -10234,6 +10234,7 @@ def save_data(
                 expected_version = int(versions[scoped_partner_id])
 
         def merge_scoped(current: Dict[str, Any]) -> Dict[str, Any]:
+            uv_questionnaires.preserve_state(data, current, _session_trainees_list, INTEGRALE_PARTNER_ID)
             vtc_practice.reconcile(data, _registered_trainees, current)
             return _merge_partner_scoped_payload(
                 data,
@@ -10274,6 +10275,7 @@ def save_data(
             vtc_practice.reconcile(payload, _registered_trainees, canonical)
             vtc_elearning_activation.preserve_state(payload, canonical, _session_trainees_list)
             desp_vae_elearning.preserve_state(payload, canonical, _session_trainees_list)
+            uv_questionnaires.preserve_state(payload, canonical, _session_trainees_list, INTEGRALE_PARTNER_ID)
             _preserve_aps_elearning_report_state(payload, canonical)
             desp_jury_projects.preserve_state(payload, canonical, _session_trainees_list, INTEGRALE_PARTNER_ID)
             _preserve_document_reminder_state(payload, canonical)

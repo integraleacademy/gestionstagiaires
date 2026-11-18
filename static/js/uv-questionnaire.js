@@ -7,6 +7,29 @@
   const duration = Number(root.dataset.seconds) || 45;
   const start = $('uq-start'), next = $('uq-next');
   const demo = root.dataset.demo === 'true';
+  const generation = root.dataset.generation || '';
+  const storageKey = 'uv-pending:' + root.dataset.endpoint;
+  let pending = null;
+  if (!demo) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey));
+      if (saved?.generation === generation && typeof saved.question_id === 'string' && typeof saved.answer === 'string') {
+        pending = {question_id: saved.question_id, answer: saved.answer};
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch { /* Storage may be unavailable in private browsing. */ }
+  }
+
+  function remember(answer) {
+    pending = answer;
+    if (demo) return;
+    try {
+      if (answer) sessionStorage.setItem(storageKey, JSON.stringify({...answer, generation}));
+      else sessionStorage.removeItem(storageKey);
+    } catch { /* Keep the submitted choice in memory in this tab. */ }
+  }
+
   const demoQuestions = demo ? JSON.parse($('uq-demo-data').textContent) : [];
   let demoIndex = 0, demoStarted = false, demoDeadline = 0;
   const demoAnswers = {};
@@ -52,11 +75,11 @@
   }
   function tick() {
     if (!state?.started || state.completed) return;
-    const ms = Math.max(0, deadline - Date.now());
+    const ms = Math.max(0, deadline - performance.now());
     $('uq-seconds').textContent = String(Math.ceil(ms / 1000));
     $('uq-clock').style.setProperty('--remaining', `${Math.min(100, ms / (duration * 10))}%`);
     $('uq-clock').classList.toggle('is-urgent', ms <= 10000);
-    if (ms <= 0 && !busy && !failed) send('sync');
+    if (ms <= 0 && !busy && !failed && !pending) send('sync', {question_id: state.question.id});
   }
   function show(data) {
     if (data.completed) { if (demo) demoResult(data); else window.location.reload(); return; }
@@ -65,7 +88,7 @@
     $('uq-intro').hidden = !!data.started;
     $('uq-player').hidden = !data.started;
     if (!data.started) { start.disabled = !$('uq-in-class').checked; return; }
-    deadline = Date.now() + data.remaining_ms;
+    deadline = performance.now() + data.remaining_ms;
     if (changed) {
       $('uq-count').replaceChildren(document.createTextNode(`Question ${String(data.index).padStart(2, '0')} `));
       const count = document.createElement('span'); count.textContent = `/ ${data.total}`; $('uq-count').append(count);
@@ -92,36 +115,78 @@
   async function send(action, extra = {}) {
     if (busy) return;
     busy = true; failed = false; start.disabled = true; next.disabled = true;
-    const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 15000);
+    const saving = action === 'answer';
+    if (saving) {
+      $('uq-options').disabled = true;
+      next.textContent = 'Enregistrement…';
+      $('uq-status').textContent = 'Enregistrement de votre réponse…';
+      $('uq-status').hidden = false;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
     try {
-      if (demo) { $('uq-error').hidden = true; show(demoRequest(action, extra)); return; }
-      const response = await fetch(root.dataset.endpoint, {method:'POST', credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json'}, body:JSON.stringify({csrf:root.dataset.csrf, action, ...extra})});
+      if (demo) {
+        const result = demoRequest(action, extra);
+        if (saving) remember(null);
+        $('uq-error').hidden = true; $('uq-status').hidden = true;
+        show(result);
+        return;
+      }
+      const response = await fetch(root.dataset.endpoint, {method:'POST', credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json'}, body:JSON.stringify({csrf:root.dataset.csrf, generation, action, ...extra})});
       if (response.redirected) { window.location.assign(response.url); return; }
+      if (response.status === 409) {
+        const reason = await response.json().catch(() => null);
+        if (reason?.reset) { remember(null); window.location.reload(); return; }
+      }
       if (!response.ok) {
         if ([403,404,409].includes(response.status)) throw new Error('Votre accès a changé ou votre session a expiré. Revenez à votre espace stagiaire puis reconnectez-vous.');
-        throw new Error('La réponse n’a pas pu être confirmée. Réessayez pour reprendre à la dernière question enregistrée.');
+        throw new Error('Le serveur n’a pas confirmé l’enregistrement.');
       }
       const data = await response.json();
+      if (saving) remember(null);
       $('uq-error').hidden = true;
+      $('uq-status').hidden = !data.answer_expired;
+      if (data.answer_expired) $('uq-status').textContent = 'Le délai était écoulé à la réception de la réponse précédente.';
       show(data);
     } catch(error) {
       failed = true;
-      $('uq-error-text').textContent = error.name === 'AbortError' ? 'La connexion est trop lente. Réessayez pour reprendre votre évaluation.' : error.message;
+      $('uq-status').hidden = true;
+      const message = error.name === 'AbortError' ? 'Le serveur met du temps à répondre.' : error.message;
+      $('uq-error-text').textContent = pending
+        ? message + ' Votre choix est conservé. Cliquez sur « Réessayer » pour le renvoyer.'
+        : message;
       $('uq-error').hidden = false;
     } finally {
       clearTimeout(timeout); busy = false;
-      start.disabled = !$('uq-in-class').checked;
-      next.disabled = failed || !document.querySelector('#uq-options input:checked') || Date.now() >= deadline;
+      start.disabled = failed || !!pending || !$('uq-in-class').checked;
+      $('uq-options').disabled = !!pending;
+      if (state?.started) next.textContent = state.index === state.total ? 'Terminer et voir la correction →' : 'Valider et continuer →';
+      next.disabled = failed || !!pending || !document.querySelector('#uq-options input:checked') || performance.now() >= deadline;
     }
   }
-  $('uq-in-class').addEventListener('change', () => { start.disabled = busy || !$('uq-in-class').checked; });
+  $('uq-in-class').addEventListener('change', () => { start.disabled = busy || failed || !!pending || !$('uq-in-class').checked; });
   start.addEventListener('click', () => { if ($('uq-in-class').checked) send('start', {in_class:'yes'}); });
   $('uq-form').addEventListener('submit', (event) => {
-    event.preventDefault(); const chosen = document.querySelector('#uq-options input:checked');
-    if (chosen && state && Date.now() < deadline) send('answer', {question_id:state.question.id, answer:chosen.value});
-    else if (Date.now() >= deadline) send('sync');
+    event.preventDefault();
+    if (busy || failed || pending || !state?.question) return;
+    const chosen = document.querySelector('#uq-options input:checked');
+    if (performance.now() >= deadline) {
+      send('sync', {question_id: state.question.id});
+    } else if (chosen) {
+      remember({question_id: state.question.id, answer: chosen.value});
+      send('answer', pending);
+    }
   });
-  $('uq-retry').addEventListener('click', () => send('sync'));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && state?.started) send('sync'); });
-  send('sync');
+  function resume() {
+    if (pending) send('answer', pending);
+    else send('sync', state?.question ? {question_id: state.question.id} : {});
+  }
+  $('uq-retry').addEventListener('click', resume);
+  window.addEventListener('online', () => { if (failed) resume(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (failed || pending) resume();
+    else if (state?.started) tick();
+  });
+  resume();
 })();
