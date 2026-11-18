@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      PERSIST_DIR: ${{ runner.temp }}/uv-questionnaire-tests
+      PERSIST_DIR: /tmp/uv-questionnaire-tests
       SECRET_KEY: uv-ci-synthetic-secret-only
     steps:
       - uses: actions/checkout@v4
