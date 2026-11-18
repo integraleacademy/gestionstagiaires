@@ -9,12 +9,14 @@ import hmac
 import json
 import re
 import secrets
+import threading
 import time
 from xml.sax.saxutils import escape
 
 from flask import abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 import afc_schedule
+from uv_questionnaire_store import UV_FIELDS, UVQuestionnaireStore
 
 VERSION = '20261026'
 TITLE = "Questionnaire de fin d'UV - Evaluation formative"
@@ -22,6 +24,8 @@ COHORT_START = date(2026, 10, 26)
 QUESTION_SECONDS = 45
 NOTICE = 'Le questionnaire de fin d’UV doit impérativement être réalisé pendant les cours et en présence du formateur.'
 BANK_DIR = Path(__file__).with_name('uv_questionnaires')
+_BACKUP_LOCK = threading.Lock()
+_LAST_BACKUPS = {}
 
 
 @lru_cache(maxsize=16)
@@ -91,6 +95,82 @@ def _generation(trainee, course, number):
     return _entry(trainee, 'uv_questionnaire_resets', course, number) or ''
 
 
+def _store_path(services):
+    configured = services.app.config.get('UV_QUESTIONNAIRE_DB_PATH')
+    return Path(configured or Path(services.DATA_FILE).with_name('uv-questionnaires.sqlite3'))
+
+
+def _store(services):
+    return UVQuestionnaireStore(_store_path(services))
+
+
+def backup_state(services, reason='manual'):
+    """Include a standalone SQLite snapshot in the existing backup lifecycle.
+
+    Automatic snapshots are throttled; answering a question never calls this.
+    Use SQLite's backup API so acknowledged answers still in WAL are included.
+    """
+    path = _store_path(services)
+    if not path.is_file():
+        return None
+    periodic = reason in {'before-save', 'interval'}
+    with _BACKUP_LOCK:
+        key = str(path.resolve())
+        now = time.monotonic()
+        if periodic and now - _LAST_BACKUPS.get(key, float('-inf')) < services.BACKUP_MIN_INTERVAL_SECONDS:
+            return None
+        destination = Path(services.BACKUP_DIR) / (
+            'uv_questionnaires.' + datetime.utcnow().strftime('%Y%m%dT%H%M%S.%fZ')
+            + '.' + secrets.token_hex(4) + '.sqlite3')
+        _store(services).backup_to(destination)
+        _LAST_BACKUPS[key] = time.monotonic()
+        services._cleanup_backups_for('uv_questionnaires')
+        return destination
+
+
+def _storage_key(services, training, trainee):
+    return (str(training.get('partner_id') or services.INTEGRALE_PARTNER_ID),
+            str(training.get('id') or ''), str(trainee.get('id') or ''))
+
+
+def _legacy_state(trainee):
+    return {field: trainee[field] for field in UV_FIELDS if field in trainee}
+
+
+def stored_trainee(services, training, trainee):
+    """Overlay authoritative UV state without modifying administrative snapshots.
+
+    Old attempts/results remain readable and are imported on their first mutation.
+    An existing SQLite row (including a reset) always wins over legacy JSON.
+    """
+    saved = _store(services).read(_storage_key(services, training, trainee))
+    if saved is None:
+        return trainee
+    person = {field: value for field, value in trainee.items() if field not in UV_FIELDS}
+    person.update(saved)
+    return person
+
+
+def transfer_state(services, source, target, trainee):
+    """Keep one state across an authorized administrative session transfer.
+
+    A storage alias also routes answers already in flight to the same row.
+    Creating it before saving the administrative move leaves the source intact
+    if that save fails, and never copies potentially stale answers.
+    """
+    _store(services).transfer(_storage_key(services, source, trainee),
+                              _storage_key(services, target, trainee), _legacy_state(trainee))
+
+
+def _question_context(trainee, course, number):
+    attempt = _entry(trainee, 'uv_questionnaire_attempts', course, number)
+    result = _result(trainee, course, number)
+    row = unit(course, number, (result or attempt or {}).get('version', VERSION))
+    if not row:
+        abort(404)
+    return row, attempt, result
+
+
 def preserve_state(payload, canonical, trainees, default_partner):
     """Only the UV transactions own these fields. Ignore older form snapshots."""
     fields = ('uv_questionnaire_attempts', 'uv_questionnaires', 'uv_questionnaire_resets')
@@ -123,6 +203,7 @@ def view(services, training, trainee):
     course = course_for(training)
     if not course or not eligible(training):
         return None
+    trainee = stored_trainee(services, training, trainee)
     start = practical_start(training, trainee)
     rows = []
     for row in bank()['courses'][course]['units']:
@@ -251,12 +332,9 @@ def register(app, services):
             abort(404)
         if not available(services, training, trainee):
             abort(access_status, description='Ces questionnaires sont accessibles pendant les cours en présentiel.')
+        trainee = stored_trainee(services, training, trainee)
         course = course_for(training)
-        attempt = _entry(trainee, 'uv_questionnaire_attempts', course, number)
-        result = _result(trainee, course, number)
-        row = unit(course, number, (result or attempt or {}).get('version', VERSION))
-        if not row:
-            abort(404)
+        row, attempt, result = _question_context(trainee, course, number)
         return training, trainee, course, row, attempt, result
 
     @app.route('/espace/<token>/questionnaires-uv/<int:number>', methods=['GET', 'POST'])
@@ -267,7 +345,7 @@ def register(app, services):
         csrf = session.setdefault('uv_questionnaire_csrf', secrets.token_urlsafe(32))
         if request.method == 'GET':
             training, trainee, course, row, _, result = public_context(
-                token, number, services.load_data(run_background_tasks=False))
+                token, number, services.load_data(run_background_tasks=False, persist_normalization=False))
             response = app.make_response(render_template('uv_questionnaire.html',
                 training=training, trainee=trainee, course=course, number=number, title=row['title'],
                 questionnaire_title=TITLE, questions=row['questions'] if result else [],
@@ -281,12 +359,12 @@ def register(app, services):
             action = payload.get('action')
             if action not in ('start', 'answer', 'sync') or not isinstance(payload.get('question_id', ''), str):
                 abort(400)
+            training, trainee, course, row, attempt, result = public_context(
+                token, number, services.load_data(run_background_tasks=False, persist_normalization=False))
+            if (payload.get('generation') or '') != _generation(trainee, course, number):
+                return jsonify(reset=True), 409
             state = None
             if action in ('start', 'sync'):
-                _, trainee, course, row, attempt, result = public_context(
-                    token, number, services.load_data(run_background_tasks=False))
-                if (payload.get('generation') or '') != _generation(trainee, course, number):
-                    return jsonify(reset=True), 409
                 # Opening a page, returning to a tab and ordinary syncs need no write.
                 if result or not attempt:
                     needs_write = not result and action == 'start'
@@ -296,16 +374,19 @@ def register(app, services):
                 if not needs_write:
                     state = attempt_state(trainee, course, number, attempt, row)
             if state is None:
-                def mutate(current):
-                    _, person, course, row, attempt, _ = public_context(token, number, current, 409)
+                def mutate(person):
                     if (payload.get('generation') or '') != _generation(person, course, number):
                         return dict(reset=True)
+                    row, attempt, _ = _question_context(person, course, number)
                     return _apply_action(services, person, course, number, row, attempt, payload, received_at)
-                state = services._atomic_update_data(mutate)
+                # Only this learner's small state is written. Never take the
+                # general JSON lock or run administrative work in this transaction.
+                state = _store(services).mutate(_storage_key(services, training, trainee),
+                                                _legacy_state(trainee), mutate)
                 if state.get('reset'):
                     return jsonify(state), 409
             if 'deadline' in state:
-                # The shared JSON write can take seconds after the mutation returns.
+                # Report time remaining after the durable commit, not before it.
                 state['remaining_ms'] = max(0, int((state.pop('deadline') - clock()) * 1000))
             response = jsonify(state)
         response.headers['Cache-Control'] = 'private, no-store'
@@ -313,7 +394,7 @@ def register(app, services):
 
     def admin_pair(session_id, trainee_id, number, data=None):
         if data is None:
-            data = services.load_data(run_background_tasks=False)
+            data = services.load_data(run_background_tasks=False, persist_normalization=False)
         training, _, trainee = services._find_session_trainee(data, session_id, trainee_id)
         if not training or not trainee or not eligible(training):
             abort(404)
@@ -321,11 +402,9 @@ def register(app, services):
         unrestricted = services._is_super_admin_session() and not session.get('assist_partner_id')
         if not unrestricted and owner != (services._current_partner_id() or services.INTEGRALE_PARTNER_ID):
             abort(404)
+        trainee = stored_trainee(services, training, trainee)
         course = course_for(training)
-        result = _result(trainee, course, number)
-        row = unit(course, number, result['version'] if result else VERSION)
-        if not row:
-            abort(404)
+        row, _, result = _question_context(trainee, course, number)
         return training, trainee, course, row, result
 
     @app.post('/admin/sessions/<session_id>/stagiaires/<trainee_id>/questionnaires-uv/<int:number>/reinitialiser')
@@ -336,18 +415,20 @@ def register(app, services):
         if not expected or not hmac.compare_digest(request.form.get('csrf', '').encode(), expected.encode()):
             abort(403)
 
-        def reset(current):
-            _, trainee, course, _, result = admin_pair(session_id, trainee_id, number, current)
-            if request.form.get('generation') != _generation(trainee, course, number):
+        training, trainee, course, _, _ = admin_pair(session_id, trainee_id, number)
+
+        def reset(person):
+            if request.form.get('generation') != _generation(person, course, number):
                 return False
-            if not result and not _entry(trainee, 'uv_questionnaire_attempts', course, number):
+            if not _result(person, course, number) and not _entry(person, 'uv_questionnaire_attempts', course, number):
                 return False
             for field in ('uv_questionnaires', 'uv_questionnaire_attempts'):
-                trainee.get(field, {}).get(course, {}).pop(str(number), None)
-            trainee.setdefault('uv_questionnaire_resets', {}).setdefault(course, {})[str(number)] = secrets.token_urlsafe(16)
+                person.get(field, {}).get(course, {}).pop(str(number), None)
+            person.setdefault('uv_questionnaire_resets', {}).setdefault(course, {})[str(number)] = secrets.token_urlsafe(16)
             return True
 
-        changed = services._atomic_update_data(reset)
+        changed = _store(services).mutate(_storage_key(services, training, trainee),
+                                          _legacy_state(trainee), reset)
         if changed:
             flash(f'Le questionnaire UV {number:02} a été remis à zéro.', 'uv_reset')
         else:
@@ -393,3 +474,4 @@ def register(app, services):
                             download_name=f'{course.upper()}_UV{number:02}_{trainee_id}_{mode}.pdf')
         response.headers['Cache-Control'] = 'private, no-store'
         return response
+

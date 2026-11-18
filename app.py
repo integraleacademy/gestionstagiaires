@@ -5593,6 +5593,13 @@ def _force_backup_snapshot(path: str, reason: str = "manual") -> Optional[str]:
         if not os.path.isfile(backup_path):
             app.logger.warning("New backup was not retained for %s", path)
             return None
+        if os.path.abspath(path) == os.path.abspath(DATA_FILE):
+            try:
+                uv_questionnaires.backup_state(sys.modules[__name__], reason)
+            except Exception:
+                # Preserve the valid JSON snapshot and make any missing UV
+                # backup visible; never copy a live SQLite main file alone.
+                app.logger.exception("Unable to create UV questionnaire SQLite backup")
         return backup_path
     except ValueError:
         app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES and hard-link snapshot unavailable", path)
@@ -5724,7 +5731,7 @@ def _archive_registration_copy(training: dict, trainee: dict) -> None:
         _write_json_with_backups(path, record, _data_lock)
 
 
-def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
+def _load_valid_json_payload(path: str, *, archive_duplicates: bool = True) -> Optional[Dict[str, Any]]:
     # Writers fsync a separate file then atomically replace the path. An open
     # reader therefore sees one complete committed snapshot, even during a save.
     # Read/modify/write transactions still hold _data_lock in update_data and
@@ -5739,7 +5746,11 @@ def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
     if path == DATA_FILE:
         # Read the same active record in admin, public and background jobs.
         # The next regular locked write also repairs the stored roster.
-        collapse_registration_copies(loaded, _archive_registration_copy)
+        # Questionnaire reads keep the same canonical row without waiting for
+        # the administrative writer to archive divergent legacy duplicates.
+        # Regular reads/writes still archive before persisting any repair.
+        archive = _archive_registration_copy if archive_duplicates else lambda *_args: None
+        collapse_registration_copies(loaded, archive)
     return loaded
 
 
@@ -9878,9 +9889,14 @@ def _invalidate_request_data_cache() -> None:
         g.data_payload_cache = {}
 
 
-def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
+def load_data(run_background_tasks: bool = False, *, persist_normalization: bool = True) -> Dict[str, Any]:
     load_started_at = time.monotonic()
+    read_options = {} if persist_normalization else {'archive_duplicates': False}
     cache_key = _request_data_cache_key(run_background_tasks)
+    if not persist_normalization:
+        # A questionnaire read must never queue behind the administrative writer.
+        # Keep its normalized view separate from callers which expect a save.
+        cache_key = (*cache_key, 'read-only')
     partner_postgres_source = bool(
         _partner_postgres_active() and _is_partner_data_scope_session()
     )
@@ -9904,7 +9920,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     elif not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
-            loaded = _load_valid_json_payload(DATA_FILE)
+            loaded = _load_valid_json_payload(DATA_FILE, **read_options)
             if loaded is not None:
                 if not isinstance(loaded.get("wedof_links"), list):
                     loaded["wedof_links"] = []
@@ -9933,12 +9949,12 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         return _cache_request_data(cache_key, result)
     else:
         _log_memory_stage("BEFORE_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
-        data = _load_valid_json_payload(DATA_FILE)
+        data = _load_valid_json_payload(DATA_FILE, **read_options)
         baseline_mb = _log_memory_stage("AFTER_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
         if data is None:
             recovered_from = _recover_data_file(DATA_FILE)
             if recovered_from:
-                data = _load_valid_json_payload(DATA_FILE)
+                data = _load_valid_json_payload(DATA_FILE, **read_options)
             if data is None:
                 app.logger.error("Unable to read %s and no valid recovery source found", DATA_FILE)
                 base = _empty_data_payload()
@@ -9977,7 +9993,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         baseline_mb = _log_memory_stage("NORMALIZATION ensure_public_tokens", load_started_at, _current_route_for_log(), baseline_mb)
 
         # ✅ IMPORTANT : normalise en "trainees" partout (sinon admin/public désynchronisés)
-        if normalize_sessions_schema(data):
+        if normalize_sessions_schema(data, **read_options):
             changed = True
         baseline_mb = _log_memory_stage("NORMALIZATION normalize_sessions_schema", load_started_at, _current_route_for_log(), baseline_mb)
 
@@ -10065,7 +10081,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
 
         baseline_mb = _log_memory_stage("NORMALIZATION vae_action_dates_and_vtc_book_notifications", load_started_at, _current_route_for_log(), baseline_mb)
 
-        if changed:
+        if changed and persist_normalization:
             # A PostgreSQL tenant bundle must be written back to its own row;
             # the global JSON path remains correct for every other data source.
             save_data(data, force_global=not partner_postgres_source)
@@ -12086,9 +12102,10 @@ def session_is_conform(session: Dict[str, Any]) -> bool:
         return False
     return all(trainee_is_conform(t, training_type) for t in trainees)
 
-def normalize_sessions_schema(data: Dict[str, Any]) -> bool:
+def normalize_sessions_schema(data: Dict[str, Any], *, archive_duplicates: bool = True) -> bool:
     # PostgreSQL partner bundles and restored snapshots can also contain old copies.
-    changed = collapse_registration_copies(data, _archive_registration_copy)
+    archive = _archive_registration_copy if archive_duplicates else lambda *_args: None
+    changed = collapse_registration_copies(data, archive)
     for s in data.get("sessions", []):
         # Si pas de trainees, on convertit depuis stagiaires
         if "trainees" not in s or not isinstance(s.get("trainees"), list):
@@ -32220,10 +32237,19 @@ def admin_transfer_trainee(session_id: str, trainee_id: str):
     if not trainee:
         abort(404)
 
+    target_trainees = _session_trainees_list(target_session)
+    if any(x.get("id") == trainee_id for x in target_trainees):
+        flash("Ce stagiaire est déjà présent dans la session de destination. Le transfert n’a pas été effectué.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    try:
+        uv_questionnaires.transfer_state(sys.modules[__name__], source_session, target_session, trainee)
+    except ValueError:
+        flash("Un historique de questionnaires existe déjà pour ce stagiaire dans la session de destination. Le transfert n’a pas été effectué.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
     source_session["trainees"] = [x for x in source_trainees if x.get("id") != trainee_id]
     source_session.pop("stagiaires", None)
 
-    target_trainees = _session_trainees_list(target_session)
     target_trainees.insert(0, trainee)
     target_session["trainees"] = target_trainees
     target_session.pop("stagiaires", None)

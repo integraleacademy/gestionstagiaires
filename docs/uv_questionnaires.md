@@ -18,7 +18,43 @@ Le serveur vérifie l’heure de réception de la réponse avant l’attente d�
 
 Sur la fiche stagiaire, l’équipe peut utiliser **Remettre à zéro** pour une UV en cours ou terminée. Après confirmation, le stagiaire peut recommencer cette UV à la première question. Un onglet ouvert avant la remise à zéro recharge le nouveau questionnaire. Les autres UV et les autres stagiaires conservent leurs résultats.
 
-Après la vingtième question, le score et la remise définitive sont enregistrés atomiquement sous `trainee.uv_questionnaires[course][uv]`. La correction expliquée devient alors accessible. Il n’existe pas de seuil de certification associé au score. Les PDF sont générés à la demande sans fichier public permanent.
+Après la vingtième question, le score et la remise définitive sont enregistrés atomiquement dans l’état UV du stagiaire, sous `uv_questionnaires[course][uv]`. La correction expliquée devient alors accessible. Il n’existe pas de seuil de certification associé au score. Les PDF sont générés à la demande sans fichier public permanent.
+
+## Stockage des réponses et concurrence
+
+Les tentatives, résultats et générations de remise à zéro sont conservés dans `uv-questionnaires.sqlite3`, à côté de `DATA_FILE` sur le disque persistant. `UV_QUESTIONNAIRE_DB_PATH` dans la configuration Flask permet de choisir un emplacement isolé pour les tests. Une réponse ne réécrit plus le fichier administratif général. Les lectures d’accès aux UV normalisent les données en mémoire sans sauvegarder le JSON ni archiver des doublons ; les traitements administratifs ordinaires conservent ces opérations.
+
+La clé de stockage distingue partenaire, session et stagiaire. Chaque mutation utilise une transaction SQLite courte en WAL, avec `synchronous=FULL` : l’accusé de réception HTTP suit le commit. Les réponses restent sérialisées au niveau de l’écriture SQLite, mais seule la petite progression du stagiaire est modifiée. Les contrôles d’accès précèdent la transaction ; le numéro de génération et l’état courant sont recontrôlés dans celle-ci. Un rejeu n’avance pas une autre question et une réponse arrivée à temps conserve son heure de réception avant l’attente d’écriture.
+
+Les anciens champs JSON restent lisibles. Ils sont importés une seule fois, lors de la première mutation de ce stagiaire. Toute ligne SQLite existante, y compris un état vide ou remis à zéro, est prioritaire sur les anciennes copies JSON. Les vues individuelles, les corrections, les PDF individuels et les impressions groupées utilisent la même source. Un transfert administratif autorisé crée un alias vers l’état d’origine : une réponse en vol et une réponse après transfert modifient ainsi la même ligne. Une destination ayant un autre historique est refusée plutôt qu’écrasée.
+
+### Sauvegarde et restauration
+
+La base SQLite fait partie des données à conserver, en plus de `data.json`. Lors des sauvegardes administratives existantes, une copie autonome est produite dans `BACKUP_DIR/uv_questionnaires.<date>.<suffixe>.sqlite3`. Pour les sauvegardes automatiques, cette copie est limitée à une par `BACKUP_MIN_INTERVAL_SECONDS` (300 secondes par défaut) ; les sauvegardes manuelles forcent une nouvelle copie. La rétention `BACKUP_RETENTION` s’applique séparément aux copies SQLite. Il ne s’agit pas d’un nouveau planificateur : ces copies suivent les sauvegardes administratives, tandis que chaque réponse est durablement validée dans la base active.
+
+La copie utilise l’[API de sauvegarde SQLite](https://www.sqlite.org/backup.html), qui inclut les commits présents dans le WAL. Pour une sauvegarde ponctuelle, utiliser `UVQuestionnaireStore(chemin_base).backup_to(chemin_destination)`. Ne pas copier uniquement le fichier principal d’une base active en ignorant ses fichiers `-wal` et `-shm`.
+
+Une restauration de la base doit se faire après arrêt des processus de l’application, en conservant au préalable les fichiers actifs. Restaurer une copie SQLite complète et vérifiée, écarter les anciens fichiers WAL/SHM de la base remplacée, puis redémarrer : le démarrage remet la base en WAL. Ne pas restaurer la base à chaud en conservant des connexions existantes. Restaurer uniquement un ancien JSON conserve l’état UV actuellement présent dans SQLite, notamment les remises à zéro. Un retour à une ancienne version du code qui ne lit que le JSON exige au préalable un export des états SQLite vers une copie du JSON, application arrêtée ; un simple retour arrière du code rendrait les nouvelles réponses invisibles.
+
+### Tests reproductibles
+
+`tests/test_uv_questionnaire_store.py` vérifie les transactions, les migrations, les resets, les transferts et les sauvegardes. Les tests des routes utilisent une vraie base SQLite et couvrent aussi les générations périmées, les coupures et reçus perdus, les anciennes banques de questions et les PDF.
+
+Le script suivant démarre un serveur HTTP local isolé avec **1 worker Gunicorn et 4 threads**, puis fait répondre **24 stagiaires à 20 questions**, avec 120 rejeux. Les réponses sont synchronisées par question et tous les résultats sont relus dans SQLite. L’environnement du processus est limité aux paramètres du test, les données sont synthétiques et les connexions externes sont bloquées.
+
+```bash
+python scripts/benchmark_uv_questionnaires.py --full-app --clients 24 --padding-mib 8 --save-delay-ms 0 --json-output /tmp/uv-full-app.json
+```
+
+Pour vérifier l’indépendance même en présence de doublons historiques et d’un verrou administratif conservé pendant tout le questionnaire :
+
+```bash
+python scripts/benchmark_uv_questionnaires.py --full-app --clients 24 --padding-mib 8 --save-delay-ms 0 --legacy-duplicates --background-mode hold --json-output /tmp/uv-locked-json.json
+```
+
+Sans `--full-app`, le script teste les vraies routes UV et leur stockage dans un banc d’essai où les contrôles métier sont synthétiques. L’option `--module-file` permet une comparaison avec une version précédente ; ce mode doit être comparé à lui-même, pas aux mesures de l’application complète. Le rapport indique la taille du JSON, la concurrence, les délais artificiels éventuels, les écritures générales, les erreurs et les percentiles HTTP. Ces temps caractérisent l’environnement de test, pas un engagement de latence en production.
+
+Le workflow GitHub `UV questionnaires` exécute les régressions, le test Chromium de coupures/reprise et une simulation de 24 stagiaires sur les PR concernées.
 
 ## Maintenance des questions
 
