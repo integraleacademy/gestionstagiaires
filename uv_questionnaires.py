@@ -109,19 +109,27 @@ def _public_pair(services, token, *, original_loader=None):
     """Read one UV context without normalizing/copying all business records."""
     loader = services.load_data
     path = getattr(services, 'DATA_FILE', None)
-    # An injected data provider or authoritative PostgreSQL tenant needs its
-    # own freshness rules. Keep the existing scoped reader for those sources.
+    postgres = getattr(services, '_partner_postgres_active', lambda: False)()
+    # An injected provider or a scoped tenant keeps its authorized reader.
     use_index = (path and original_loader is not None and loader is original_loader
-                 and not getattr(services, '_partner_postgres_active', lambda: False)()
                  and not getattr(services, '_is_partner_data_scope_session', lambda: False)())
     if use_index:
         try:
-            return index_for(path).lookup(token)
+            training, trainee = index_for(path).lookup(token)
+            internal = getattr(services, 'INTEGRALE_PARTNER_ID', None)
+            # Active PostgreSQL replaces only external tenants and appends their
+            # rows after the JSON rows. A first internal match remains canonical.
+            # Missing/external tokens must still resolve through the PG overlay.
+            if not postgres or (training and internal
+                                and (training.get('partner_id') or internal) == internal):
+                return training, trainee
         except UnversionedSource:
             pass
         except (OSError, ValueError):
-            # Do not authorize a removed token using the previous cached file.
-            abort(503, description='Le contexte du questionnaire est momentanément indisponible. Réessayez.')
+            # Never serve a stale cached token. In active mode the existing
+            # reader can still resolve authoritative external PostgreSQL data.
+            if not postgres:
+                abort(503, description='Le contexte du questionnaire est momentanément indisponible. Réessayez.')
     data = loader(run_background_tasks=False, persist_normalization=False)
     return services.find_session_and_trainee_by_token(data, token)
 

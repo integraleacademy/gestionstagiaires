@@ -230,9 +230,12 @@ def post(client, action='sync', *, path=PATH, **kwargs):
     return client.post(path, json={'csrf': 'context-csrf', 'action': action, **kwargs})
 
 
-def test_real_http_posts_reuse_index_without_global_reader_normalizer_or_billing_copy(disk_case, monkeypatch):
+@pytest.mark.parametrize('postgres', [False, True])
+def test_real_http_posts_reuse_index_without_global_reader_normalizer_or_billing_copy(disk_case, monkeypatch, postgres):
     client, data, source = disk_case
     blocked = Mock(side_effect=AssertionError('UV must not load the general administrative document.'))
+    monkeypatch.setattr(app, '_partner_postgres_active', lambda: postgres)
+    monkeypatch.setattr(app, '_get_partner_postgres_store', blocked)
     monkeypatch.setattr(app, '_load_valid_json_payload', blocked)
     monkeypatch.setattr(app, 'normalize_sessions_schema', blocked)
     monkeypatch.setattr(app.billing_persistence, 'track_payload', blocked)
@@ -250,6 +253,177 @@ def test_real_http_posts_reuse_index_without_global_reader_normalizer_or_billing
     training = data['sessions'][0]
     result = uv.stored_trainee(app, training, training['trainees'][0])['uv_questionnaires']['aps']['3']
     assert len(result['answers']) == 20 and all(result['answers'].values())
+
+
+@pytest.mark.parametrize('owner', ['missing', None, '', app.INTEGRALE_PARTNER_ID, ' ', 'external-owner'])
+def test_active_mode_uses_the_same_internal_ownership_default_as_normalization(tmp_path, owner):
+    data = payload()
+    training = data['sessions'][0]
+    if owner == 'missing':
+        training.pop('partner_id')
+    else:
+        training['partner_id'] = owner
+    # A trainee-level owner must never turn an external session into an internal one.
+    training['trainees'][0]['partner_id'] = app.INTEGRALE_PARTNER_ID
+    source = tmp_path / 'data.json'
+    write_source(source, data)
+    canonical = payload()
+    canonical['sessions'][0]['trainees'][0]['id'] = 'FROM-CANONICAL-LOADER'
+    loader = Mock(return_value=canonical)
+    services = SimpleNamespace(
+        DATA_FILE=str(source), INTEGRALE_PARTNER_ID=app.INTEGRALE_PARTNER_ID,
+        load_data=loader, find_session_and_trainee_by_token=app.find_session_and_trainee_by_token,
+        _partner_postgres_active=lambda: True,
+    )
+    _, person = uv._public_pair(services, 'context-token', original_loader=loader)
+    internal = owner in ('missing', None, '', app.INTEGRALE_PARTNER_ID)
+    assert person['id'] == ('TEST-1' if internal else 'FROM-CANONICAL-LOADER')
+    assert loader.call_count == (0 if internal else 1)
+
+
+def active_postgres(monkeypatch, sessions):
+    """Use the real global loader/overlay with a small authoritative PG bundle."""
+    bundle = {'partners': [{'id': 'external-owner', 'name': 'Synthetic external partner'}],
+              'sessions': sessions, 'users': [], 'invitations': []}
+    reader = Mock(side_effect=lambda: [(copy.deepcopy(bundle), 1)])
+    monkeypatch.setattr(app, '_partner_postgres_active', lambda: True)
+    monkeypatch.setattr(app, '_get_partner_postgres_store', lambda: SimpleNamespace(load_all_bundles=reader))
+    return bundle, reader
+
+
+def resolve(token):
+    # A separate request each time prevents Flask's per-request cache masking a change.
+    with app.app.test_request_context('/espace/' + token):
+        return uv._public_pair(app, token, original_loader=app.load_data)
+
+
+def test_active_external_cancellation_and_token_revocation_override_unchanged_json(disk_case, monkeypatch):
+    client, data, source = disk_case
+    training = data['sessions'][0]
+    training['partner_id'] = 'external-owner'
+    write_source(source, data)
+    bundle, reader = active_postgres(monkeypatch, copy.deepcopy(data['sessions']))
+    original = source.read_bytes()
+    question = post(client, 'start', in_class='yes').json['question']
+    authoritative = bundle['sessions'][0]['trainees'][0]
+    authoritative['registration_cancelled'] = True
+    response = post(client, 'answer', question_id=question['id'], answer=question['options'][0]['id'])
+    assert response.status_code == 403
+    saved = uv.stored_trainee(app, training, training['trainees'][0])
+    assert saved['uv_questionnaire_attempts']['aps']['3']['answers'] == {}
+    authoritative['public_token'] = 'new-pg-token'
+    assert resolve('context-token') == (None, None)
+    assert resolve('new-pg-token')[1]['registration_cancelled'] is True
+    assert reader.call_count == 4
+    assert source.read_bytes() == original and context.index_for(source).build_count == 1
+
+
+def test_active_mode_finds_a_session_existing_only_in_postgres(disk_case, monkeypatch):
+    _, data, source = disk_case
+    external = copy.deepcopy(data['sessions'][0])
+    external.update(id='PG-ONLY', partner_id='external-owner')
+    external['trainees'][0].update(id='PG-PERSON', public_token='pg-only-token')
+    _, reader = active_postgres(monkeypatch, [external])
+    training, person = resolve('pg-only-token')
+    assert (training['id'], person['id']) == ('PG-ONLY', 'PG-PERSON')
+    reader.assert_called_once()
+    assert context.index_for(source).lookup('pg-only-token') == (None, None)
+
+
+@pytest.mark.parametrize('external_first', [False, True])
+def test_active_collision_preserves_canonical_overlay_order(disk_case, monkeypatch, external_first):
+    _, data, source = disk_case
+    internal = data['sessions'][0]
+    external = copy.deepcopy(internal)
+    external.update(id='EXTERNAL', partner_id='external-owner')
+    external['trainees'][0]['id'] = 'EXTERNAL-PERSON'
+    data['sessions'] = [external, internal] if external_first else [internal, external]
+    write_source(source, data)
+    bundle, reader = active_postgres(monkeypatch, [external])
+    expected = app._overlay_partner_bundle(copy.deepcopy(data), bundle, 'external-owner')
+    expected_training, expected_person = app.find_session_and_trainee_by_token(expected, 'context-token')
+    training, person = resolve('context-token')
+    assert (training['id'], person['id']) == (expected_training['id'], expected_person['id'])
+    assert training['id'] == 'SOURCE'
+    assert reader.call_count == int(external_first)
+
+
+def test_active_transfer_changes_source_authority_and_keeps_sqlite_state(disk_case, monkeypatch):
+    client, data, source = disk_case
+    old = data['sessions'][0]
+    person = old['trainees'][0]
+    target = {**old, 'id': 'EXTERNAL', 'partner_id': 'external-owner', 'trainees': []}
+    bundle, reader = active_postgres(monkeypatch, [copy.deepcopy(target)])
+    questions = uv.unit('aps', 3)['questions']
+    post(client, 'start', in_class='yes')
+    assert post(client, 'answer', question_id=questions[0]['id'], answer=questions[0]['answer']).status_code == 200
+    reader.assert_not_called()
+
+    uv.transfer_state(app, old, target, person)
+    old['trainees'] = []
+    target['trainees'] = [person]
+    data['sessions'].append(target)
+    bundle['sessions'] = [copy.deepcopy(target)]
+    write_source(source, data)
+    response = post(client, 'answer', question_id=questions[1]['id'], answer=questions[1]['answer'])
+    assert response.status_code == 200 and response.json['index'] == 3
+    reader.assert_called_once()
+
+    uv.transfer_state(app, target, old, person)
+    target['trainees'] = []
+    old['trainees'] = [person]
+    bundle['sessions'] = [copy.deepcopy(target)]
+    write_source(source, data)
+    response = post(client, 'answer', question_id=questions[2]['id'], answer=questions[2]['answer'])
+    assert response.status_code == 200 and response.json['index'] == 4
+    reader.assert_called_once()
+    expected = {q['id']: q['answer'] for q in questions[:3]}
+    for training in (old, target):
+        assert uv.stored_trainee(app, training, person)['uv_questionnaire_attempts']['aps']['3']['answers'] == expected
+
+
+@pytest.mark.parametrize('damage', ['missing', 'invalid'])
+def test_active_unreadable_source_uses_current_loader_not_previous_snapshot(tmp_path, damage):
+    source = tmp_path / 'data.json'
+    write_source(source, payload())
+    current = payload()
+    current['sessions'][0]['trainees'][0]['registration_cancelled'] = True
+    loader = Mock(return_value=current)
+    services = SimpleNamespace(
+        DATA_FILE=str(source), INTEGRALE_PARTNER_ID=app.INTEGRALE_PARTNER_ID,
+        load_data=loader, find_session_and_trainee_by_token=app.find_session_and_trainee_by_token,
+        _partner_postgres_active=lambda: True,
+    )
+    assert not uv._public_pair(services, 'context-token', original_loader=loader)[1].get('registration_cancelled')
+    loader.assert_not_called()
+    if damage == 'missing':
+        source.unlink()
+    else:
+        source.write_text('{truncated', encoding='utf-8')
+    assert uv._public_pair(services, 'context-token', original_loader=loader)[1]['registration_cancelled'] is True
+    loader.assert_called_once_with(run_background_tasks=False, persist_normalization=False)
+
+
+def test_active_partner_scope_cannot_reuse_an_internal_json_match(tmp_path):
+    source = tmp_path / 'data.json'
+    write_source(source, payload())
+    loader = Mock(return_value={'sessions': []})
+    services = SimpleNamespace(
+        DATA_FILE=str(source), INTEGRALE_PARTNER_ID=app.INTEGRALE_PARTNER_ID,
+        load_data=loader, find_session_and_trainee_by_token=app.find_session_and_trainee_by_token,
+        _partner_postgres_active=lambda: True, _is_partner_data_scope_session=lambda: True,
+    )
+    assert uv._public_pair(services, 'context-token', original_loader=loader) == (None, None)
+    loader.assert_called_once_with(run_background_tasks=False, persist_normalization=False)
+
+
+def test_off_mode_returns_unknown_token_without_using_the_global_loader(disk_case, monkeypatch):
+    _, _, source = disk_case
+    blocked = Mock(side_effect=AssertionError('Unknown JSON tokens need no general read.'))
+    monkeypatch.setattr(app, '_load_valid_json_payload', blocked)
+    assert resolve('not-in-json') == (None, None)
+    blocked.assert_not_called()
+    assert context.index_for(source).build_count == 1
 
 
 @pytest.mark.parametrize('change,expected', [('cancelled', 403), ('in_person', 403), ('cohort', 404), ('delete', 404)])
@@ -335,10 +509,14 @@ def test_sqlite_reset_wins_over_cached_legacy_results_without_json_change(disk_c
     assert source.read_bytes() == before and context.index_for(source).build_count == 1
 
 
-def test_corrupt_source_returns_retryable_error_without_accepting_an_answer(disk_case):
+@pytest.mark.parametrize('damage', ['missing', 'invalid'])
+def test_unreadable_source_returns_retryable_error_without_accepting_an_answer(disk_case, damage):
     client, data, source = disk_case
     question = post(client, 'start', in_class='yes').json['question']
-    source.write_text('{truncated', encoding='utf-8')
+    if damage == 'missing':
+        source.unlink()
+    else:
+        source.write_text('{truncated', encoding='utf-8')
     assert post(client, 'answer', question_id=question['id'], answer=question['options'][0]['id']).status_code == 503
     training = data['sessions'][0]
     saved = uv.stored_trainee(app, training, training['trainees'][0])
