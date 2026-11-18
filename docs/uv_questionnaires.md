@@ -14,7 +14,7 @@ Le bouton **Tester le questionnaire** ouvre le même parcours chronométré en m
 
 Le stagiaire confirme sa présence en cours avec le formateur avant de commencer. Cette déclaration ne constitue pas une vérification technique de sa présence physique. Le serveur conserve une tentative sous `uv_questionnaire_attempts`, avec la version, l’index, les réponses validées et une échéance de 45 secondes pour la question affichée. Une seule question, sans réponse correcte ni explication, est transmise à la fois.
 
-Le serveur vérifie l’heure de réception de la réponse avant l’attente d’écriture. Le chrono affiche le temps restant après l’enregistrement. Une question dont le délai expire sans réponse reçue vaut zéro. Une reconnexion ou un rechargement dans le même onglet permet de renvoyer le choix en attente de confirmation. Le serveur reconnaît la question et conserve la réponse déjà enregistrée.
+Le serveur vérifie l’heure de réception de la réponse avant l’attente d’écriture. Le chrono affiche le temps restant après l’enregistrement et retire le trajet réseau mesuré par le navigateur. La durée de traitement serveur, mesurée avec une horloge monotone, est exclue de cette compensation pour ne pas être retirée deux fois. La mesure utilise le trajet complet et reste donc prudente ; une synchronisation ultérieure peut rétablir du temps encore accordé par le serveur. Une question dont le délai expire sans réponse reçue vaut zéro. Une reconnexion ou un rechargement dans le même onglet permet de renvoyer le choix en attente de confirmation. Le serveur reconnaît la question et conserve la réponse déjà enregistrée.
 
 Sur la fiche stagiaire, l’équipe peut utiliser **Remettre à zéro** pour une UV en cours ou terminée. Après confirmation, le stagiaire peut recommencer cette UV à la première question. Un onglet ouvert avant la remise à zéro recharge le nouveau questionnaire. Les autres UV et les autres stagiaires conservent leurs résultats.
 
@@ -54,7 +54,7 @@ python scripts/benchmark_uv_questionnaires.py --full-app --clients 24 --padding-
 
 Sans `--full-app`, le script teste les vraies routes UV et leur stockage dans un banc d’essai où les contrôles métier sont synthétiques. L’option `--module-file` permet une comparaison avec une version précédente ; ce mode doit être comparé à lui-même, pas aux mesures de l’application complète. Le rapport indique la taille du JSON, la concurrence, les délais artificiels éventuels, les écritures générales, les erreurs et les percentiles HTTP. Ces temps caractérisent l’environnement de test, pas un engagement de latence en production.
 
-Le workflow GitHub `UV questionnaires` exécute les régressions, le test Chromium de coupures/reprise et une simulation de 24 stagiaires sur les PR concernées.
+Le workflow GitHub `UV questionnaires` exécute les régressions, les tests Chromium de coupures/reprise et de réponse réseau retardée, ainsi qu’une simulation de 24 stagiaires sur les PR concernées. Le test de compteur avance ensemble les horloges du navigateur et du serveur : un retour retenu pendant 17,5 secondes doit réduire le temps affiché, avec ou sans traitement serveur prolongé.
 
 ## Maintenance des questions
 

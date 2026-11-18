@@ -339,6 +339,7 @@ def register(app, services):
 
     @app.route('/espace/<token>/questionnaires-uv/<int:number>', methods=['GET', 'POST'])
     def public_uv_questionnaire(token, number):
+        processing_started = time.monotonic()
         received_at = clock()
         if not services._public_is_authed(token):
             return redirect(url_for('public_trainee_login', token=token))
@@ -387,7 +388,13 @@ def register(app, services):
                     return jsonify(state), 409
             if 'deadline' in state:
                 # Report time remaining after the durable commit, not before it.
-                state['remaining_ms'] = max(0, int((state.pop('deadline') - clock()) * 1000))
+                processing_finished = time.monotonic()
+                response_at = clock()
+                state['remaining_ms'] = max(0, int((state.pop('deadline') - response_at) * 1000))
+                # The browser removes transport time from this snapshot. Server
+                # processing is already included in remaining_ms, so expose its
+                # monotonic duration to avoid subtracting that time twice.
+                state['server_processing_ms'] = max(0, int((processing_finished - processing_started) * 1000))
             response = jsonify(state)
         response.headers['Cache-Control'] = 'private, no-store'
         return response
