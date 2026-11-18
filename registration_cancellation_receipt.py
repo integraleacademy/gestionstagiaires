@@ -44,7 +44,7 @@ def message(host, group, trainee):
     start = host._diploma_date_fr(host._session_get(schedule, "date_start", ""))
     end = host._diploma_date_fr(host._session_get(schedule, "date_end", ""))
     dates = f", prévue du {start} au {end}" if start and end else ""
-    intro = f"Nous avons bien pris en compte votre demande d’annulation concernan la formation « {course} »{dates}."
+    intro = f"Nous avons bien pris en compte votre demande d’annulation concernant la formation « {course} »{dates}."
     steps = ("Connectez-vous à Mon Compte Formation, ouvrez « Dossiers » et sélectionnez la formation concernée. "
              "Cliquez sur « Annuler mon dossier », confirmez votre choix et conservez la confirmation.")
     info = ("Les jours ouvrés vont du lundi au vendredi, hors jours fériés. Les remboursements dus par la plateforme "
