@@ -415,7 +415,14 @@ def test_on_time_answer_survives_another_tab_expiring_first(case, monkeypatch, l
     if last_question:
         assert res.json == {'completed': True, 'score': 20}
         assert persisted(training, trainee)['uv_questionnaires']['aps']['2']['score'] == 20
-    assert post(client, 'answer', question_id=q['id'], answer=q['options'][0]['id']).json == res.json
+    replayed = post(client, 'answer', question_id=q['id'], answer=q['options'][0]['id']).json
+    original = res.json
+    if not last_question:
+        # Replaying must preserve the question and its deadline, while each
+        # independent HTTP request reports its own processing duration.
+        assert replayed.pop('server_processing_ms') >= 0
+        assert original.pop('server_processing_ms') >= 0
+    assert replayed == original
 
 
 @pytest.mark.parametrize('finished', [False, True])
@@ -583,4 +590,242 @@ def test_browser_retries_the_same_choice_after_disconnect_lost_receipt_and_reloa
         assert posted == [first, first, second, second, third]
         assert persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers'] == dict([first, second, third])
         assert not page_errors
+        browser.close()
+
+
+def _advancing_uv_clock(monkeypatch):
+    """Move wall and processing clocks together without changing pytest's clock."""
+    from types import SimpleNamespace
+
+    now = [1000.0]
+    monkeypatch.setattr(uv, 'clock', lambda: now[0])
+    monkeypatch.setattr(uv, 'time', SimpleNamespace(
+        time=lambda: now[0], monotonic=lambda: now[0]))
+    return now
+
+
+def _delay_next_uv_response(monkeypatch, now, seconds):
+    """Model work after the answer commits but before Flask emits its reply."""
+    store = uv._store(app)
+    original = store.mutate
+    delay = [seconds]
+
+    def mutate(*args, **kwargs):
+        result = original(*args, **kwargs)
+        now[0] += delay[0]
+        delay[0] = 0
+        return result
+
+    monkeypatch.setattr(store, 'mutate', mutate)
+    monkeypatch.setattr(uv, '_store', lambda _services: store)
+
+
+def _run_questionnaire_timer_script(script, scenario):
+    """Run the shipped JS with a pending fetch and a controlled monotonic clock."""
+    import shutil
+    import subprocess
+
+    node = shutil.which('node')
+    if not node:
+        pytest.skip('Node.js indisponible')
+    harness = r'''
+const fs = require('node:fs');
+const vm = require('node:vm');
+const {source, scenario} = JSON.parse(fs.readFileSync(0, 'utf8'));
+let now = 0, intervalId = 0;
+const intervals = new Map(), elements = new Map(), requests = [];
+class Element {
+  constructor(tag = 'div') {
+    this.tagName = tag; this.children = []; this.listeners = {};
+    this.style = {setProperty() {}}; this.classList = {toggle() {}};
+    this.textContent = ''; this.hidden = false; this.disabled = false;
+  }
+  addEventListener(name, listener) { this.listeners[name] = listener; }
+  fire(name) { this.listeners[name]?.({preventDefault() {}}); }
+  append(...children) { this.children.push(...children); }
+  replaceChildren(...children) { this.children = children; }
+  setAttribute() {}
+  focus() {}
+}
+const element = id => {
+  if (!elements.has(id)) elements.set(id, new Element());
+  return elements.get(id);
+};
+const descendants = node => [node, ...(node.children || []).flatMap(descendants)];
+element('uv-experience').dataset = {endpoint:'/uv-test', csrf:'csrf', seconds:'45', generation:''};
+const document = {
+  getElementById: element,
+  createElement: tag => new Element(tag),
+  createTextNode: text => ({textContent:text}),
+  querySelector: () => descendants(element('uq-options')).find(node => node.checked),
+  addEventListener() {}, hidden:false
+};
+const context = {
+  document, performance:{now:() => now}, AbortController,
+  sessionStorage:{getItem:() => null, setItem() {}, removeItem() {}},
+  window:{addEventListener() {}, location:{reload() {}, assign() {}}},
+  setTimeout:() => 1, clearTimeout() {},
+  setInterval:callback => { intervals.set(++intervalId, callback); return intervalId; },
+  clearInterval:id => intervals.delete(id),
+  fetch:(_url, options) => new Promise(resolve => requests.push({
+    payload:JSON.parse(options.body), resolve
+  }))
+};
+const flush = () => new Promise(resolve => setImmediate(resolve));
+const advance = ms => { now += ms; for (const tick of [...intervals.values()]) tick(); };
+async function deliver(data, elapsed = 0) {
+  const request = requests.shift();
+  if (!request) throw new Error('No pending questionnaire request');
+  advance(elapsed);
+  request.resolve({status:200, ok:true, redirected:false, json:async () => data});
+  await flush();
+  return request.payload;
+}
+function chooseFirst() {
+  const input = descendants(element('uq-options')).find(node => node.tagName === 'input');
+  input.checked = true; input.fire('change');
+  element('uq-form').fire('submit');
+}
+(async () => {
+  vm.runInNewContext(source, context, {timeout:2000});
+  await deliver(scenario.initial);
+  element('uq-in-class').checked = true;
+  element('uq-start').fire('click');
+  await deliver(scenario.started);
+  chooseFirst();
+  await deliver(scenario.answered, scenario.roundtrip_ms);
+  const displayed = Number(element('uq-seconds').textContent);
+  advance(scenario.wait_after_delivery_ms);
+  const nearDeadline = Number(element('uq-seconds').textContent);
+  chooseFirst();
+  const submitted = requests[0]?.payload;
+  process.stdout.write(JSON.stringify({displayed, nearDeadline, submitted}));
+})().catch(error => { process.stderr.write(error.stack); process.exitCode = 1; });
+'''
+    completed = subprocess.run([node, '-e', harness], input=json.dumps({
+        'source': script, 'scenario': scenario}), text=True, capture_output=True, timeout=10)
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+@pytest.mark.parametrize('processing_seconds', [0, 12])
+def test_timer_matches_server_after_delayed_reply_without_counting_processing_twice(
+        case, monkeypatch, processing_seconds):
+    """A delayed reply must not show time the real server no longer permits."""
+    import math
+    from pathlib import Path
+
+    client, training, trainee, _ = case
+    now = _advancing_uv_clock(monkeypatch)
+    initial = post(client).json
+    started = post(client, 'start', in_class='yes').json
+    q1 = started['question']
+    _delay_next_uv_response(monkeypatch, now, processing_seconds)
+    answered = post(client, 'answer', question_id=q1['id'], answer=q1['options'][0]['id']).json
+    deadline = persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['deadline']
+
+    # The HTTP body is already computed. Its delivery now takes another 17.5s;
+    # the server deadline keeps elapsing during this return trip.
+    now[0] += 17.5
+    remaining = (deadline - now[0]) * 1000
+    scenario = dict(initial=initial, started=started, answered=answered,
+                    roundtrip_ms=(processing_seconds + 17.5) * 1000,
+                    wait_after_delivery_ms=remaining - 1500)
+    source = (Path(__file__).parents[1] / 'static/js/uv-questionnaire.js').read_text()
+    observation = _run_questionnaire_timer_script(source, scenario)
+    assert observation['displayed'] == math.ceil(remaining / 1000)
+    assert observation['nearDeadline'] == 2
+    q2 = answered['question']
+    submitted = observation['submitted']
+    assert submitted['action'] == 'answer'
+    assert submitted['question_id'] == q2['id']
+
+    # At the same instant on the advancing server clock, that visible choice
+    # is still on time and must be persisted, not converted to a timeout.
+    now[0] = deadline - 1.5
+    response = post(client, 'answer', question_id=q2['id'], answer=submitted['answer'])
+    assert response.status_code == 200 and not response.json.get('answer_expired')
+    saved = persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers']
+    assert saved[q2['id']] == submitted['answer']
+
+
+@pytest.mark.parametrize('processing_seconds', [0, 12])
+def test_browser_delayed_reply_keeps_visible_timer_within_the_server_deadline(
+        case, monkeypatch, processing_seconds):
+    import math
+    import os
+    import shutil
+    from pathlib import Path
+    from urllib.parse import urlsplit
+
+    playwright = pytest.importorskip('playwright.sync_api')
+    client, training, trainee, _ = case
+    now = _advancing_uv_clock(monkeypatch)
+    held = []
+    answers = []
+    errors = []
+
+    def handle(route):
+        req = route.request
+        url = urlsplit(req.url)
+        if url.hostname != 'uv.test':
+            return route.abort()
+        payload = req.post_data_json if req.method == 'POST' else None
+        response = client.open(url.path, method=req.method, json=payload)
+        if payload and payload['action'] == 'answer':
+            answers.append(response.json)
+            if len(answers) == 1:
+                held.append((route, response))
+                return
+        route.fulfill(status=response.status_code, content_type=response.content_type, body=response.data)
+
+    with playwright.sync_playwright() as driver:
+        executable = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH') or shutil.which('chromium') or driver.chromium.executable_path
+        if not Path(executable).exists():
+            pytest.skip('Chromium indisponible')
+        browser = driver.chromium.launch(executable_path=executable, args=['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'])
+        page = browser.new_page()
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.route('**/*', handle)
+        page.clock.install(time=dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc))
+        page.goto('https://uv.test' + PATH)
+        page.locator('#uq-in-class').check()
+        playwright.expect(page.locator('#uq-start')).to_be_enabled()
+        page.clock.pause_at(dt.datetime(2026, 11, 18, 0, 1, tzinfo=dt.timezone.utc))
+        page.locator('#uq-start').click()
+        questions = uv.unit('aps', 2)['questions']
+        playwright.expect(page.locator('#uq-question')).to_have_text(questions[0]['prompt'])
+        _delay_next_uv_response(monkeypatch, now, processing_seconds)
+        page.locator('label.uq-option').first.click()
+        page.locator('#uq-next').click()
+        playwright.expect(page.locator('#uq-status')).to_contain_text('Enregistrement')
+        # Keep servicing Playwright events until Flask has produced the held
+        # response; the saving indicator alone precedes that HTTP event.
+        for _ in range(100):
+            if held:
+                break
+            page.wait_for_timeout(10)
+        assert held
+        deadline = persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['deadline']
+
+        now[0] += 17.5
+        # Both clocks advance: unlike the old retry test, Flask's deadline
+        # really loses this return-trip time while its reply is held.
+        page.clock.fast_forward(int((processing_seconds + 17.5) * 1000))
+        route, response = held.pop()
+        route.fulfill(status=response.status_code, content_type=response.content_type, body=response.data)
+        playwright.expect(page.locator('#uq-question')).to_have_text(questions[1]['prompt'])
+        remaining = (deadline - now[0]) * 1000
+        playwright.expect(page.locator('#uq-seconds')).to_have_text(str(math.ceil(remaining / 1000)))
+
+        now[0] = deadline - 1.5
+        page.clock.fast_forward(int(remaining - 1500))
+        playwright.expect(page.locator('#uq-seconds')).to_have_text('2')
+        page.locator('label.uq-option').first.click()
+        page.locator('#uq-next').click()
+        playwright.expect(page.locator('#uq-question')).to_have_text(questions[2]['prompt'])
+        assert not answers[-1].get('answer_expired')
+        saved = persisted(training, trainee)['uv_questionnaire_attempts']['aps']['2']['answers']
+        assert saved[questions[1]['id']] == questions[1]['options'][0]['id']
+        assert not errors
         browser.close()

@@ -3,7 +3,7 @@
   const root = document.getElementById('uv-experience');
   if (!root) return;
   const $ = (id) => document.getElementById(id);
-  let state = null, deadline = 0, busy = false, failed = false, clockInterval;
+  let state = null, deadline = 0, syncNotBefore = 0, busy = false, failed = false, clockInterval;
   const duration = Number(root.dataset.seconds) || 45;
   const start = $('uq-start'), next = $('uq-next');
   const demo = root.dataset.demo === 'true';
@@ -75,20 +75,21 @@
   }
   function tick() {
     if (!state?.started || state.completed) return;
-    const ms = Math.max(0, deadline - performance.now());
+    const now = performance.now();
+    const ms = Math.max(0, deadline - now);
     $('uq-seconds').textContent = String(Math.ceil(ms / 1000));
     $('uq-clock').style.setProperty('--remaining', `${Math.min(100, ms / (duration * 10))}%`);
     $('uq-clock').classList.toggle('is-urgent', ms <= 10000);
-    if (ms <= 0 && !busy && !failed && !pending) send('sync', {question_id: state.question.id});
+    if (ms <= 0 && now >= syncNotBefore && !busy && !failed && !pending) send('sync', {question_id: state.question.id});
   }
-  function show(data) {
+  function show(data, observedAt = performance.now()) {
     if (data.completed) { if (demo) demoResult(data); else window.location.reload(); return; }
     const changed = data.question?.id !== state?.question?.id;
     state = data;
     $('uq-intro').hidden = !!data.started;
     $('uq-player').hidden = !data.started;
     if (!data.started) { start.disabled = !$('uq-in-class').checked; return; }
-    deadline = performance.now() + data.remaining_ms;
+    deadline = observedAt + data.remaining_ms;
     if (changed) {
       $('uq-count').replaceChildren(document.createTextNode(`Question ${String(data.index).padStart(2, '0')} `));
       const count = document.createElement('span'); count.textContent = `/ ${data.total}`; $('uq-count').append(count);
@@ -132,6 +133,7 @@
         show(result);
         return;
       }
+      const requestedAt = performance.now();
       const response = await fetch(root.dataset.endpoint, {method:'POST', credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json'}, body:JSON.stringify({csrf:root.dataset.csrf, generation, action, ...extra})});
       if (response.redirected) { window.location.assign(response.url); return; }
       if (response.status === 409) {
@@ -143,11 +145,25 @@
         throw new Error('Le serveur n’a pas confirmé l’enregistrement.');
       }
       const data = await response.json();
+      const observedAt = performance.now();
+      const roundTripMs = Math.max(0, observedAt - requestedAt);
+      const processingMs = Number.isFinite(data.server_processing_ms) && data.server_processing_ms >= 0 && data.server_processing_ms <= roundTripMs
+        ? data.server_processing_ms : 0;
+      if (data.started && !data.completed) {
+        const remainingMs = Number.isFinite(data.remaining_ms) ? Math.max(0, data.remaining_ms) : 0;
+        // The server already deducted its processing time. Deduct the full
+        // remaining round trip conservatively; older servers fall back to RTT.
+        data.remaining_ms = Math.max(0, remainingMs - Math.max(0, roundTripMs - processingMs));
+        // A conservative estimate can reach zero before the server deadline.
+        // Avoid rapid sync retries while allowing the server to refresh it.
+        syncNotBefore = data.remaining_ms === 0 && remainingMs > 0
+          ? observedAt + Math.min(1000, remainingMs) : 0;
+      }
       if (saving) remember(null);
       $('uq-error').hidden = true;
       $('uq-status').hidden = !data.answer_expired;
       if (data.answer_expired) $('uq-status').textContent = 'Le délai était écoulé à la réception de la réponse précédente.';
-      show(data);
+      show(data, observedAt);
     } catch(error) {
       failed = true;
       $('uq-status').hidden = true;
