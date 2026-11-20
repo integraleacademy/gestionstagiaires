@@ -55,20 +55,22 @@ def summary(services, training):
     members = []
     exams = []
     afc = afc_schedule.enabled(training)
+    level = None
     for examination in all_exams([training]):
-        roster = _members(services, examination)
+        settings = exam.settings(examination)
+        roster = _members(services, examination, settings)
         if afc:
-            settings = exam.settings(examination)
             label = settings['level']
             for member in roster:
                 member['exam_label'] = label
             exams.append({'label': label, 'date': settings.get('date'), 'members': roster})
+        else:
+            level = settings['level']
         members.extend(roster)
-    return {'members': members, 'exams': exams}
+    return {'members': members, 'exams': exams, 'level': level}
 
 
-def _members(services, training):
-    config = exam.settings(training)
+def _members(services, training, config):
     if not config['jury']:
         return []
     reminders = schedule(services, training)['members']

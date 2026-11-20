@@ -1,3 +1,7 @@
+{% macro ssiap1_presence(members) -%}
+  {% set present = members|selectattr('confirmed')|list|length %}
+  <span class="session-jury__badge session-jury__badge--{{ 'sent' if present else 'incomplete' }}">{% if present %}Jury complet · {% endif %}{% if present > 1 %}{{ present }} présents (1 attendu){% else %}{{ present }}/1 présent{% endif %}</span>
+{%- endmacro %}
 {% macro jury_members(members) -%}
       {% if members %}
       <ul class="session-jury__members">
@@ -122,12 +126,14 @@
     <section class="session-jury" aria-label="Organisation et jury">
       <div class="session-jury__header">
         <strong>Organisation et jury</strong>
-        {% if s.exam_jury.members and not s.exam_jury.exams %}<span class="session-jury__count">{{ s.exam_jury.members|length }} membre{{ 's' if s.exam_jury.members|length > 1 else '' }}</span>{% endif %}
+        {% if s.exam_jury.level == 'SSIAP 1' %}{{ ssiap1_presence(s.exam_jury.members) }}
+        {% elif s.exam_jury.members and not s.exam_jury.exams %}<span class="session-jury__count">{{ s.exam_jury.members|length }} membre{{ 's' if s.exam_jury.members|length > 1 else '' }}</span>{% endif %}
       </div>
       {% if s.exam_jury.exams %}
         {% for exam in s.exam_jury.exams %}
         <div class="session-jury__exam" role="group" aria-label="Jury {{ exam.label }}">
-          <h3>Jury {{ exam.label }} {% if exam.date %}<time datetime="{{ exam.date }}">{{ exam.date|frdate }}</time>{% endif %}</h3>
+          <h3>Jury {{ exam.label }} {% if exam.date %}<time datetime="{{ exam.date }}">{{ exam.date|frdate }}</time>{% endif %}
+            {% if exam.label == 'SSIAP 1' %}{{ ssiap1_presence(exam.members) }}{% endif %}</h3>
           {{ jury_members(exam.members) }}
         </div>
         {% endfor %}

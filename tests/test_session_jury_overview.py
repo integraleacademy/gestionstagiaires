@@ -55,6 +55,19 @@ def test_afc_card_shows_both_juries_even_when_one_is_empty(overview):
     aps, ssiap = html.split('aria-label="Jury SSIAP 1"')
     assert 'aria-label="Jury APS"' in aps and 'Alex JURY' in aps
     assert '15/02/2027' in ssiap and 'Jury à renseigner' in ssiap and 'Alex JURY' not in ssiap
+    assert '0/1 présent' in ssiap and '0/1 présent' not in aps
+
+
+@pytest.mark.parametrize('afc', [True, False])
+def test_ssiap1_jury_complete_only_after_a_confirmation(overview, afc):
+    client, training, _ = overview
+    training.update(afc_enabled=afc, training_type='SSIAP 1', name='SSIAP 1')
+    training['ssiap_exam'] = training.pop('security_exam')
+    html, = card_html(client)
+    assert '0/1 présent' in html and 'Jury complet' not in html
+    training['ssiap_exam']['platform_confirmations'] = {'source/member': 'J1'}
+    html, = card_html(client)
+    assert html.count('Jury complet · 1/1 présent') == 1 and 'Alex JURY' in html
 
 
 @pytest.mark.parametrize('family', ['APS', 'A3P', 'DESP initial', 'SSIAP 1'])
