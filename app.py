@@ -28017,7 +28017,8 @@ def api_import_trainee_from_image():
 @admin_login_required
 @admin_write_required
 def api_update_vtc_individual_offer(session_id: str, trainee_id: str):
-    requested = (request.get_json(silent=True) or {}).get("offer")
+    body = request.get_json(silent=True)
+    requested = body.get("offer") if isinstance(body, dict) else None
     try:
         requested = vtc_individual_offers.validate(requested)
     except ValueError as exc:
@@ -28035,12 +28036,16 @@ def api_update_vtc_individual_offer(session_id: str, trainee_id: str):
         current_offer = vtc_individual_offers.offer(trainee)
         if current_offer != requested:
             signature_state = trainee.get("convention_signature") or trainee.get("convocation_signature") or {}
-            if signature_state.get("signature_request_id") or signature_state.get("signed_pdf_path"):
+            if (signature_state.get("signature_request_id") or signature_state.get("signed_pdf_path")
+                    or signature_state.get("status") in ("done", "signed", "completed")
+                    or trainee.get("convention_legacy_signed_at")):
                 raise ValueError(
                     "Une convention a déjà été envoyée pour signature ou signée. "
                     "Annulez ou traitez d'abord cette demande Yousign avant de modifier la formule."
                 )
             vtc_individual_offers.update(trainee, requested, default_training_price("VTC"))
+            trainee.pop("convention_signature", None)
+            trainee.pop("convocation_signature", None)
             for key in ("convention_aps_pdf_path", "convention_aps_docx_path",
                         "convention_aps_status", "convention_aps_generated_at",
                         "convocation_aps_pdf_path", "convocation_aps_docx_path",
@@ -28049,6 +28054,7 @@ def api_update_vtc_individual_offer(session_id: str, trainee_id: str):
                         "convocation_aps_pdf_token", "vtc_practice_convocation_sent_at"):
                 trainee.pop(key, None)
             if vtc_individual_offers.reduced(trainee):
+                trainee["sales_tracking_amount"] = ""
                 trainee["elearning_link"] = ""
                 trainee["vtc_elearning_manual_ok"] = False
             _refresh_vtc_cm_reminder_schedule(trainee)
@@ -37423,6 +37429,8 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         raise RuntimeError("Le PDF nettoyé pour Yousign n’a pas été généré.")
 
     training_label = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
+    if vtc_individual_offers.is_vtc(session_obj) and vtc_individual_offers.reduced(trainee):
+        training_label = vtc_individual_offers.LABELS[vtc_individual_offers.offer(trainee)]
     request_name = f"Convention formation - {training_label} - {first_name} {last_name}".strip()
     external_id = make_yousign_external_id(session_id, trainee_id)
     yousign_environment = _yousign_environment()
@@ -52691,9 +52699,13 @@ CONVENTION_FINANCING_FIELDS = ("training_price", "cpf_amount", "personal_amount"
 def _apply_convention_financing_payload(trainee: Dict[str, Any], payload: Dict[str, Any], session_obj=None) -> None:
     if afc_schedule.enabled(session_obj or {}):
         return  # AFC conventions never require personal/CPF financing inputs.
+    fixed_vtc_price = (vtc_individual_offers.PRICES[vtc_individual_offers.offer(trainee)]
+                       if vtc_individual_offers.is_vtc(session_obj or {}) and vtc_individual_offers.reduced(trainee) else None)
     for key in CONVENTION_FINANCING_FIELDS:
-        if key in payload:
+        if key in payload and not (fixed_vtc_price and key == "training_price"):
             trainee[key] = str(payload.get(key) or "").strip()
+    if fixed_vtc_price:
+        trainee["training_price"] = fixed_vtc_price
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/financing")
