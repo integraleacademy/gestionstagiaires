@@ -323,7 +323,9 @@ def build_mail(training, config, member, kind, count, logo_url, *, today=None, p
 
 
 def register(app, services):
+    from platform_jury import register as register_platform_jury
     from jury_planning import mail_context, register as register_planning
+    register_platform_jury(app, services)
     register_planning(app, services)
 
     def get_training(data, session_id, *, security=False):

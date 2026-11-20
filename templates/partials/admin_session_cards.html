@@ -105,8 +105,9 @@
       <ul class="session-jury__members">
         {% for member in s.exam_jury.members %}
         <li class="session-jury__member">
-          <div class="session-jury__identity">{{ member.name }}{% if member.president %}<span class="session-jury__role">Président du jury</span>{% endif %}</div>
+          <div class="session-jury__identity">{{ member.name }}{% if member.exam_label %} · {{ member.exam_label }}{% endif %}{% if member.president %}<span class="session-jury__role">Président du jury</span>{% endif %}</div>
           <div class="session-jury__badges">
+            {% if member.confirmed %}<span class="session-jury__badge session-jury__badge--sent">Présence confirmée</span>{% endif %}
             {% if member.email_missing %}
             <span class="session-jury__badge session-jury__badge--incomplete">⚠️ E-mail à renseigner</span>
             {% else %}

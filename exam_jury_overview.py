@@ -2,6 +2,8 @@
 import datetime as dt
 from zoneinfo import ZoneInfo
 
+import afc_schedule
+from exam_context import all_exams
 import ssiap_exam as exam
 from ssiap_exam_reminders import schedule
 
@@ -50,16 +52,30 @@ def summary(services, training):
     if (not exam.jury_supported(training)
             or training.get('partner_id') not in (None, '', services.INTEGRALE_PARTNER_ID)):
         return None
+    members = []
+    for examination in all_exams([training]):
+        for member in _members(services, examination):
+            if afc_schedule.enabled(training):
+                member['exam_label'] = exam.settings(examination)['level']
+            members.append(member)
+    return {'members': members}
+
+
+def _members(services, training):
     config = exam.settings(training)
+    if not config['jury']:
+        return []
     reminders = schedule(services, training)['members']
+    confirmed = set(exam.state(training).get('platform_confirmations', {}).values())
     members = []
     for member in config['jury']:
         receipts = exam.mail_status(training, member)
         members.append({
             'name': ' '.join(str(member.get(key) or '').strip() for key in ('first_name', 'last_name')).strip(),
             'president': member.get('role') == 'president',
+            'confirmed': member['id'] in confirmed,
             'email_missing': not exam.MAIL_RE.fullmatch(member.get('email') or ''),
             'badges': [_badge(kind, receipts[kind], reminders.get(member['id'], {}))
                        for kind in ('invitation', 'reminder')],
         })
-    return {'members': members}
+    return members
