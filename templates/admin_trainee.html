@@ -462,6 +462,7 @@
       <section class="card vtc-individual-offer" id="vtcIndividualOffer"
                data-update-url="{{ url_for('api_update_vtc_individual_offer',session_id=session.id,trainee_id=trainee.id) }}"
                data-current-offer="{{ trainee.vtc_offer or 'full' }}"
+               data-read-only="{{ '1' if is_read_only else '0' }}"
                style="margin:12px 0;padding:16px;border:1px solid #cbd5e1;border-radius:14px;">
         <h3 style="margin:0 0 6px;font-size:17px;">Formule Chauffeur VTC</h3>
         <p class="hint" style="margin:0 0 12px;">Choisissez une seule formule. Le prix et les documents sont mis à jour automatiquement pour ce stagiaire.</p>
