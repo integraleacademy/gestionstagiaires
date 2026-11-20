@@ -25,6 +25,7 @@ def read_source(host):
 def install(host):
     base = origin()
     host.app.jinja_env.globals["campus_public_url"] = base
+    host.app.jinja_env.globals["campus_external_vtc"] = directory.external_vtc_course
     # Render stops the old disk-backed instance before this new worker starts.
     # At this point nobody can still write its SQLite databases. Enabling this
     # mode on an already-running legacy worker is intentionally unsupported.

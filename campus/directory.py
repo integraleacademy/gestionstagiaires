@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import re
 import secrets
+from urllib.parse import urlsplit
 
 from psycopg.types.json import Jsonb
 
@@ -13,8 +14,10 @@ from campus.identity import (_birth_to_ddmmyyyy, _norm_lastname, _public_trainee
                              _public_trainee_last_names, _trainee_registration_is_cancelled)
 import elearning_orders
 import uv_questionnaires
+import vtc_individual_offers
 from elearning_native.paths import assigned_modules
 from elearning_native.vtc_enrolments import effective_learner_session
+from vtc_elearning_activation import STATE_KEY as VTC_ACTIVATION
 
 INTERNAL = "11111111-1111-4111-8111-111111111111"
 TRAINING = ("id", "partner_id", "name", "nom", "training_type", "type", "type_formation",
@@ -57,6 +60,25 @@ def _select(obj, fields):
     return {k: obj[k] for k in fields if k in obj}
 
 
+def external_vtc_course(training, learner):
+    """Historical full VTC offers can have an external course instead of native modules."""
+    if not vtc_individual_offers.is_vtc(training) or vtc_individual_offers.reduced(learner):
+        return ""
+    activation = learner.get(VTC_ACTIVATION)
+    if activation and (not isinstance(activation, dict) or not activation.get("activated_at")):
+        return ""
+    if training.get("aps_elearning_enabled") and assigned_modules(training):
+        return ""
+    link = str(learner.get("elearning_link") or "").strip()
+    try:
+        url = urlsplit(link)
+        if url.scheme == "https" and url.hostname and not url.username and not url.password:
+            return link
+    except ValueError:
+        pass
+    return ""
+
+
 def project(data, host, secret):
     """Project access and module versions, never billing, documents or admin accounts."""
     import json
@@ -69,7 +91,8 @@ def project(data, host, secret):
             if not tokens or not training.get("id") or not learner.get("id") or _trainee_registration_is_cancelled(learner):
                 continue
             effective = effective_learner_session(training, learner)
-            if not (uv_questionnaires.eligible(training) or assigned_modules(effective)
+            vtc_link = external_vtc_course(effective, learner)
+            if not (uv_questionnaires.eligible(training) or assigned_modules(effective) or vtc_link
                     or (effective.get("aps_elearning_enabled") and learner.get("aps_elearning_login"))):
                 continue
             # UV eligibility uses the original classroom dates. Individual VTC/DESP grants
@@ -78,6 +101,8 @@ def project(data, host, secret):
             selected["campus_native"] = _select(effective, TRAINING)
             selected["partner_id"] = training.get("partner_id") or INTERNAL
             person = _select(learner, PERSON)
+            if vtc_link:
+                person["campus_external_vtc"] = vtc_link
             person["first_name"] = learner.get("first_name") or learner.get("prenom") or ""
             person["last_name"] = learner.get("last_name") or learner.get("nom") or ""
             identities = sorted({_identity(secret, last, birth) for last in _public_trainee_last_names(learner)

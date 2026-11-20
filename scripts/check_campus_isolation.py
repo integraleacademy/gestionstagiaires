@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.benchmark_uv_questionnaires import synthetic_data, TRAINING, block_external_network
 
 PARTNER = "11111111-1111-4111-8111-111111111111"
+LEGACY_VTC_URL = "https://cours.example.invalid/formation-personnelle"
 
 
 @contextmanager
@@ -62,6 +63,15 @@ def seed(disk, people):
                     aps_native_course_version=course["version"])
     for person in training["trainees"]:
         person.update(birth_date="1990-03-12", partner_id=PARTNER)
+    historical_vtc = []
+    for label, offer in (("complet", "full"), ("pratique", "practice"), ("vehicule", "vehicle"), ("attente", "full")):
+        person = dict(id="vtc-" + label, public_token="legacy-vtc-" + label, last_name=label,
+                      birth_date="1990-03-12", vtc_offer=offer, elearning_link=LEGACY_VTC_URL)
+        if label == "attente":
+            person["vtc_elearning_auto"] = {"due_at": "2099-01-01T12:00:00Z"}
+        historical_vtc.append(person)
+    data["sessions"].append(dict(id="ancien-vtc", partner_id=PARTNER, name="VTC historique", training_type="VTC",
+                                 date_start="2035-01-01", trainees=historical_vtc))
     token = "el_" + secrets.token_hex(32)
     external = "3bbf3bc7-5365-43b3-874c-08cd01382b62"
     data["partners"] = [{"id": external, "name": "Centre de test", "status": "active"}]
@@ -165,6 +175,22 @@ def logged_in(campus, index, barrier=None):
     return client, personal
 
 
+def historical_vtc_access(campus):
+    for label in ("complet", "pratique", "vehicule", "attente"):
+        with requests.Session() as client:
+            client.trust_env = False
+            client.verify = campus.cert
+            login = campus.base + "/espace/legacy-vtc-" + label + "/login"
+            form = verify(client.get(login, timeout=10))
+            csrf = field(form.text, r'name="csrf" value="([^"]+)"')
+            result = client.post(login, data=dict(csrf=csrf, last_name=label, birth="1990-03-12"), timeout=10)
+            if label == "complet":
+                assert f'href="{LEGACY_VTC_URL}"' in verify(result).text
+                assert 'Questionnaires de fin d’UV' not in result.text
+            else:
+                verify(result, 401)
+
+
 def native_smoke(campus, course, second_question, partner_token):
     with requests.Session() as link:
         link.trust_env = False
@@ -233,6 +259,7 @@ def exercise(temp, dsn, people):
         portal = verify(requests.get(manager.base + "/espacestagiaire", verify=manager.cert, timeout=10))
         assert f'href="{campus.base}/"' in portal.text
         manager.stop()
+        historical_vtc_access(campus)
         native_smoke(campus, course, second, partner_token)
         questions = next(r["questions"] for r in uv.bank()["courses"]["aps"]["units"] if r["number"] == 4)
         barrier = threading.Barrier(people)

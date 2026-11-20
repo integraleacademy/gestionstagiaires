@@ -177,12 +177,14 @@ def create_app():
         training, learner = pair(token)
         native, _ = pair(token, native=True)
         when = start_date(native)
-        accessible = (native.get("individual_aps_access") or native.get("vtc_auto_access_available")
+        external_vtc = learner.get("campus_external_vtc") or ""
+        accessible = (external_vtc or native.get("individual_aps_access") or native.get("vtc_auto_access_available")
                       or (when and when <= dt.date.today()))
         legacy_url = str(learner.get("aps_elearning_login") or "").strip()
+        external_aps = legacy_url if native.get("aps_elearning_enabled") and legacy_url.startswith("https://") else ""
         return render_template("campus/home.html", token=token, learner=learner, training=training,
-                    uv=uv_questionnaires.view(host, training, learner), native=bool(assigned_modules(native)),
-                    accessible=accessible, legacy_url=legacy_url if native.get("aps_elearning_enabled") and legacy_url.startswith("https://") else "",
+                    uv=uv_questionnaires.view(host, training, learner), native=not external_vtc and bool(assigned_modules(native)),
+                    accessible=accessible, legacy_url=external_vtc or external_aps,
                     dossier_url=(admin_base + "/espace/" + token) if admin_base and not record(token)[2] else "",
                     csrf=csrf())
 
