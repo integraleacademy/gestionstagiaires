@@ -4,7 +4,7 @@ import shutil
 
 import exam_retakes
 import exam_retakes_workflow as provider
-from vtc_order_documents import document
+from vtc_order_documents import order_contract
 
 STOPPED = {"canceled", "cancelled", "expired", "declined", "rejected", "deleted"}
 
@@ -32,7 +32,7 @@ def locked(row):
 
 def generate(store, row):
     path = store.document(row["id"], "convention")
-    row["signature_field"] = document(row, path, contract=True)
+    row["signature_field"] = order_contract(store.host, row, path)
     row["pdf_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
 
 

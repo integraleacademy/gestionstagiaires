@@ -534,7 +534,7 @@ def style_document(document, *, reference_key=None):
         _paragraph(p)
         if p.text.startswith(("Convention d’accompagnement", "Convention de formation")):
             _title(p, secondary=True)
-        elif p.text.strip() == "Annexe à la convention de formation":
+        elif p.text.strip() in {"Annexe à la convention de formation", "Annexe 1 – Programme de la formation pratique"}:
             _title(p, secondary=True)
             p.paragraph_format.page_break_before = True
     for table in list(document.tables):
@@ -552,14 +552,14 @@ def style_document(document, *, reference_key=None):
         if text.startswith(("Le prix ", "Engagement du stagiaire")):
             _panel(table, PALE if text.startswith("Le prix ") else CREAM)
             continue
-        if len(text) < 240 and len(table.cell(0, 0).paragraphs) == 1 and not text.startswith(("Contrat de formation", "Convention de formation", "RÈGLEMENT")):
+        if len(text) < 240 and len(table.cell(0, 0).paragraphs) == 1 and not text.startswith(("Contrat de formation", "Convention de formation", "Convention de mise à disposition", "RÈGLEMENT")):
             _panel(table, CREAM, GOLD, prominent=True)
             continue
         for index, p in enumerate(table.cell(0, 0).paragraphs):
             _paragraph(p)
             p.paragraph_format.left_indent = Cm(0)
             p.paragraph_format.first_line_indent = Cm(0)
-            if text.startswith(("Contrat de formation", "Convention de formation", "RÈGLEMENT INTÉRIEUR")):
+            if text.startswith(("Contrat de formation", "Convention de formation", "Convention de mise à disposition", "RÈGLEMENT INTÉRIEUR")):
                 if index == 0:
                     _title(p, secondary=text.startswith("RÈGLEMENT"))
                     p.paragraph_format.page_break_before = text.startswith("RÈGLEMENT")
