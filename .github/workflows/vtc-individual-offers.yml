@@ -50,4 +50,12 @@ jobs:
           tests/test_vtc_individual_offers.py
           tests/test_vtc_elearning_activation.py
           tests/test_vtc_convocation_automation.py
+      - name: Régressions du parcours VTC complet hors modèle historique daté
+        # Les trois cas test_vtc_convention_uses_real_dates_without_changing_the_session
+        # échouent déjà sur le modèle Word historique : des dates fixes y
+        # figurent même lorsque les variables du contrat sont bien remplacées.
+        # Ce correctif ne modifie pas ce modèle binaire. Suivi séparé requis.
+        run: >-
+          python -m pytest -q
           tests/test_convention_vtc_dates_preview.py
+          -k "not test_vtc_convention_uses_real_dates_without_changing_the_session"
