@@ -1,11 +1,103 @@
-{% extends "campus/base.html" %}{% block title %}Mon parcours{% endblock %}
-{% block content %}<div class="top"><div><p>{{ training.name }}</p><h1>Bonjour {{ learner.first_name }}</h1></div>
-<form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="subtle">Déconnexion</button></form></div>
-{% if native or legacy_url %}<section class="card"><h2>Mon e-learning</h2>
-{% if accessible %}<a class="action" href="{{ url_for('native_elearning.learner_path',token=token) if native else legacy_url }}">Accéder à mon parcours</a>
-{% else %}<p>Le parcours ouvrira à la date prévue pour votre formation.</p>{% endif %}</section>{% endif %}
-{% if uv %}<section id="questionnaires-uv" class="card"><h2>Questionnaires de fin d’UV</h2><p>{{ uv.notice }}</p>
-{% if not uv.available %}<p>Ouverture prévue au début du présentiel{% if uv.start_label %}, le {{ uv.start_label }}{% endif %}.</p>
-{% else %}<ul>{% for unit in uv.units %}<li><span><b>UV {{ unit.number }}</b> · {{ unit.title }}</span>
-<a href="{{ url_for('public_uv_questionnaire',token=token,number=unit.number) }}">{{ 'Voir la correction' if unit.completed else 'Reprendre' if unit.in_progress else 'Ouvrir' }}</a></li>{% endfor %}</ul>{% endif %}</section>{% endif %}
-{% if dossier_url %}<a class="dossier" href="{{ dossier_url }}">Mon dossier administratif</a>{% endif %}{% endblock %}
+{% extends "campus/base.html" %}
+{% block title %}Mon parcours{% endblock %}
+
+{% macro icon(name, class_name='') -%}
+<svg class="icon {{ class_name }}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  {% if name == 'arrow' %}<path d="M5 12h14m-5-5 5 5-5 5"/>
+  {% elif name == 'book' %}<path d="M12 5v15m0-15C8 2 4 3 2 4v15c3-1 6-1 10 1 4-2 7-2 10-1V4c-2-1-6-2-10 1Z"/>
+  {% elif name == 'check' %}<path d="m5 12 4 4L19 6"/>
+  {% elif name == 'info' %}<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-9v.1"/>
+  {% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+  {% elif name == 'folder' %}<path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/>
+  {% elif name == 'logout' %}<path d="M9 4H4v16h5m1-8h11m-4-4 4 4-4 4"/>{% endif %}
+</svg>
+{%- endmacro %}
+
+{% block header_actions %}
+<div class="header-actions">
+  {% if dossier_url %}<a class="header-link" href="{{ dossier_url }}">{{ icon('folder') }}<span>Mon dossier administratif</span></a>{% endif %}
+  <form method="post" action="{{ url_for('logout') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="logout" type="submit">{{ icon('logout') }}<span>Déconnexion</span></button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+{% set total = uv.units|length if uv else 0 %}
+{% set completed = uv.completed_count|default(0) if uv else 0 %}
+<section class="welcome" aria-labelledby="welcome-title">
+  <div class="welcome-copy">
+    <p class="eyebrow">MON PARCOURS DE FORMATION</p>
+    <h1 id="welcome-title">Bonjour{% if learner.first_name %} {{ learner.first_name }}{% endif %}<span class="greeting-dot">.</span></h1>
+    <p class="welcome-intro">Bienvenue dans votre espace pour apprendre et progresser.</p>
+    {% if training.name %}<p class="training-name">{{ icon('book') }}<span>{{ training.name }}</span></p>{% endif %}
+  </div>
+  {% if uv and uv.available and total %}
+  <div class="progress-panel">
+    <p class="progress-label">VOTRE PROGRESSION</p>
+    <p class="progress-value">{{ completed }}<span> / {{ total }}</span></p>
+    <p class="progress-caption">questionnaire{{ 's' if completed != 1 else '' }} terminé{{ 's' if completed != 1 else '' }}</p>
+    <progress max="{{ total }}" value="{{ completed }}" aria-label="Questionnaires terminés">{{ completed }} sur {{ total }}</progress>
+    <p class="progress-hint">{{ 'Toutes vos corrections sont disponibles ci-dessous.' if completed == total else 'Retrouvez vos questionnaires ci-dessous.' }}</p>
+  </div>
+  {% endif %}
+</section>
+
+{% if native or legacy_url %}
+<section class="learning-card" aria-labelledby="learning-title">
+  <div class="learning-icon">{{ icon('book') }}</div>
+  <div class="learning-copy">
+    <p class="eyebrow">APPRENDRE EN LIGNE</p>
+    <h2 id="learning-title">Mon e-learning</h2>
+    <p>{{ 'Retrouvez vos cours et poursuivez votre formation.' if accessible else 'Le parcours ouvrira à la date prévue pour votre formation.' }}</p>
+  </div>
+  {% if accessible %}<a class="button button-dark" href="{{ url_for('native_elearning.learner_path', token=token) if native else legacy_url }}">Accéder à mon parcours {{ icon('arrow') }}</a>
+  {% else %}<span class="status status-pending">{{ icon('clock') }} Bientôt disponible</span>{% endif %}
+</section>
+{% endif %}
+
+{% if uv %}
+<section id="questionnaires-uv" class="questionnaires" aria-labelledby="questionnaires-title">
+  <div class="section-heading">
+    <div><p class="eyebrow">VALIDER MES CONNAISSANCES</p><h2 id="questionnaires-title">Questionnaires de fin d’UV</h2></div>
+    {% if uv.available and total %}<span class="unit-count">{{ total }} unités de valeur</span>{% endif %}
+  </div>
+  <div class="notice">{{ icon('info') }}<p>{{ uv.notice }}</p></div>
+  {% if not uv.available %}
+  <div class="availability-card">
+    <span class="availability-icon">{{ icon('clock') }}</span>
+    <div><h3>Vos questionnaires seront bientôt disponibles</h3><p>Ouverture prévue au début du présentiel{% if uv.start_label %}, le {{ uv.start_label }}{% endif %}.</p></div>
+  </div>
+  {% else %}
+  <ul class="unit-grid">
+    {% for unit in uv.units %}
+    <li class="unit-card{% if unit.completed %} is-complete{% elif unit.in_progress %} is-started{% endif %}">
+      <div class="unit-meta">
+        <span class="unit-number">UV <b>{{ unit.number }}</b></span>
+        {% if unit.completed %}<span class="status status-complete">{{ icon('check') }} Terminé</span>
+        {% elif unit.in_progress %}<span class="status status-started">{{ icon('clock') }} En cours</span>
+        {% else %}<span class="status status-pending">À commencer</span>{% endif %}
+      </div>
+      <h3 id="unit-title-{{ unit.number }}">{{ unit.title }}</h3>
+      <div class="unit-bottom">
+        {% if unit.completed and unit.score is not none %}<p class="unit-score">Votre résultat <strong>{{ unit.score }}<span> / 20</span></strong></p>{% endif %}
+        <a class="button unit-action{% if unit.completed %} button-outline{% else %} button-dark{% endif %}" href="{{ url_for('public_uv_questionnaire', token=token, number=unit.number) }}" aria-describedby="unit-title-{{ unit.number }}">
+          {{ 'Voir la correction' if unit.completed else 'Reprendre' if unit.in_progress else 'Commencer' }} {{ icon('arrow') }}
+        </a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if dossier_url %}
+<aside class="dossier-card">
+  <span class="dossier-icon">{{ icon('folder') }}</span>
+  <div><h2>Votre dossier administratif</h2><p>Retrouvez les informations et documents de votre formation.</p></div>
+  <a href="{{ dossier_url }}">Ouvrir mon dossier {{ icon('arrow') }}</a>
+</aside>
+{% endif %}
+{% endblock %}
