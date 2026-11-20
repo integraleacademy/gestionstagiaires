@@ -230,6 +230,8 @@ def exercise(temp, dsn, people):
         verify(requests.get(campus.base+"/",verify=campus.cert),503)
         manager.start()
         manager.wait()
+        portal = verify(requests.get(manager.base + "/espacestagiaire", verify=manager.cert, timeout=10))
+        assert f'href="{campus.base}/"' in portal.text
         manager.stop()
         native_smoke(campus, course, second, partner_token)
         questions = next(r["questions"] for r in uv.bank()["courses"]["aps"]["units"] if r["number"] == 4)

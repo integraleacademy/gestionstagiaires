@@ -4,10 +4,12 @@ import hashlib
 import os
 from pathlib import Path, PurePosixPath
 import tempfile
+import threading
 
 from campus import db
 
 CHUNK = 1024 * 1024
+_cache_locks = tuple(threading.Lock() for _ in range(32))
 
 
 def initialize():
@@ -82,6 +84,14 @@ def materialize(root, key):
     mutable = parts.name == "current.json"
     if destination.is_file() and not mutable:
         return
+    # A class can open the same video immediately after an instance restart.
+    # Only one thread needs to fetch that immutable file into the shared cache.
+    with _cache_locks[hash(destination) % len(_cache_locks)]:
+        if mutable or not destination.is_file():
+            _download(destination, key, mutable)
+
+
+def _download(destination, key, mutable):
     with db.pool().connection() as conn:
         conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         row = conn.execute("SELECT size,digest FROM campus_directory.course_files WHERE path=%s", (key,)).fetchone()
@@ -96,7 +106,8 @@ def materialize(root, key):
             with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as f:
                 name = f.name
                 hashed = hashlib.sha256()
-                with conn.cursor(name="campus_course_download") as cur:
+                with conn.cursor(name="campus_course_download", binary=True) as cur:
+                    cur.itersize = 2  # Two 1 MiB chunks per batch, even for a large video.
                     cur.execute("SELECT body FROM campus_directory.course_chunks WHERE path=%s ORDER BY part", (key,))
                     for (data,) in cur:
                         f.write(data)
