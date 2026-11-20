@@ -24951,47 +24951,34 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
 
     canvas_state_saved = False
     try:
-        with Image.open(image_path) as source:
-            # A 35 x 45 mm portrait needs about 413 x 531 pixels at 300 dpi.
-            # Decode large JPEGs at a smaller size, then embed only the printed crop.
-            pixel_width = max(1, round(width * 300 / 72))
-            pixel_height = max(1, round(height * 300 / 72))
-            source.draft("RGB", (pixel_width * 2, pixel_height * 2))
-            image = ImageOps.exif_transpose(source).convert("RGB")
-            reduction = min(1, image.width / pixel_width, image.height / pixel_height)
-            image = ImageOps.fit(image, (max(1, round(pixel_width * reduction)),
-                                        max(1, round(pixel_height * reduction))),
-                                 method=Image.Resampling.LANCZOS)
-            image_width, image_height = image.size
-            if image_width <= 0 or image_height <= 0:
-                return False
-            encoded = BytesIO()
-            image.save(encoded, format="JPEG", quality=90, optimize=True)
-            encoded.seek(0)
-            image_reader = ImageReader(encoded)
-            scale = max(width / image_width, height / image_height)
-            draw_width = image_width * scale
-            draw_height = image_height * scale
-            draw_x = x + (width - draw_width) / 2
-            draw_y = y + (height - draw_height) / 2
+        # A 35 × 45 mm portrait needs about 413 × 531 pixels at 300 dpi.
+        encoded = identity_photos.printable_portrait(
+            image_path, max(1, round(width * 300 / 72)), max(1, round(height * 300 / 72)))
+        image_reader = ImageReader(encoded)
+        image_width, image_height = image_reader.getSize()
+        scale = max(width / image_width, height / image_height)
+        draw_width = image_width * scale
+        draw_height = image_height * scale
+        draw_x = x + (width - draw_width) / 2
+        draw_y = y + (height - draw_height) / 2
 
-            pdf_canvas.saveState()
-            canvas_state_saved = True
-            clip_path = pdf_canvas.beginPath()
-            clip_path.rect(x, y, width, height)
-            pdf_canvas.clipPath(clip_path, stroke=0, fill=0)
-            pdf_canvas.drawImage(
-                image_reader,
-                draw_x,
-                draw_y,
-                width=draw_width,
-                height=draw_height,
-                preserveAspectRatio=True,
-                mask="auto",
-            )
-            pdf_canvas.restoreState()
-            canvas_state_saved = False
-            return True
+        pdf_canvas.saveState()
+        canvas_state_saved = True
+        clip_path = pdf_canvas.beginPath()
+        clip_path.rect(x, y, width, height)
+        pdf_canvas.clipPath(clip_path, stroke=0, fill=0)
+        pdf_canvas.drawImage(
+            image_reader,
+            draw_x,
+            draw_y,
+            width=draw_width,
+            height=draw_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+        pdf_canvas.restoreState()
+        canvas_state_saved = False
+        return True
     except Exception:
         if canvas_state_saved:
             pdf_canvas.restoreState()
