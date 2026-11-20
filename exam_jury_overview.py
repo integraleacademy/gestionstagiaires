@@ -53,12 +53,18 @@ def summary(services, training):
             or training.get('partner_id') not in (None, '', services.INTEGRALE_PARTNER_ID)):
         return None
     members = []
+    exams = []
+    afc = afc_schedule.enabled(training)
     for examination in all_exams([training]):
-        for member in _members(services, examination):
-            if afc_schedule.enabled(training):
-                member['exam_label'] = exam.settings(examination)['level']
-            members.append(member)
-    return {'members': members}
+        roster = _members(services, examination)
+        if afc:
+            settings = exam.settings(examination)
+            label = settings['level']
+            for member in roster:
+                member['exam_label'] = label
+            exams.append({'label': label, 'date': settings.get('date'), 'members': roster})
+        members.extend(roster)
+    return {'members': members, 'exams': exams}
 
 
 def _members(services, training):

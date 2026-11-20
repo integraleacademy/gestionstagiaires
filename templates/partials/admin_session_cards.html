@@ -1,3 +1,26 @@
+{% macro jury_members(members) -%}
+      {% if members %}
+      <ul class="session-jury__members">
+        {% for member in members %}
+        <li class="session-jury__member">
+          <div class="session-jury__identity">{{ member.name }}{% if member.president %}<span class="session-jury__role">Président du jury</span>{% endif %}</div>
+          <div class="session-jury__badges">
+            {% if member.confirmed %}<span class="session-jury__badge session-jury__badge--sent">Présence confirmée</span>{% endif %}
+            {% if member.email_missing %}
+            <span class="session-jury__badge session-jury__badge--incomplete">⚠️ E-mail à renseigner</span>
+            {% else %}
+              {% for badge in member.badges %}
+              <span class="session-jury__badge session-jury__badge--{{ badge.state }}" title="{{ badge.detail }}" aria-label="{{ badge.detail }}" tabindex="0"><span aria-hidden="true">{{ badge.icon }}</span>{{ badge.label }}</span>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="session-jury__empty">Jury à renseigner</p>
+      {% endif %}
+{%- endmacro %}
   {% for s in sessions %}
   {% if s.deferred %}
   <template data-ended-session="{{ s.id }}"></template>
@@ -99,28 +122,17 @@
     <section class="session-jury" aria-label="Organisation et jury">
       <div class="session-jury__header">
         <strong>Organisation et jury</strong>
-        {% if s.exam_jury.members %}<span class="session-jury__count">{{ s.exam_jury.members|length }} membre{{ 's' if s.exam_jury.members|length > 1 else '' }}</span>{% endif %}
+        {% if s.exam_jury.members and not s.exam_jury.exams %}<span class="session-jury__count">{{ s.exam_jury.members|length }} membre{{ 's' if s.exam_jury.members|length > 1 else '' }}</span>{% endif %}
       </div>
-      {% if s.exam_jury.members %}
-      <ul class="session-jury__members">
-        {% for member in s.exam_jury.members %}
-        <li class="session-jury__member">
-          <div class="session-jury__identity">{{ member.name }}{% if member.exam_label %} · {{ member.exam_label }}{% endif %}{% if member.president %}<span class="session-jury__role">Président du jury</span>{% endif %}</div>
-          <div class="session-jury__badges">
-            {% if member.confirmed %}<span class="session-jury__badge session-jury__badge--sent">Présence confirmée</span>{% endif %}
-            {% if member.email_missing %}
-            <span class="session-jury__badge session-jury__badge--incomplete">⚠️ E-mail à renseigner</span>
-            {% else %}
-              {% for badge in member.badges %}
-              <span class="session-jury__badge session-jury__badge--{{ badge.state }}" title="{{ badge.detail }}" aria-label="{{ badge.detail }}" tabindex="0"><span aria-hidden="true">{{ badge.icon }}</span>{{ badge.label }}</span>
-              {% endfor %}
-            {% endif %}
-          </div>
-        </li>
+      {% if s.exam_jury.exams %}
+        {% for exam in s.exam_jury.exams %}
+        <div class="session-jury__exam" role="group" aria-label="Jury {{ exam.label }}">
+          <h3>Jury {{ exam.label }} {% if exam.date %}<time datetime="{{ exam.date }}">{{ exam.date|frdate }}</time>{% endif %}</h3>
+          {{ jury_members(exam.members) }}
+        </div>
         {% endfor %}
-      </ul>
       {% else %}
-      <p class="session-jury__empty">Jury à renseigner</p>
+        {{ jury_members(s.exam_jury.members) }}
       {% endif %}
     </section>
     {% endif %}

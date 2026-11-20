@@ -48,6 +48,15 @@ def card_html(client):
     return re.findall(r'<section class="session-jury".*?</section>', response.get_data(as_text=True), re.S)
 
 
+def test_afc_card_shows_both_juries_even_when_one_is_empty(overview):
+    client, training, _ = overview
+    training.update(afc_enabled=True, ssiap_exam_date='2027-02-15')
+    html, = card_html(client)
+    aps, ssiap = html.split('aria-label="Jury SSIAP 1"')
+    assert 'aria-label="Jury APS"' in aps and 'Alex JURY' in aps
+    assert '15/02/2027' in ssiap and 'Jury à renseigner' in ssiap and 'Alex JURY' not in ssiap
+
+
 @pytest.mark.parametrize('family', ['APS', 'A3P', 'DESP initial', 'SSIAP 1'])
 def test_names_and_independent_sent_badges_are_visible_on_session_page(overview, family):
     client, training, _ = overview

@@ -49,6 +49,8 @@ def locate(services, data, selector):
             continue
         exam_date = config.get('date') or ('' if selector['afc'] else services._session_get(training, 'exam_date'))
         dates_match = bool(selector['exam_date'] and selector['exam_date'] == exam_date)
+        if selector['afc'] and selector['exam_date'] and exam_date and not dates_match:
+            continue
         period_match = all(selector[key] and selector[key] == services._session_get(training, key)
                            for key in ('date_start', 'date_end'))
         if dates_match or (selector['target_id'] and selector['level']) or (

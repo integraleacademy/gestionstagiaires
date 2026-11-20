@@ -67,3 +67,23 @@ def test_domain_scoped_shared_key(monkeypatch):
     monkeypatch.setenv('AFC_ATTENDANCE_SYNC_TOKEN', 'fixture-only')
     assert platform_jury.integration_key() != 'fixture-only'
     assert len(platform_jury.integration_key()) == 64
+
+
+def test_afc_confirmations_are_independent_for_the_same_juror(setup):
+    _, training, selector, _, post = setup
+    from exam_jury_overview import summary
+    training.update(afc_enabled=True, ssiap_exam_date='2027-02-15')
+    selector.update(afc=True, target_id='target', level='APS', exam_date='2027-02-15')
+    assert post().status_code == 409
+    assert 'ssiap_exam' not in training and 'security_exam' not in training
+    selector['exam_date'] = training['exam_date']
+    assert post().status_code == 200
+    aps, ssiap = summary(app, training)['exams']
+    assert aps['label'] == 'APS' and aps['members'][0]['confirmed']
+    assert ssiap['label'] == 'SSIAP 1' and ssiap['members'] == []
+    selector.update(level='SSIAP 1', exam_date='2027-02-15')
+    assert post().status_code == 200
+    assert post().status_code == 200
+    for exam in summary(app, training)['exams']:
+        member, = exam['members']
+        assert member['confirmed'] and member['name'] == 'Camille EXEMPLE'
