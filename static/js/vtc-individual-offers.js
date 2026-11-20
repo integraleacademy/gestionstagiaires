@@ -1,56 +1,36 @@
-/* Individual VTC package selection; other training types never load this file. */
+/* Choose one limited VTC package. Clearing it restores the complete course. */
 (() => {
   "use strict";
   const panel = document.getElementById("vtcIndividualOffer");
-  const practice = document.getElementById("vtcPracticeOnly");
-  const vehicle = document.getElementById("vtcVehicleOnly");
+  if (!panel) return;
+  const options = panel.querySelector("fieldset");
+  if (options.disabled) return;
   const status = document.getElementById("vtcIndividualOfferStatus");
-  if (!panel || !practice || !vehicle) return;
-  let current = panel.dataset.currentOffer || "full";
-  let saving = false;
-  const draw = offer => {
-    practice.checked = offer === "practice";
-    vehicle.checked = offer === "vehicle";
-  };
-  const message = (text, error = false) => {
-    if (!status) return;
-    status.textContent = text;
-    status.style.color = error ? "#b91c1c" : "#475569";
-  };
-  const select = async offer => {
-    if (saving) return;
-    saving = true;
-    const previous = current;
+  const inputs = [...options.querySelectorAll("input[type=checkbox]")];
+  const draw = offer => inputs.forEach(input => { input.checked = input.value === offer; });
+
+  options.addEventListener("change", async event => {
+    const input = event.target;
+    if (!inputs.includes(input) || options.disabled) return;
+    const offer = input.checked ? input.value : "full";
     draw(offer);
-    practice.disabled = true;
-    vehicle.disabled = true;
-    message("Enregistrement de la formule VTC…");
+    options.disabled = true;
+    status.classList.remove("is-error");
+    status.textContent = "Enregistrement de la formule…";
     try {
       const response = await fetch(panel.dataset.updateUrl, {
         method: "POST",
-        credentials: "same-origin",
         headers: {"Content-Type": "application/json", "Accept": "application/json"},
         body: JSON.stringify({offer}),
       });
       const data = await response.json();
-      if (!response.ok || data.ok !== true)
-        throw new Error(data.error || "La formule VTC n'a pas été sauvegardée.");
-      current = data.offer;
-      draw(current);
-      message("Formule enregistrée. Mise à jour de la convention, du tarif et des automatisations…");
-      // Re-render the PDF actions and the financing panel on the same record.
+      if (!response.ok || !data.ok) throw new Error(data.error || "La formule n’a pas pu être enregistrée.");
       window.location.reload();
     } catch (error) {
-      draw(previous);
-      message(error.message || "Erreur d'enregistrement.", true);
-    } finally {
-      saving = false;
-      const readOnly = panel.dataset.readOnly === "1";
-      practice.disabled = readOnly;
-      vehicle.disabled = readOnly;
+      draw(panel.dataset.currentOffer);
+      status.classList.add("is-error");
+      status.textContent = error.message || "La formule n’a pas pu être enregistrée.";
+      options.disabled = false;
     }
-  };
-  practice.addEventListener("change", () => select(practice.checked ? "practice" : "full"));
-  vehicle.addEventListener("change", () => select(vehicle.checked ? "vehicle" : "full"));
-  draw(current);
+  });
 })();

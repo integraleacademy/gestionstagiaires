@@ -81,15 +81,50 @@ document.addEventListener("submit", async (event)=>{
   if(!form || form.dataset.yousignRegenerateConfirmed === "1") return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  const message = "Annuler la demande Yousign actuelle et générer une nouvelle convention ? L’ancienne signature ne sera plus considérée comme valide.";
+  const signed = form.dataset.conventionSigned === "1";
+  const message = signed
+    ? "Créer une nouvelle demande de signature ? La convention déjà signée sera archivée."
+    : "Annuler la demande de signature actuelle et envoyer une nouvelle convention au stagiaire ?";
   const ok = window.AppModal
-    ? await window.AppModal.confirm({type:"warning", title:"Annuler et régénérer la convention", message, primaryText:"Annuler et régénérer", secondaryText:"Conserver"})
+    ? await window.AppModal.confirm({type:"warning", title:signed ? "Nouvelle version de la convention" : "Annuler et régénérer la convention", message, primaryText:signed ? "Créer une nouvelle version" : "Annuler et régénérer", secondaryText:"Conserver"})
     : window.confirm(message);
   if(ok){
     form.dataset.yousignRegenerateConfirmed = "1";
     form.requestSubmit ? form.requestSubmit() : form.submit();
   }
 }, true);
+
+const conventionCancelButtons = document.querySelectorAll("[data-cancel-convention]");
+conventionCancelButtons.forEach(button => {
+  button.addEventListener("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const message = "Le lien de signature sera désactivé. Vous pourrez ensuite préparer et envoyer une nouvelle convention.";
+    const confirmed = window.AppModal
+      ? await window.AppModal.confirm({type: "warning", title: "Annuler la demande de signature ?",
+          message, primaryText: "Confirmer l’annulation", secondaryText: "Conserver la demande"})
+      : window.confirm(message);
+    if (!confirmed) return;
+    conventionCancelButtons.forEach(control => { control.disabled = true; });
+    const feedback = button.nextElementSibling;
+    feedback.classList.remove("is-error");
+    feedback.textContent = "Annulation en cours…";
+    try {
+      const response = await fetch(button.dataset.cancelConvention, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        body: JSON.stringify({request_id: button.dataset.requestId}),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) throw new Error(result.error || "L’annulation n’a pas pu être confirmée.");
+      window.location.reload();
+    } catch (error) {
+      feedback.classList.add("is-error");
+      feedback.textContent = error.message || "Connexion interrompue. Réessayez dans quelques instants.";
+      conventionCancelButtons.forEach(control => { control.disabled = false; });
+    }
+  });
+});
 
 document.querySelectorAll(".automation-loading-form").forEach((form)=>{
   form.addEventListener("submit", async (event)=>{
