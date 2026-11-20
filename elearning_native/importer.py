@@ -17,6 +17,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Tuple
 from urllib.parse import urlparse
 
+from campus import db as learning_db
+from campus import catalog as shared_catalog
 from .videos import bundled_asset_path, enrich_course
 from .academy import load_bundled_course, curriculum_ids, bundled_asset
 from . import vtc, a3p, mac_aps
@@ -929,11 +931,15 @@ class CourseCatalog:
         self.root = Path(root).resolve()
 
     def import_zip(self, archive_path: os.PathLike[str] | str, *, archive_source: bool = True) -> Dict[str, Any]:
-        return import_easygenerator_course(
+        course = import_easygenerator_course(
             archive_path,
             self.root,
             archive_source=archive_source,
         )
+
+        if learning_db.enabled():
+            shared_catalog.publish(self.root, course['id'])
+        return course
 
     def _course_root(self, course_id: str) -> Path:
         if not _SAFE_COURSE_ID_RE.fullmatch(str(course_id or "")):
@@ -957,6 +963,8 @@ class CourseCatalog:
                 raise CourseImportError("Version A3P introuvable.")
             return bundled
         if version is None:
+            if learning_db.enabled():
+                shared_catalog.materialize(self.root, course_id + "/current.json")
             try:
                 pointer = json.loads((course_root / "current.json").read_text(encoding="utf-8"))
                 version = str(pointer["version"])
@@ -965,6 +973,8 @@ class CourseCatalog:
         safe_version = _safe_identifier(version, fallback="")
         if not safe_version or safe_version != version:
             raise CourseImportError("Version de cours invalide.")
+        if learning_db.enabled():
+            shared_catalog.materialize(self.root, f"{course_id}/{safe_version}/course.json")
         path = course_root / safe_version / "course.json"
         try:
             course = json.loads(path.read_text(encoding="utf-8"))
@@ -1010,6 +1020,8 @@ class CourseCatalog:
         path = (course_root / safe_version / "assets").joinpath(*PurePosixPath(normalized).parts)
         expected_root = (course_root / safe_version / "assets").resolve()
         resolved = path.resolve()
+        if expected_root in resolved.parents and learning_db.enabled() and not resolved.is_file():
+            shared_catalog.materialize(self.root, f"{course_id}/{safe_version}/assets/{normalized}")
         if expected_root not in resolved.parents or not resolved.is_file():
             raise CourseImportError("Média introuvable.")
         return resolved

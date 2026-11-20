@@ -16,6 +16,7 @@ import copy
 import json
 from pathlib import Path
 import sqlite3
+from campus import db as learning_db
 
 from .importer import CourseImportError
 from .paths import assigned_modules, allows_free_module_navigation, path_revision, project_course, project_progress, required_activity_order
@@ -49,9 +50,9 @@ def _database_path(tracking_store):
 
 
 def _existing(database_path, key):
-    if not database_path.is_file():
+    if not learning_db.exists(database_path):
         return None
-    with sqlite3.connect(database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as connection:
+    with learning_db.connect(database_path, readonly=True, timeout=15) as connection:
         connection.row_factory = sqlite3.Row
         if not connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (TABLE,)).fetchone():
             return None

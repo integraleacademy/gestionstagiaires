@@ -10,6 +10,7 @@ import datetime as dt
 import json
 import re
 import sqlite3
+from campus import db as learning_db
 from functools import lru_cache
 from pathlib import Path
 from .academy import ROOT, curriculum_manifest
@@ -86,7 +87,7 @@ class ExamStore:
 
     @contextmanager
     def connect(self):
-        connection = sqlite3.connect(str(self.path), timeout=15)
+        connection = learning_db.connect(self.path, timeout=15)
         connection.row_factory = sqlite3.Row
         try:
             with connection:
@@ -101,7 +102,7 @@ class ExamStore:
         date = dt.datetime.now(dt.timezone.utc).isoformat()
         with self.connect() as db:
             # INSERT OR IGNORE makes network retries idempotent across processes.
-            db.execute('INSERT OR IGNORE INTO aps_exam_attempts VALUES (?,?,?,?,?,?,?)',
+            db.execute('INSERT INTO aps_exam_attempts VALUES (?,?,?,?,?,?,?) ON CONFLICT DO NOTHING',
                        (*key, date, json.dumps(result, ensure_ascii=False)))
             row = db.execute('''SELECT submitted_at, result_json FROM aps_exam_attempts
                 WHERE session_id=? AND trainee_id=? AND exam_id=? AND version=? AND attempt_id=?''', key).fetchone()

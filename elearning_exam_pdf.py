@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import sqlite3
+from campus import db as learning_db
 from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
 
@@ -15,9 +16,9 @@ from elearning_exam_reporting import number_label, recorded_seconds
 def read_stored_attempt(database_path, session_id, learner_id, exam_id, version, attempt_id):
     """The caller must first authorize the order and its pinned exam/version."""
     path = Path(database_path)
-    if not path.is_file():
+    if not learning_db.exists(path):
         return None
-    with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=15) as db:
+    with learning_db.connect(path, readonly=True, timeout=15) as db:
         db.row_factory = sqlite3.Row
         if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='aps_exam_attempts'").fetchone():
             return None

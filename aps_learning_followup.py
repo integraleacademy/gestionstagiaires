@@ -1,6 +1,8 @@
 """Read-only APS roster summaries and contextual, durable daily follow-up."""
 from __future__ import annotations
 
+from campus.links import origin as campus_origin
+
 import datetime as dt
 from contextlib import closing, contextmanager
 import hashlib
@@ -11,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+from campus import db as learning_db
 import statistics
 import uuid
 from urllib.parse import quote
@@ -56,11 +59,11 @@ def eligible(host, training, person, day):
 
 def live_records(reader, session_id, now=None):
     """Only a fresh, active, non-ended tracking lease means LIVE."""
-    if not reader.database_path.is_file():
+    if not learning_db.exists(reader.database_path):
         return set()
     epoch = clock(now).timestamp()
     try:
-        with closing(sqlite3.connect(reader.database_path.as_uri() + '?mode=ro', uri=True, timeout=2)) as db:
+        with closing(learning_db.connect(reader.database_path, readonly=True, timeout=2)) as db:
             rows = db.execute('''SELECT t.trainee_id, t.course_id, t.course_version
                 FROM tracking_sessions t JOIN learner_course_progress p ON p.active_tracking_session_id = t.id
                 WHERE t.session_id = ? AND t.ended_at IS NULL AND t.status = 'open'
@@ -383,7 +386,7 @@ def message(host, training, person, report, day, *, cohort=None):
     else:
         workload_note = (f"Il reste {days} jour{'s' if days > 1 else ''}, aujourd’hui inclus. Objectif indicatif par jour : {time_label(state['daily_seconds'])} de temps requis, "
                          'à compléter par toutes les activités non terminées. Ce calcul ne garantit pas à lui seul la validation du parcours.')
-    origin = host.PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')
+    origin = campus_origin(host.PUBLIC_STUDENT_PORTAL_BASE)
     access_url = origin + '/espace/' + quote(str(person.get('public_token') or ''), safe='') + '/elearning'
     training_label = 'Votre formation agent de prévention et de sécurité (APS)'
     subject_note = {'critical': 'ALERTE CRITIQUE — action requise aujourd’hui',

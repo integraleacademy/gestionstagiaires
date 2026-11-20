@@ -6,6 +6,7 @@ import json
 import math
 import os
 import sqlite3
+from campus import db as learning_db
 import threading
 import time
 import uuid
@@ -35,7 +36,7 @@ def idle_timeout_seconds(course_id: str) -> float:
     return APS_IDLE_TIMEOUT_SECONDS if course_id in APS_TRACKED_COURSES else IDLE_TIMEOUT_SECONDS
 
 _INITIALIZE_LOCK = threading.Lock()
-_INITIALIZED_DATABASES: set[str] = set()
+_INITIALIZED_DATABASES: set[str | tuple[str, int]] = set()
 
 
 class TrackingError(ValueError):
@@ -76,7 +77,7 @@ class NativeElearningStore:
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(str(self.database_path), timeout=15)
+        connection = learning_db.connect(self.database_path, timeout=15)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA busy_timeout = 15000")
@@ -84,8 +85,10 @@ class NativeElearningStore:
 
     def _ensure_schema(self) -> None:
         key = str(self.database_path)
+        if learning_db.enabled(self.database_path):
+            key = (key, id(learning_db.pool()))
         with _INITIALIZE_LOCK:
-            if key in _INITIALIZED_DATABASES and self.database_path.is_file():
+            if key in _INITIALIZED_DATABASES and learning_db.exists(self.database_path):
                 return
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
             with self._connect() as connection:

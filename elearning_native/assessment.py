@@ -89,8 +89,9 @@ def record_attempt(connection, access, *, activity_id, item_id, kind, answer,
     cursor = connection.execute('''INSERT INTO learner_assessment_attempts (
         session_id, trainee_id, course_id, course_version, activity_id, item_id, kind,
         attempt_number, request_id, answer_json, correct, submitted_at, competency, revision
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id''',
         (*scope, number, request_id or uuid.uuid4().hex, encoded, int(correct), submitted_at, str(competency)[:500], str(revision)[:128]))
+    attempt_id = cursor.fetchone()[0]
     diagnostics = _decode(progress['assessment_diagnostics_json'], {})
     bucket = diagnostics.setdefault(kind, {})
     if kind == 'practice':
@@ -106,7 +107,7 @@ def record_attempt(connection, access, *, activity_id, item_id, kind, answer,
     connection.execute('''UPDATE learner_course_progress SET assessment_diagnostics_json=?, updated_at=?
         WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
         (json.dumps(diagnostics, ensure_ascii=False, separators=(',', ':')), submitted_at, *key))
-    return {'id': cursor.lastrowid, 'activity_id': str(activity_id), 'item_id': str(item_id), 'kind': kind,
+    return {'id': attempt_id, 'activity_id': str(activity_id), 'item_id': str(item_id), 'kind': kind,
             'attempt_number': number, 'answer': answer, 'correct': correct, 'submitted_at': submitted_at,
             'competency': str(competency)[:500], 'revision': str(revision)[:128]}
 

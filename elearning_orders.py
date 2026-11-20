@@ -8,6 +8,8 @@ Learner records stay outside administrative trainee sessions.
 """
 from __future__ import annotations
 
+from campus.links import origin as campus_origin
+
 import copy
 import datetime as dt
 import hashlib
@@ -288,7 +290,8 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False, sta
     commerce._save(host, order, emails=emails)
     paid = entitled(order)
     title = "Votre formation vous attend" if person else "Votre commande est confirmée"
-    link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
+    link = (campus_origin(base_url(host)) + "/apprendre/" + access_token(host, order, person) if person
+            else base_url(host) + "/admin/organisme/e-learning/commandes/" + order["id"])
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
     subject = ("Votre accès personnel " if person else "Commande confirmée · E-learning ") + (course_full_label(order["course_code"]) if person else course_label(order["course_code"])) + " · " + (brand["name"] if person else "Intégrale Connect")
     if staff:

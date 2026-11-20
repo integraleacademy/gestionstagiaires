@@ -124,13 +124,13 @@ def _verify_signed(raw_token: Any) -> Dict[str, Any]:
     return payload
 
 
-def _verify_access(raw_token: Any) -> Dict[str, Any]:
+def _verify_access(raw_token: Any, public_is_authed) -> Dict[str, Any]:
     payload = _verify_signed(raw_token)
     nonce = str(payload.get("nonce") or "")
     if not nonce or not hmac.compare_digest(nonce, str(session.get("native_elearning_nonce") or "")):
         abort(401, "Session e-learning expirée.")
     public_token = str(payload.get("public_token") or "")
-    if not session.get("admin_logged_in") and not session.get(f"public_auth_{public_token}"):
+    if not session.get("admin_logged_in") and not public_is_authed(public_token):
         abort(401, "Session stagiaire expirée.")
     for field in ("session_id", "trainee_id", "course_id", "course_version"):
         if not str(payload.get(field) or "").strip():
@@ -370,8 +370,14 @@ def create_native_elearning_blueprint(
     public_is_authed: Callable[[str], bool],
     is_aps_elearning_session: Callable[[Dict[str, Any]], bool],
     session_start_date: Callable[[Dict[str, Any]], Optional[dt.date]],
+    learner_only: bool = False,
 ) -> Blueprint:
-    blueprint = Blueprint("native_elearning", __name__)
+    class LearnerBlueprint(Blueprint):
+        def add_url_rule(self, rule, *args, **kwargs):
+            if rule.startswith(("/espace/", "/api/espace/", "/api/elearning/", "/elearning/assets/")):
+                return super().add_url_rule(rule, *args, **kwargs)
+
+    blueprint = (LearnerBlueprint if learner_only else Blueprint)("native_elearning", __name__)
     # Cache only successful authorization timestamps, never administrative data
     # or course bodies. Heartbeats must not parse the large data.json every 15s.
     access_checks: OrderedDict[tuple, float] = OrderedDict()
@@ -500,7 +506,8 @@ def create_native_elearning_blueprint(
         if not public_is_authed(token):
             abort(401)
         try:
-            session_obj = effective_learner_session(session_obj, trainee)
+            if not learner_only:
+                session_obj = effective_learner_session(session_obj, trainee)
         except CourseImportError as exc:
             abort(403, str(exc))
         if not (session_obj.get("individual_aps_access") or is_aps_elearning_session(session_obj)):
@@ -562,7 +569,7 @@ def create_native_elearning_blueprint(
         )), bool(session.get("admin_logged_in")))
         with access_checks_lock:
             recently_checked = time.monotonic() - access_checks.get(cache_key, float("-inf")) < 60
-        if request.endpoint == "native_elearning.tracking_heartbeat" and recently_checked and access.get("section_ids") and not str(access.get("public_token", "")).startswith("el_"):
+        if not learner_only and request.endpoint == "native_elearning.tracking_heartbeat" and recently_checked and access.get("section_ids") and not str(access.get("public_token", "")).startswith("el_"):
             try:
                 return project_course(catalog().load_course(str(access["course_id"]), str(access["course_version"])),
                                       {"section_ids": access["section_ids"], "title": access.get("module_title"),
@@ -2340,7 +2347,7 @@ def create_native_elearning_blueprint(
         payload = request.get_json(silent=True) or {}
         if not isinstance(payload, dict):
             abort(400)
-        access = _verify_access(payload.get("access_token"))
+        access = _verify_access(payload.get("access_token"), public_is_authed)
         course = course_for_access(access)
         if access.get('exam_id'):
             exam_activity = FINAL_ACTIVITY_ID if course['id'] == FINAL_COURSE_ID else module_exam_activity_id(course)

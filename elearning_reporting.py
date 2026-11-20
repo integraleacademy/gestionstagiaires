@@ -11,6 +11,7 @@ import datetime as dt
 import io
 import json
 import sqlite3
+from campus import db as learning_db
 from pathlib import Path
 from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
@@ -78,7 +79,7 @@ class ProgressReader:
 
     def rows(self, table, session_id, learner_id):
         """Use existing history only: no schema creation, no learner mutation."""
-        if not self.database_path.is_file():
+        if not learning_db.exists(self.database_path):
             return []
         queries = {
             "progress": """SELECT * FROM learner_course_progress
@@ -90,7 +91,7 @@ class ProgressReader:
                 WHERE session_id = ? AND trainee_id = ? ORDER BY submitted_at DESC, attempt_id DESC""",
         }
         table_name = {"progress": "learner_course_progress", "connections": "tracking_sessions", "exams": "aps_exam_attempts"}[table]
-        with sqlite3.connect(self.database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as db:
+        with learning_db.connect(self.database_path, readonly=True, timeout=15) as db:
             db.row_factory = sqlite3.Row
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table_name,)).fetchone()
             records = [dict(row) for row in db.execute(queries[table], (session_id, learner_id))] if exists else []
@@ -236,7 +237,7 @@ class ProgressReader:
                             # VTC corrections use the tracked production attempt
                             # projection above; APS analyses retain their own
                             # history and grading schema in production_ai.sqlite3.
-                            if activity.get("vtc", {}).get("kind") != "production" and self.ai_path.is_file():
+                            if activity.get("vtc", {}).get("kind") != "production" and learning_db.exists(self.ai_path):
                                 from elearning_native.production_ai import read_analyses
                                 rows[-1]["production"]["ai"] = read_analyses(self.ai_path, access, activity["id"])
                     required_rows = [row for row in rows if not row["optional"]]
@@ -351,11 +352,11 @@ class ProgressReader:
 
     def assessment_attempts(self, access, course):
         """Return the purchased module's recorded checks without creating a DB."""
-        if not self.database_path.is_file():
+        if not learning_db.exists(self.database_path):
             return []
         from elearning_native.assessment import describe_history, history_for
         selected = set(course["activity_order"])
-        with sqlite3.connect(self.database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as db:
+        with learning_db.connect(self.database_path, readonly=True, timeout=15) as db:
             db.row_factory = sqlite3.Row
             if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='learner_assessment_attempts'").fetchone():
                 return []

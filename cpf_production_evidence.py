@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import re
 import sqlite3
+from campus import db as learning_db
 from zoneinfo import ZoneInfo
 
 
@@ -66,7 +67,7 @@ def read_evidence(legacy, requested, *, data=None):
     paris = ZoneInfo("Europe/Paris")
     today = dt.datetime.now(paris).date().isoformat()
     path = Path(legacy.DATA_FILE).parent/"native_elearning"/"tracking.sqlite3"
-    db = sqlite3.connect(path.resolve().as_uri()+"?mode=ro", uri=True, timeout=2) if path.is_file() else None
+    db = learning_db.connect(path, readonly=True, timeout=2) if learning_db.exists(path) else None
     try:
         has_tracking = db and db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tracking_events'").fetchone()

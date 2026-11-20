@@ -16,6 +16,7 @@ import os
 import re
 import socket
 import sqlite3
+from campus import db as learning_db
 import threading
 import time
 import uuid
@@ -455,9 +456,9 @@ def read_analyses(database_path: os.PathLike[str] | str, access: Mapping[str, An
     owner, course_id, version = ProductionAIService._scope(access)
     path = Path(database_path).resolve()
     empty = {"latest": None, "history": []}
-    if not path.is_file():
+    if not learning_db.exists(path):
         return empty
-    with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=10)) as connection:
+    with closing(learning_db.connect(path, readonly=True, timeout=10)) as connection:
         connection.row_factory = sqlite3.Row
         if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='production_ai_jobs'").fetchone() is None:
             return empty
@@ -494,7 +495,7 @@ class ProductionAIService:
         return (self._api_key if self._api_key is not None else os.getenv("OPENAI_API_KEY", "")).strip()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(str(self.database_path), timeout=10)
+        connection = learning_db.connect(self.database_path, timeout=10)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA busy_timeout = 10000")
         return connection

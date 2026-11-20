@@ -1,0 +1,5 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Campus{% endblock %} · Intégrale Academy</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/campus.css') }}"></head>
+<body><header class="bar"><img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"><strong>Campus</strong></header>
+<main>{% block content %}{% endblock %}</main></body></html>

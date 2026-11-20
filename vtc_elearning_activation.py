@@ -6,6 +6,8 @@ Network delivery happens outside the short atomic claim/finalize transactions.
 """
 from __future__ import annotations
 
+from campus.links import origin as campus_origin
+
 import copy
 import datetime as dt
 import hashlib
@@ -143,7 +145,7 @@ def _find(host, data, session_id, trainee_id):
 
 
 def message(host, trainee):
-    origin = host.PUBLIC_STUDENT_PORTAL_BASE.rstrip("/")
+    origin = campus_origin(host.PUBLIC_STUDENT_PORTAL_BASE)
     link = origin + "/espace/" + quote(str(trainee["public_token"]), safe="")
     subject = "Votre espace e-learning VTC est prêt 🚘"
     first_name = str(trainee.get("first_name") or "").strip()

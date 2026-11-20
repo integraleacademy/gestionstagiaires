@@ -1,0 +1,11 @@
+{% extends "campus/base.html" %}{% block title %}Mon parcours{% endblock %}
+{% block content %}<div class="top"><div><p>{{ training.name }}</p><h1>Bonjour {{ learner.first_name }}</h1></div>
+<form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="subtle">Déconnexion</button></form></div>
+{% if native or legacy_url %}<section class="card"><h2>Mon e-learning</h2>
+{% if accessible %}<a class="action" href="{{ url_for('native_elearning.learner_path',token=token) if native else legacy_url }}">Accéder à mon parcours</a>
+{% else %}<p>Le parcours ouvrira à la date prévue pour votre formation.</p>{% endif %}</section>{% endif %}
+{% if uv %}<section id="questionnaires-uv" class="card"><h2>Questionnaires de fin d’UV</h2><p>{{ uv.notice }}</p>
+{% if not uv.available %}<p>Ouverture prévue au début du présentiel{% if uv.start_label %}, le {{ uv.start_label }}{% endif %}.</p>
+{% else %}<ul>{% for unit in uv.units %}<li><span><b>UV {{ unit.number }}</b> · {{ unit.title }}</span>
+<a href="{{ url_for('public_uv_questionnaire',token=token,number=unit.number) }}">{{ 'Voir la correction' if unit.completed else 'Reprendre' if unit.in_progress else 'Ouvrir' }}</a></li>{% endfor %}</ul>{% endif %}</section>{% endif %}
+{% if dossier_url %}<a class="dossier" href="{{ dossier_url }}">Mon dossier administratif</a>{% endif %}{% endblock %}

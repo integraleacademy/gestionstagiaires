@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from campus import db as learning_db
 import tempfile
 import threading
 import time
@@ -66,8 +67,8 @@ class UVQuestionnaireStore:
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(
-            str(self.database_path), timeout=_BUSY_TIMEOUT_SECONDS,
+        connection = learning_db.connect(
+            self.database_path, timeout=_BUSY_TIMEOUT_SECONDS,
             isolation_level=None,
         )
         try:
@@ -82,6 +83,8 @@ class UVQuestionnaireStore:
         return connection
 
     def _identity(self) -> tuple[int, int] | None:
+        if learning_db.enabled(self.database_path):
+            return (os.getpid(), id(learning_db.pool()))
         try:
             stat = self.database_path.stat()
         except FileNotFoundError:
@@ -98,9 +101,12 @@ class UVQuestionnaireStore:
             while True:
                 try:
                     with closing(self._connect()) as connection:
-                        mode = connection.execute("PRAGMA journal_mode = WAL").fetchone()[0]
-                        if str(mode).lower() != "wal":
-                            raise RuntimeError("UV questionnaire storage requires SQLite WAL mode.")
+                        if learning_db.enabled(self.database_path):
+                            connection.execute("BEGIN IMMEDIATE")
+                        else:
+                            mode = connection.execute("PRAGMA journal_mode = WAL").fetchone()[0]
+                            if str(mode).lower() != "wal":
+                                raise RuntimeError("UV questionnaire storage requires SQLite WAL mode.")
                         connection.execute(
                             """CREATE TABLE IF NOT EXISTS uv_questionnaire_state (
                                 partner_id TEXT NOT NULL,
@@ -123,6 +129,7 @@ class UVQuestionnaireStore:
                                   REFERENCES uv_questionnaire_state (partner_id, session_id, trainee_id)
                             ) WITHOUT ROWID"""
                         )
+                        connection.commit()
                     identity = self._identity()
                     if identity is not None:
                         _INITIALIZED_DATABASES[path] = identity
@@ -283,7 +290,7 @@ class UVQuestionnaireStore:
         """
         destination = Path(destination).resolve()
         if (destination == self.database_path or
-                (destination.exists() and os.path.samefile(destination, self.database_path))):
+                (destination.exists() and self.database_path.exists() and os.path.samefile(destination, self.database_path))):
             raise ValueError("The UV backup destination must differ from the live database.")
         destination.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = tempfile.mkstemp(
@@ -291,9 +298,21 @@ class UVQuestionnaireStore:
         )
         os.close(descriptor)
         try:
+            managed = learning_db.enabled(self.database_path)
+            if managed:
+                UVQuestionnaireStore(temporary_name)
             with closing(self._connect()) as source, closing(sqlite3.connect(temporary_name)) as target:
                 target.execute("PRAGMA synchronous = FULL")
-                source.backup(target, pages=256, sleep=0.025)
+                if managed:
+                    source.execute("BEGIN")
+                    for table in ("uv_questionnaire_state", "uv_questionnaire_alias"):
+                        rows = source.execute(f"SELECT * FROM {table}")
+                        for row in rows:
+                            placeholders = ",".join("?" for _ in row)
+                            target.execute(f"INSERT INTO {table} VALUES ({placeholders})", tuple(row))
+                    target.commit()
+                else:
+                    source.backup(target, pages=256, sleep=0.025)
                 # Publish one complete file, never a snapshot requiring sidecars.
                 target.execute("PRAGMA journal_mode = DELETE")
             with open(temporary_name, "rb") as snapshot:
