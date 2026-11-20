@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#11263f"><title>Vérification de diplôme SSIAP · Intégrale Academy</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/ssiap-verification.css') }}">
+</head>
+<body>
+  <header class="mast"><div class="brand"><img src="{{ url_for('static', filename='logo-integrale.png') }}" width="44" height="44" alt=""><span>Intégrale <b>Academy</b></span></div><span class="mast-title">Vérification de diplôme</span></header>
+  <main>
+    {% if diploma %}
+    <article class="certificate">
+      <header class="cover">
+        <div class="seal-status"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 1 2.8 1.9 3.4.1 1.3 3.1 2.6 2.2-.7 3.3.7 3.3-2.6 2.2-1.3 3.1-3.4.1L12 22.3l-2.8-1.9-3.4-.1-1.3-3.1-2.6-2.2.7-3.3-.7-3.3 2.6-2.2L5.8 3l3.4-.1z"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m7.8 11.9 2.7 2.7 5.8-6"/></svg>Diplôme vérifié</div>
+        <h1>{{ diploma.level }}</h1><p>{{ levels[diploma.level] }}</p>
+      </header>
+      <section class="identity">
+        <h2>Titulaire du diplôme</h2><p class="holder">{{ diploma.first_name }} <strong>{{ diploma.last_name }}</strong></p>
+        <dl><div><dt>Date de naissance</dt><dd>{{ diploma.birth_date }}</dd></div><div><dt>Lieu de naissance</dt><dd>{{ diploma.birth_place }}</dd></div></dl>
+      </section>
+      <section class="facts">
+        <h2>Informations du diplôme</h2>
+        <dl><div><dt>Numéro du diplôme</dt><dd class="reference">{{ diploma.number }}</dd></div>
+          <div><dt>Numéro d’examen</dt><dd class="reference">{{ diploma.exam_number }}</dd></div>
+          <div><dt>Date d’examen</dt><dd>{{ diploma.exam_date }}</dd></div>
+          {% if diploma.exam_place %}<div><dt>Lieu d’examen</dt><dd>{{ diploma.exam_place }}</dd></div>{% endif %}
+          <div><dt>Délivré le</dt><dd>{{ diploma.issue_date }}{% if diploma.issue_place %} · {{ diploma.issue_place }}{% endif %}</dd></div>
+          <div><dt>Organisme émetteur</dt><dd>{{ diploma.issuer }}</dd></div>
+        </dl>
+      </section>
+      <footer class="footnote">Ces informations correspondent au diplôme enregistré dans le registre d’Intégrale Academy.</footer>
+    </article>
+    {% else %}
+    <article class="certificate unavailable"><header class="cover"><h1>Diplôme introuvable</h1><p>Ce lien ne correspond à aucun diplôme vérifiable dans le registre.</p></header>
+      <section class="identity"><h2>Vérifier le document</h2><p>Scannez le QR code de l’exemplaire le plus récent. Si le doute persiste, contactez Intégrale Academy avec le numéro inscrit sur votre diplôme.</p><a href="tel:+33422470768">04 22 47 07 68</a></section>
+    </article>
+    {% endif %}
+  </main>
+</body>
+</html>

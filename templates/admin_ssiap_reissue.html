@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-registry.css') }}">{% endblock %}
+{% macro input(name, label, type='text', required=false, limit=120, wide=false) %}
+  <label{% if wide %} class="sr-wide"{% endif %}>{{ label }}{% if required %} *{% endif %}
+    <input type="{{ type }}" name="{{ name }}" value="{{ values.get(name,'') }}" maxlength="{{ limit }}"{% if required %} required{% endif %}>
+  </label>
+{% endmacro %}
+{% block content %}
+<main class="sr-registry sr-formpage">
+  <a class="sr-back" href="{{ url_for('admin_ssiap_registry') }}">← Registre des diplômes</a>
+  <header class="sr-head"><div><h1>{{ 'Corriger le diplôme' if key else 'Régénérer un diplôme' }}</h1><p>Reprenez les informations du diplôme d’origine. Vous pouvez saisir un ancien titulaire sans créer de fiche stagiaire.</p></div></header>
+  {% if error %}<p class="sr-error" role="alert">{{ error }}{% if not key %} Sélectionnez à nouveau la photo avant de valider.{% endif %}</p>{% endif %}
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if key %}<input type="hidden" name="version" value="{{ values.get('version','') }}">{% endif %}
+    <fieldset class="sr-panel"><legend>Titulaire</legend><div class="sr-fields">
+      <label>Civilité *<select name="civility" required>{% for v in ('Monsieur','Madame') %}<option {% if values.civility == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+      {{ input('first_name','Prénom',required=true) }}{{ input('last_name','Nom',required=true) }}
+      {{ input('birth_date','Date de naissance','date',true) }}{{ input('birth_city','Ville de naissance',required=true) }}
+      {{ input('birth_department','Département de naissance') }}{{ input('birth_country','Pays de naissance',required=true) }}
+      <div class="sr-photo sr-wide"><img id="sr-portrait" alt="Aperçu de la photo du diplôme" {% if key %}src="{{ url_for('admin_ssiap_manual_photo',key=key) }}"{% else %}hidden{% endif %}>
+        <label>Photo d’identité{% if not key %} *{% endif %}<input id="sr-upload" type="file" name="photo" accept="image/jpeg,image/png,image/webp" {% if not key %}required{% endif %}><small>JPG, PNG ou WebP · 25 Mo maximum. {% if key %}Choisissez un fichier pour remplacer la photo actuelle.{% endif %}</small></label>
+      </div>
+    </div></fieldset>
+    <fieldset class="sr-panel"><legend>Examen et délivrance</legend><div class="sr-fields">
+      <label>Niveau *<select name="level" required>{% for level in levels %}<option {% if values.level == level %}selected{% endif %}>{{ level }}</option>{% endfor %}</select></label>
+      {{ input('number','Numéro du diplôme d’origine',required=true,limit=90) }}{{ input('exam_number','Numéro d’examen',required=true,limit=90) }}
+      {{ input('exam_date','Date de l’examen','date',true) }}{{ input('exam_place','Lieu de l’examen',limit=160) }}
+      {{ input('issue_date','Date de délivrance d’origine','date',true) }}{{ input('issue_place','Lieu de délivrance',required=true) }}
+    </div></fieldset>
+    <fieldset class="sr-panel"><legend>Mentions du diplôme d’origine</legend><div class="sr-fields">
+      {{ input('issuer','Organisme de formation',required=true,limit=150) }}{{ input('registration','Référence de certification (RS)',limit=140) }}
+      {{ input('approval','Agrément préfectoral en vigueur à l’époque',limit=250,wide=true) }}
+      {{ input('issuer_details','Coordonnées et références de l’organisme (adresse, SIRET, NDA…)',limit=250,wide=true) }}
+      {{ input('representative','Nom et qualité du représentant du centre',limit=140) }}{{ input('jury_representative','Nom et qualité du représentant du DDSIS',limit=140) }}
+    </div></fieldset>
+    <div class="sr-save"><span>* Champs obligatoires</span><button class="sr-primary" type="submit">{{ 'Enregistrer la correction' if key else 'Régénérer le diplôme' }}</button></div>
+  </form>
+</main>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static',filename='js/ssiap-archive-photo.js') }}" defer></script>{% endblock %}

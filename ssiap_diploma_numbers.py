@@ -50,29 +50,37 @@ def change_number(services, training, trainee, number, reason):
             "previous_number": old, "number": number}
 
 
-def reconcile(services, data, training, *, deleted=(), years=()):
-    """Compact affected annual series in their existing issuance order.
+def sequence_key(level, year):
+    # Preserve the original keys used for SSIAP 1.
+    return str(year) if level == "1" else f"{level}-{year}"
 
-    Keep the starting offset of an imported series (e.g. 8 after seven historical
-    diplomas). Include revoked/deleted numbers when finding that starting point,
-    so withdrawing the first or last diploma also releases its number.
-    """
+
+def reserved_numbers(services, data, training):
+    if (training.get("partner_id") or services.INTEGRALE_PARTNER_ID) != services.INTEGRALE_PARTNER_ID:
+        return set()
+    return {record["number"].upper() for record in data.get("ssiap_manual_diplomas", {}).values()}
+
+
+def reconcile(services, data, training, *, deleted=(), years=()):
+    """Compact an annual series while keeping historical manual references fixed."""
     parse = services.SSIAP_DIPLOMA_NUMBER_RE.fullmatch
     affected = numbering_trainees(services, training) + list(deleted)
     matches = [m for t in affected if (m := parse(str(t.get("ssiap_diploma_number") or "").strip()))]
-    years = set(years) | {int(m.group(1)) for m in matches}
-    if not years:
+    level = exam.settings(exam.for_family(training, "ssiap"))["level"][-1]
+    series = {(level, int(year)) for year in years} | {(m["level"], int(m["year"])) for m in matches}
+    if not series:
         return []
     trainings, sequences = scope(services, data, training)
+    reserved = reserved_numbers(services, data, training)
     changes = []
-    for year in sorted(years):
+    for level, year in sorted(series):
         entries = []
-        positions = [int(m.group(2)) for m in matches if int(m.group(1)) == year]
+        positions = [int(m["seq"]) for m in matches if m["level"] == level and int(m["year"]) == year]
         for current in trainings:
             for trainee in numbering_trainees(services, current):
                 match = parse(str(trainee.get("ssiap_diploma_number") or "").strip())
-                if match and int(match.group(1)) == year:
-                    position = int(match.group(2))
+                if match and match["level"] == level and int(match["year"]) == year:
+                    position = int(match["seq"])
                     positions.append(position)
                     entries.append((position, str(current["id"]), str(trainee["id"]), current, trainee))
         if not positions:
@@ -81,7 +89,10 @@ def reconcile(services, data, training, *, deleted=(), years=()):
         for _, _, _, current, trainee in sorted(entries, key=lambda item: item[:3]):
             if eligible(services, current, trainee):
                 sequence += 1
-                number = f"083-8323-1-{year}-{sequence:05d}"
+                number = f"083-8323-{level}-{year}-{sequence:05d}"
+                while number in reserved:
+                    sequence += 1
+                    number = f"083-8323-{level}-{year}-{sequence:05d}"
                 reason = "renumbered_after_exam_correction"
             else:
                 number = ""
@@ -89,10 +100,11 @@ def reconcile(services, data, training, *, deleted=(), years=()):
             change = change_number(services, current, trainee, number, reason)
             if change:
                 changes.append(change)
+        key = sequence_key(level, year)
         if sequence:
-            sequences[str(year)] = sequence
+            sequences[key] = sequence
         else:
-            sequences.pop(str(year), None)
+            sequences.pop(key, None)
     return changes
 
 
@@ -114,5 +126,6 @@ def preserve_state(payload, canonical):
                 else:
                     trainee.pop(key, None)
     # These counters are owned by atomic numbering writes, not legacy forms.
-    if "ssiap_diploma_sequences" in canonical:
-        payload["ssiap_diploma_sequences"] = copy.deepcopy(canonical["ssiap_diploma_sequences"])
+    for key in ("ssiap_diploma_sequences", "ssiap_manual_diplomas", "ssiap_issued_diplomas"):
+        if key in canonical:
+            payload[key] = copy.deepcopy(canonical[key])
