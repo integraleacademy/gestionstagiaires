@@ -49,6 +49,7 @@
               <option value="54" {% if row.ran_hours == 54 %}selected{% endif %}>RAN complète · 54 h</option>
               <option value="40" {% if row.ran_hours == 40 %}selected{% endif %}>RAN partielle · 40 h</option>
               <option value="0" {% if row.ran_hours == 0 %}selected{% endif %}>Sans RAN · 0 h</option>
+              {% if afc_state.planned_hours %}<option value="planning" {% if row.from_planning %}selected{% endif %}>Selon la date d’entrée{% if row.start_override in afc_state.planned_hours %} · {{ afc_state.planned_hours[row.start_override] }} h{% endif %}</option>{% endif %}
             </select></td>
             <td><span data-row-start>—</span><details><summary>Date individuelle</summary><input type="date" data-start-override aria-label="Date d’entrée individuelle de {{ row.first_name }} {{ row.last_name }}" value="{{ row.start_override }}" min="{{ training.date_start }}" max="{{ training.date_end }}" {% if afc_state.read_only %}disabled{% endif %}><small>Laisser vide pour suivre la date du profil RAN.</small></details></td><td data-row-total>—</td>
           </tr>
@@ -66,5 +67,5 @@
   </div>
 </div>
 <script type="application/json" id="afcHoursState">{{ afc_state|tojson }}</script>
-<script src="{{ url_for('static', filename='js/afc-hours.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/afc-hours.js', v='20261120') }}" defer></script>
 {% endblock %}

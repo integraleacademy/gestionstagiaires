@@ -57,6 +57,9 @@ def with_watched(private, owner, snapshot):
         if not saved or not before or saved["checked"] <= max(before.get("observed_at") or 0, snapshot.get("checked") or 0):
             continue
         fields = saved["fields"]
+        if (directory.normalized(fields.get("state") or "") in directory.ACCEPTED_STATES
+                and saved["checked"] <= (snapshot.get("accepted_checked") or 0)):
+            continue
         if all(directory.normalized(fields.get(k) or "") == directory.normalized(before.get(k) or "")
                for k in ("first_name", "last_name")):
             rows[folder] = {**before, **saved["row"], "observed_at":saved["checked"]}

@@ -79,13 +79,17 @@ def clean_changes(changes, raw, training):
         clean['france_travail_id'] = updates['identifiant_ft'] = normalize_ft_id(value.strip().upper())[1]
     if 'ranHours' in clean:
         hours = clean['ranHours']
-        if hours is not None and (type(hours) is not int or hours not in afc_hours.PROFILES):
-            raise ValueError('Choisissez un des profils de remise à niveau proposés.')
-        updates['afc_ran_hours'] = hours
+        entry = clean.get('entryDate') or raw.get('training_date_start')
+        planned = type(hours) is int and hours not in afc_hours.PROFILES and afc_hours.remaining_ran(training).get(entry) == hours
+        if hours is not None and not planned and (type(hours) is not int or hours not in afc_hours.PROFILES):
+            raise ValueError('Choisissez un profil de remise à niveau ou le volume prévu à cette date.')
+        updates.update(afc_ran_hours=hours, afc_ran_from_planning=planned)
+        if planned:
+            updates['afc_start_override'] = entry
     if 'entryDate' in clean:
         if not clean['entryDate']:
             raise ValueError('Renseignez la date d’entrée en formation.')
-        updates.update(afc_schedule.trainee_update(training, raw, {'training_date_start': clean['entryDate']}))
+        updates.update(afc_schedule.trainee_update(training, {**raw, **updates}, {'training_date_start': clean['entryDate']}))
         clean['entryDate'] = updates['training_date_start']
     return clean, updates
 
@@ -119,7 +123,7 @@ def edit_student(services, data, selector, payload):
     if 'entryDate' in clean and clean['entryDate'] != row['entryDate']:
         raw['afc_dates_changed_at'] = services._now_iso()
     raw.update(updates)
-    return {**row, **clean}
+    return {**row, **clean, 'ranHours': raw.get('afc_ran_hours')}
 
 
 def register(app, services):

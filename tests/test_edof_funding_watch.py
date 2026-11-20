@@ -107,3 +107,40 @@ def test_wrong_filtered_scope_does_not_publish(site, monkeypatch):
     with pytest.raises(directory.IncompleteDirectory, match="scope"):
         watch.refresh(context, witness, site.vault, site.owner, lambda: None)
     assert not site.vault.get(directory.validated_key(site.owner))
+
+
+def test_new_official_acceptance_is_listed_without_a_full_refresh(site, monkeypatch):
+    context, witness, scan = portal(monkeypatch, [application(state="accepted")])
+    watch.refresh_accepted(context, witness, site.vault, site.owner, lambda: None)
+    url = "/admin/edof-test?section=state&group=training&tab=to_register"
+    marker = 'data-edof-folder="100008"'
+    assert marker in site.client.get(url).text
+    assert scan.call_args.args[2] == "accepted"
+    watch.refresh_accepted(context, witness, site.vault, site.owner, lambda: None)
+    scan.assert_called_once()
+    local = json.loads(site.local.read_text())
+    link = {"active": True, "external_id": "100008", "session_id": "s1", "trainee_id": "missing"}
+    local["wedof_links"] = [link]
+    site.local.write_text(json.dumps(local))
+    broken = site.client.get(url)
+    assert marker in broken.text and "Rattachement à vérifier" in broken.text
+    link["trainee_id"] = "t1"
+    site.local.write_text(json.dumps(local))
+    assert marker not in site.client.get(url).text
+
+
+def test_wrong_accepted_scope_cannot_replace_last_known_list(site, monkeypatch):
+    key = directory.accepted_key(site.owner)
+    old = {"checked": 100, "rows": {"100008": directory.project(application(state="accepted"))}}
+    site.vault.put(key, old)
+    context, witness, _ = portal(monkeypatch, [application(state="validated")])
+    with pytest.raises(directory.IncompleteDirectory):
+        watch.refresh_accepted(context, witness, site.vault, site.owner, lambda: None)
+    assert site.vault.get(key) == old
+
+
+def test_newer_observation_wins_over_an_older_accepted_snapshot():
+    accepted = directory.project(application(state="accepted"))
+    fresh = {**accepted, "state": "inTraining", "observed_at": 300}
+    full = {"checked": 100, "rows": {"100008": fresh}}
+    assert directory.with_accepted(full, {"checked": 200, "rows": {"100008": accepted}})["rows"]["100008"] == fresh

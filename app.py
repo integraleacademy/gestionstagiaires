@@ -28111,7 +28111,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
             return jsonify(ok=False, error="Aucun e-learning n'est inclus dans cette formule VTC."), 409
         payload["send_elearning_notification"] = False
     try:
-        payload.update(afc_schedule.trainee_update(s, t, payload))
+        afc_date_updates = afc_schedule.trainee_update(s, t, payload)
+        payload.update(afc_date_updates)
     except ValueError as exc:
         return jsonify(ok=False, error=str(exc)), 400
     if any(t.get(k, "") != payload[k] for k in afc_schedule.TRAINEE_DATES if k in payload):
@@ -28266,6 +28267,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         if isinstance(vtc_book_sent_payload, str) and vtc_book_sent_payload.strip() and not _is_vtc_book_address_complete(t):
             return jsonify({"ok": False, "error": "vtc_book_address_incomplete"}), 400
 
+    t.update({key: value for key, value in afc_date_updates.items() if key not in afc_schedule.TRAINEE_DATES})
     for k, v in payload.items():
         if k in ("send_vae_notification", "send_exam_fees_notification", "send_elearning_notification"):
             continue
@@ -42403,23 +42405,46 @@ def _normalize_payment_plan(raw: Dict[str, Any], total: Any) -> Dict[str, Any]:
     mode = str(raw.get('paymentMode') or raw.get('mode') or 'cash').strip().lower()
     if mode not in {'sepa', 'direct_debit', 'sepa_direct_debit'}:
         return {'mode': 'cash', 'label': 'Comptant'}
-    installments = int(raw.get('installments') or raw.get('numberOfInstallments') or 1)
-    installments = max(1, min(60, installments))
-    first_date = str(raw.get('firstDebitDate') or raw.get('first_date') or (datetime.date.today() + datetime.timedelta(days=7)).isoformat())[:10]
-    schedule = raw.get('schedule') if isinstance(raw.get('schedule'), list) else []
-    if schedule:
-        cleaned = []
-        for item in schedule:
-            if isinstance(item, dict):
-                cleaned.append({'date': str(item.get('date') or first_date)[:10], 'amount': _money(item.get('amount')), 'status': 'scheduled'})
-        schedule = cleaned
-    else:
-        schedule = _build_direct_debit_schedule(total, installments, first_date)
-    expected_cents = int(round(_money(total) * 100))
-    got_cents = sum(int(round(_money(item.get('amount')) * 100)) for item in schedule)
-    if got_cents != expected_cents and schedule:
-        schedule[-1]['amount'] = round((_money(schedule[-1].get('amount')) * 100 + expected_cents - got_cents) / 100, 2)
-    return {'mode': 'sepa_direct_debit', 'label': f"Prélèvement {len(schedule)}x", 'installments': len(schedule), 'frequency': 'monthly', 'firstDebitDate': first_date, 'schedule': schedule}
+    available = money_value_to_cents(total)
+    selected = billing_debit_scheduling.amount_cents(raw['debitAmount'], installment=False) if 'debitAmount' in raw else None
+    if selected is not None and selected > available:
+        raise ValueError("Le montant à prélever dépasse le solde de cette ligne de financement.")
+    rows = raw.get('schedule', [])
+    if not isinstance(rows, list) or len(rows) > 60:
+        raise ValueError("L’échéancier doit comporter entre 1 et 60 échéances.")
+    if not rows:
+        installments = int(raw.get('installments') or raw.get('numberOfInstallments') or 1)
+        if not 1 <= installments <= 60:
+            raise ValueError("Choisissez entre 1 et 60 échéances.")
+        first_date = raw.get('firstDebitDate') or raw.get('first_date') or (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+        if not _parse_date_safe(first_date):
+            raise ValueError("Indiquez la date du premier prélèvement.")
+        rows = _build_direct_debit_schedule(cents_to_money(selected if selected is not None else available), installments, first_date)
+    schedule, actual = [], 0
+    for row in rows:
+        if not isinstance(row, dict) or not _parse_date_safe(row.get('date')):
+            raise ValueError("Indiquez la date de chaque prélèvement.")
+        cents = billing_debit_scheduling.amount_cents(row.get('amount'))
+        actual += cents
+        schedule.append({'date': _parse_date_safe(row['date']).isoformat(), 'amount': cents_to_money(cents), 'status': 'scheduled'})
+    if actual > available:
+        raise ValueError("Le montant à prélever dépasse le solde de cette ligne de financement.")
+    if selected is not None and actual != selected:
+        raise ValueError("La somme des échéances doit correspondre au montant total à prélever.")
+    return {'mode': 'sepa_direct_debit', 'label': f"Prélèvement {len(schedule)}x", 'debitAmount': cents_to_money(actual),
+            'installments': len(schedule), 'frequency': 'monthly', 'firstDebitDate': schedule[0]['date'], 'schedule': schedule}
+
+
+def _mandate_available_cents(line):
+    total = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    paid = max(int(line.get('qonto_amount_paid_cents') or 0), _bank_line_paid_cents(line),
+               money_value_to_cents(line.get('amountPaid') or line.get('amount_paid') or 0))
+    return max(0, total - paid)
+
+
+def _mandate_schedule_cents(line):
+    amount = (line.get('paymentPlan') or {}).get('debitAmount')
+    return money_value_to_cents(amount if amount is not None else line.get('amountTTC') or line.get('amount') or 0)
 
 
 def _active_qonto_mandate(client_id: str) -> Optional[Dict[str, Any]]:
@@ -43146,6 +43171,7 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         if count == 1 and schedule_type in recurring_types:
             installment_amount = _money(amount)
             invoice_cents = _cents_first_non_null(
+                money_value_to_cents(line['paymentPlan']['debitAmount']) if (line.get('paymentPlan') or {}).get('debitAmount') is not None else None,
                 line.get('qonto_total_amount_cents'), line.get('qontoTotalAmountCents'),
                 money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0),
             )
@@ -43658,7 +43684,12 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
         return 'Mandat à signer'
     review = _reviewed_debit_rejections(line)
     if review['pending']: return 'Rejeté'
-    if statuses and all(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Payé'
+    if statuses and all(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses):
+        if (line.get('paymentPlan') or {}).get('debitAmount') is not None:
+            total = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+            if _bank_line_paid_cents(line) < total:
+                return 'Paiement partiel'
+        return 'Payé'
     if review['treated']: return 'Rejet traité'
     if any(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Paiement partiel'
     return 'Prélèvements programmés'
@@ -44585,6 +44616,7 @@ def buildBillingLinesFromSessions(
                 line['initialDebitSchedule'] = _initial_debit_schedule(line)
                 line['debitRejectionReview'] = _reviewed_debit_rejections(line)
                 line['qontoCollectedAmountCents'] = sum(money_value_to_cents(row.get('amount') or 0) for row in _paid_sepa_collections(line))
+                line['mandateAvailableCents'] = _mandate_available_cents(line)
                 line['nextDirectDebitDate'] = _next_direct_debit_date(line)
                 out.append(line)
     return out
@@ -45967,6 +45999,10 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             return False, {'error': 'Qonto n’est pas connecté', 'message': 'Qonto n’est pas connecté : configurez les variables d’environnement Qonto avant de créer une facture.', 'line': current}
         current['generationInProgress'] = True; _save_billing_line(data, current); save_data(data)
         try:
+            has_plan = bool(current.get('qonto_direct_debit_mandate_id') and
+                            (current.get('paymentPlan') or {}).get('debitAmount') is not None and _sepa_installments(current))
+            if not has_plan:
+                payment_plan = _normalize_payment_plan(payment_plan_payload or {}, cents_to_money(_mandate_available_cents(current)))
             invoice_iban = get_qonto_invoice_iban()
             is_cpf = is_cpf_billing_context(current)
             qonto_client_payload = build_qonto_client_payload(current, current, {'id': current.get('sessionId')}, current.get('financingType') or current.get('financingLabel'))
@@ -45997,8 +46033,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
                 current['clientName'] = CPF_QONTO_CLIENT_NAME
             current.update({'qontoClientId': q_client_id, 'qontoCustomerId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoDraftId': qi.get('id'), 'qontoInvoiceNumber': _qonto_invoice_number(qi), 'invoiceStatus': _normalize_billing_invoice_status(qi.get('status') or ('draft' if qi.get('id') else 'not_invoiced')), 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'createdAt': current.get('createdAt') or _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
             _refresh_billing_line_invoice_from_qonto(current, qi)
-            payment_plan = _normalize_payment_plan(payment_plan_payload or {}, amount_ttc)
-            _setup_qonto_direct_debit_for_line(current, payment_plan)
+            if not has_plan:
+                _setup_qonto_direct_debit_for_line(current, payment_plan)
             _persist_qonto_mandate_on_trainee(data, current)
             current['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(current)
             _billing_log(current, 'Facture brouillon créée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
@@ -46799,7 +46835,7 @@ def _initial_debit_schedule(line):
     originals = terms(rows)
     # Older imports can contain a stale installment count in paymentPlan. A
     # bank retry never constitutes a new contractual installment.
-    target = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    target = _mandate_schedule_cents(line)
     def total(rows):
         return sum(money_value_to_cents(r['amount']) for r in rows)
     if frozen and frozen != plan:
@@ -49626,7 +49662,7 @@ def _sync_qonto_direct_debit_line(
                 money_value_to_cents(item.get('amount') or 0)
                 for item in _effective_sepa_installments(line)
             )
-            expected_line_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+            expected_line_cents = _mandate_schedule_cents(line)
             if (
                 expected_line_cents > 0
                 and abs(current_schedule_cents - expected_line_cents) > 1
@@ -49810,7 +49846,7 @@ def _sync_qonto_direct_debit_line(
         money_value_to_cents(item.get('amount') or 0)
         for item in _effective_sepa_installments(line)
     )
-    expected_total_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    expected_total_cents = _mandate_schedule_cents(line)
     schedule_mismatch = bool(
         expected_total_cents > 0
         and abs(effective_total_cents - expected_total_cents) > 1
@@ -50539,11 +50575,14 @@ def _existing_mandate_remote_check(data, line):
             'mandate_rum': rum or line.get('qonto_mandate_rum') or ''}
 
 
-def _existing_mandate_schedule(line, rows, remaining):
+def _existing_mandate_schedule(line, rows, remaining, debit_cents=None):
+    target = remaining if debit_cents is None else debit_cents
+    if target > remaining:
+        raise ValueError('Le montant à prélever dépasse le reste à payer vérifié dans Qonto.')
     end = _parse_date_safe(str(line.get('examDate') or line.get('dateEnd') or line.get('dateStart') or ''))
     cutoff = end - datetime.timedelta(days=3) if end else None
     schedule = billing_debit_scheduling.validate_schedule(
-        rows, remaining, today=datetime.datetime.now(ZoneInfo('Europe/Paris')).date(), cutoff=cutoff)
+        rows, target, today=datetime.datetime.now(ZoneInfo('Europe/Paris')).date(), cutoff=cutoff)
     operation = _existing_mandate_operation(line)
     if operation and schedule != operation.get('schedule'):
         raise ValueError('Reprenez exactement l’échéancier déjà réservé, sans modifier ses dates ni ses montants.')
@@ -50607,7 +50646,9 @@ def api_billing_direct_debit_preview():
         if not _qonto_is_configured():
             raise ValueError('Qonto n’est pas connecté.')
         remote = _existing_mandate_remote_check(data, line)
-        schedule = _existing_mandate_schedule(line, payload.get('schedule'), remote['remaining_cents'])
+        debit_cents = (billing_debit_scheduling.amount_cents(payload['debitAmount'], installment=False)
+                       if 'debitAmount' in payload else remote['remaining_cents'])
+        schedule = _existing_mandate_schedule(line, payload.get('schedule'), remote['remaining_cents'], debit_cents)
         _existing_mandate_remote_slots(line, schedule, remote['bank_account_id'])
         operation = _existing_mandate_operation(line)
         if operation and any(operation.get(key) != remote[value] for key, value in (
@@ -50618,7 +50659,7 @@ def api_billing_direct_debit_preview():
         return jsonify(ok=False, error=str(exc)), 409
     except Exception as exc:
         return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 502
-    selected = {'line_id': line['id'], 'schedule': schedule, 'remote': remote,
+    selected = {'line_id': line['id'], 'schedule': schedule, 'remote': remote, 'debit_cents': debit_cents,
                 'snapshot': billing_debit_scheduling.snapshot(line),
                 'operation_id': operation.get('id') or uuid.uuid4().hex,
                 'resuming': bool(operation),
@@ -50627,7 +50668,7 @@ def api_billing_direct_debit_preview():
     return jsonify(ok=True, selectionToken=token, schedule=schedule, resuming=bool(operation), summary={
         'invoiceNumber': line['qontoInvoiceNumber'],
         'traineeName': ' '.join(str(line.get(key) or '') for key in ('traineeFirstName', 'traineeLastName')).strip(),
-        'mandateRum': remote['mandate_rum'], 'totalCents': remote['remaining_cents'],
+        'mandateRum': remote['mandate_rum'], 'totalCents': debit_cents,
         'invoiceTotalCents': remote['total_cents'],
         'remainingCents': remote['remaining_cents'], 'firstDebitDate': schedule[0]['date'],
         'lastDebitDate': schedule[-1]['date']})
@@ -50643,7 +50684,8 @@ def _confirm_existing_mandate_schedule(selected):
     remote = _existing_mandate_remote_check(data, line)
     if remote != selected['remote']:
         raise ValueError('La situation bancaire a changé. Vérifiez à nouveau le récapitulatif.')
-    _existing_mandate_schedule(line, schedule, remote['remaining_cents'])
+    debit_cents = selected.get('debit_cents', remote['remaining_cents'])
+    _existing_mandate_schedule(line, schedule, remote['remaining_cents'], debit_cents)
     _existing_mandate_remote_slots(line, schedule, remote['bank_account_id'])
 
     def reserve(current):
@@ -50656,7 +50698,7 @@ def _confirm_existing_mandate_schedule(selected):
             raise ValueError('Une autre programmation existe déjà. Rechargez la fiche.')
         if not operation:
             plan = {'mode': 'sepa_direct_debit', 'label': f'Prélèvement {len(schedule)}x',
-                    'installments': len(schedule), 'frequency': 'custom',
+                    'installments': len(schedule), 'frequency': 'custom', 'debitAmount': cents_to_money(debit_cents),
                     'firstDebitDate': schedule[0]['date'], 'schedule': copy.deepcopy(schedule)}
             _prepare_sepa_payment_plan(target, plan)
             operation = {'id': selected['operation_id'], 'schedule': copy.deepcopy(schedule),
@@ -50799,6 +50841,21 @@ def api_billing_create_mandate():
         return jsonify({'ok': False, 'error': 'Prélèvement bloqué : cette inscription est annulée.'}), 409
     _apply_invoice_recipient_payload(line, payload)
     try:
+        payment_plan = _normalize_payment_plan(payload.get('paymentPlan') or payload, cents_to_money(_mandate_available_cents(line)))
+        if payment_plan.get('mode') != 'sepa_direct_debit':
+            raise ValueError('Veuillez définir au moins une échéance de prélèvement.')
+    except (TypeError, ValueError) as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    installments = _sepa_installments(line)
+    if installments and ((line.get('financial_tracking_override') or {}).get('enabled') or any(
+            row.get('qonto_direct_debit_subscription_id') or row.get('qonto_direct_debit_collection_id')
+            for row in installments)):
+        existing = [(str(row.get('due_date') or row.get('date') or '')[:10], money_value_to_cents(row.get('amount')))
+                    for row in _effective_sepa_installments(line)]
+        requested = [(row['date'], money_value_to_cents(row['amount'])) for row in payment_plan['schedule']]
+        if existing != requested:
+            return jsonify(ok=False, error='Des prélèvements sont déjà programmés. Ouvrez leur échéancier pour les modifier.'), 409
+    try:
         _ensure_qonto_oauth_ready()
         if not (line.get('qontoClientId') or line.get('qontoCustomerId')):
             client_payload = build_qonto_client_payload(
@@ -50813,9 +50870,6 @@ def api_billing_create_mandate():
             if not client_id:
                 raise RuntimeError('Client Qonto introuvable')
             line['qontoClientId'] = line['qontoCustomerId'] = client_id
-        payment_plan = _normalize_payment_plan(payload.get('paymentPlan') or payload, _money(line.get('amountTTC') or line.get('amount')))
-        if payment_plan.get('mode') != 'sepa_direct_debit' or not payment_plan.get('schedule'):
-            raise RuntimeError('Veuillez définir au moins une échéance de prélèvement')
         _setup_qonto_direct_debit_for_line(line, payment_plan)
         line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
         _persist_qonto_mandate_on_trainee(data, line)

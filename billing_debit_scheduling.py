@@ -25,14 +25,14 @@ def _day(value):
     return parsed
 
 
-def _amount_cents(value):
+def amount_cents(value, *, installment=True):
     if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         raise ValueError("Chaque échéance doit avoir un montant positif avec deux décimales maximum.")
     try:
-        amount = Decimal(str(value))
+        amount = Decimal(str(value).replace(",", "."))
         if not amount.is_finite() or amount <= 0:
             raise ValueError("Chaque montant de prélèvement doit être strictement positif.")
-        if amount > Decimal("10000"):
+        if installment and amount > Decimal("10000"):
             raise ValueError("Une échéance ne peut pas dépasser 10 000 €.")
         # Compare against the unrounded original Decimal. Multiplying a very
         # long decimal by 100 first could round away a fractional cent under
@@ -67,7 +67,7 @@ def validate_schedule(rows, remaining_cents, *, today: date, cutoff: date | None
             raise ValueError(f"Les prélèvements doivent être terminés au plus tard le {cutoff:%d/%m/%Y}.")
         if previous is not None and due <= previous:
             raise ValueError("Les dates doivent être croissantes et sans doublon.")
-        cents = _amount_cents(row.get("amount"))
+        cents = amount_cents(row.get("amount"))
         result.append({"date": due.isoformat(), "amount": cents / 100})
         total += cents
         previous = due

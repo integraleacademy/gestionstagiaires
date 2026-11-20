@@ -444,3 +444,41 @@ def test_concurrent_confirmation_reserves_the_line_before_any_duplicate_post(sch
     assert scheduling.create.call_count == 2
     assert len(scheduling.subscriptions) == 2
     assert stored_line(scheduling)['paymentPlan']['qontoSchedulingOperation']['state'] == 'completed'
+
+
+def test_signed_mandate_can_collect_part_of_the_remaining_invoice(scheduling):
+    rows = [{**row, "amount": "125.25"} for row in scheduling.schedule]
+    request = {"lineId": scheduling.line_id, "schedule": rows, "debitAmount": "250,50"}
+    previewed = scheduling.client.post(PREVIEW, json=request)
+    assert previewed.status_code == 200, previewed.json
+    assert previewed.json["summary"]["totalCents"] == 25050
+    assert previewed.json["summary"]["remainingCents"] == 95000
+    assert confirm(scheduling, previewed.json).status_code == 200
+    assert stored_line(scheduling)["paymentPlan"]["debitAmount"] == 250.5
+    assert [call.args[0]["amount"]["value"] for call in scheduling.create.call_args_list] == ["125.25", "125.25"]
+
+
+def test_new_mandate_keeps_partial_amount_from_setup_to_collection(monkeypatch):
+    line = {"id": "fin-test", "amountTTC": 950, "qontoClientId": "client-test"}
+    plan = gestion._normalize_payment_plan({"paymentMode": "sepa", "debitAmount": "250,50",
+                  "installments": 2, "firstDebitDate": "2027-05-01"}, line["amountTTC"])
+    monkeypatch.setattr(gestion, "_ensure_qonto_oauth_ready", lambda: None)
+    monkeypatch.setattr(gestion, "_active_qonto_mandate", lambda client: None)
+    create = Mock(return_value={"id": "mandate-test", "status": "pending"})
+    monkeypatch.setattr(gestion, "create_qonto_direct_debit_mandate", create)
+    gestion._setup_qonto_direct_debit_for_line(line, plan)
+    assert create.call_args.args[0]["payment_info"]["first_payment"]["amount"]["value"] == "125.25"
+    assert line["amountTTC"] == 950 and gestion._mandate_schedule_cents(line) == 25050
+    assert [row["amount"] for row in gestion._sepa_installments(line)] == [125.25, 125.25]
+    line["mandateStatus"] = line["qonto_mandate_status"] = "active"
+    for row in gestion._sepa_installments(line):
+        row["status"] = "completed"
+    assert gestion._qonto_payment_global_status(line) == "Paiement partiel"
+    assert gestion._mandate_available_cents(line) == 69950
+
+
+@pytest.mark.parametrize("selected,amount", [("200", "199"), ("951", "951"), ("-10", "-10"), ("100.001", "100.001")])
+def test_unbalanced_or_excessive_new_mandates_are_rejected(selected, amount):
+    with pytest.raises(ValueError):
+        gestion._normalize_payment_plan({"paymentMode": "sepa", "debitAmount": selected, "schedule": [
+            {"date": "2027-05-01", "amount": amount}]}, 950)

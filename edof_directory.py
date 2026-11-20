@@ -64,14 +64,18 @@ def canonical_dates(row):
 
 REQUEST_STATES = {"notprocessed", "not processed", "a traiter", "non traite", "received", "tobeprocessed",
                   "to be processed", "demande recue", "demande d inscription", "dossier non traite"}
+ACCEPTED_STATES = {"accepted", "accepte", "dossier accepte", "accepte par le titulaire"}
 
 
 def in_scope(row):
     day = row.get("session_start_date")
     if day:
         return day >= FIRST_SESSION
-    # An undated application still needs a proposal. Use the date of its official pending state.
-    return normalized(row.get("state") or "") in {"notprocessed","not processed","a traiter","non traite","received","tobeprocessed"} and (row.get("request_date") or "") >= FIRST_SESSION
+    # A recent official change can precede the planned dates in the list DTO.
+    state = normalized(row.get("state") or "")
+    if state in ACCEPTED_STATES:
+        return max(row.get("request_date") or "", row.get("state_at") or "") >= FIRST_SESSION
+    return state in REQUEST_STATES and (row.get("request_date") or "") >= FIRST_SESSION
 
 
 def dated_snapshot(snapshot):
@@ -218,11 +222,13 @@ def with_accepted(snapshot, accepted):
     if not accepted or accepted["checked"] <= (snapshot or {}).get("checked", 0):
         return snapshot
     combined = dict(snapshot or {"checked":0, "rows":{}, "scope":"accepted"})
-    rows = {k:r for k,r in combined["rows"].items() if normalized(r.get("state") or "") not in
-            {"accepted","accepte","dossier accepte","accepte par le titulaire"} or k in accepted["rows"]}
+    rows = {k:r for k,r in combined["rows"].items() if normalized(r.get("state") or "") not in ACCEPTED_STATES
+            or k in accepted["rows"] or (r.get("observed_at") or 0) > accepted["checked"]}
     pending = set(combined.get("pending_ids", ()))
     for key,row in accepted["rows"].items():
-        if key in pending and combined.get("pending_checked",0) > accepted["checked"]:
+        before = rows.get(key, {})
+        if ((before.get("observed_at") or 0) > accepted["checked"] or
+                (key in pending and combined.get("pending_checked",0) > accepted["checked"])):
             continue
         pending.discard(key)
         rows[key] = {**row, "observed_at": accepted["checked"]}

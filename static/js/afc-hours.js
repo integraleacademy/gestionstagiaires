@@ -17,7 +17,7 @@
   const dates = () => Object.fromEntries(dateFields.map(input => [input.dataset.entryDate, input.value]));
   const profiles = () => Object.fromEntries(rows.map(row => {
     const value = row.querySelector('[data-ran-choice]').value;
-    return [row.dataset.trainee, value === '' ? null : Number(value)];
+    return [row.dataset.trainee, value === '' ? null : value === 'planning' ? 'planning' : Number(value)];
   }));
   function showMessage(text, error = false) {
     message.textContent = text;
@@ -37,11 +37,18 @@
         start.textContent = 'À définir';
         row.querySelector('[data-row-total]').textContent = '—';
       } else {
-        counts[choice]++;
         const entryDate = row.querySelector('[data-start-override]')?.value || currentDates[choice];
+        const planned = choice === 'planning';
+        const hours = planned ? state.planned_hours?.[entryDate] : Number(choice);
+        if (hours in counts) counts[hours]++;
+        if (planned) {
+          row.querySelector('option[value="planning"]').textContent =
+            Number.isInteger(hours) ? `Selon la date d’entrée · ${hours} h` : 'Selon la date d’entrée';
+          if (!Number.isInteger(hours)) row.querySelector('details').open = true;
+        }
         start.textContent = formatDate(entryDate);
-        row.querySelector('[data-row-total]').textContent = `${339 + Number(choice)} h`;
-        if (!currentDates[choice]) missingDate = true;
+        row.querySelector('[data-row-total]').textContent = Number.isInteger(hours) ? `${339 + hours} h` : '—';
+        if (planned ? !Number.isInteger(hours) : !currentDates[choice]) missingDate = true;
       }
     }
     for (const hours of ['54', '40', '0']) {
@@ -130,7 +137,7 @@
     if (!state.suggestion?.profiles || state.read_only) return;
     for (const row of rows) {
       const select = row.querySelector('select');
-      if (!onlyUnset || select.value === '') {
+      if (select.value !== 'planning' && (!onlyUnset || select.value === '')) {
         select.value = String(state.suggestion.profiles[row.dataset.trainee]);
         dirty = true;
       }

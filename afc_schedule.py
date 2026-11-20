@@ -77,7 +77,12 @@ def trainee_update(training, trainee, payload):
     # The empty stored value always follows subsequent session end-date changes.
     result = {"training_date_end": ""}
     if "training_date_start" in payload:
-        result["training_date_start"] = date(payload["training_date_start"], TRAINEE_DATES["training_date_start"])
+        start = date(payload["training_date_start"], TRAINEE_DATES["training_date_start"])
+        result["training_date_start"] = start
+        if trainee.get("afc_ran_from_planning"):
+            from afc_hours import remaining_ran
+            hours = remaining_ran(training).get(start)
+            result.update(afc_ran_hours=hours, afc_start_override=start, afc_ran_from_planning=hours is not None)
     if "afc_withdrawal_last_day" in payload:
         result["afc_withdrawal_last_day"] = date(payload["afc_withdrawal_last_day"], TRAINEE_DATES["afc_withdrawal_last_day"])
     effective = effective_session(training, {**trainee, **result})
@@ -133,9 +138,9 @@ def document_context(training, trainee, fr_date, *, strict=False):
         return f"du {fr_date(start)} au {fr_date(end)}" if start and end else "À renseigner"
     aps_exam = fr_date(training.get("exam_date") or "") or "À renseigner"
     ssiap_exam = fr_date(training.get("ssiap_exam_date") or "") or "À renseigner"
-    from afc_hours import COMMON_HOURS, PROFILES
+    from afc_hours import COMMON_HOURS, known_hours
     ran = trainee.get("afc_ran_hours")
-    known_ran = type(ran) is int and ran in PROFILES
+    known_ran = known_hours(ran)
     common = sum(COMMON_HOURS)
     return {
         "formation_nom": TITLE, "nom_pedagogique": TITLE,
