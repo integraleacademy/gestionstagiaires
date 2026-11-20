@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-registry.css') }}">{% endblock %}
+{% block content %}
+<main class="sr-registry">
+  <header class="sr-head">
+    <div><span class="sr-kicker">Outils · Scolarité</span><h1>Diplômes SSIAP</h1><p>Retrouvez un diplôme par titulaire, par numéro ou par année d’examen.</p></div>
+    {% if not is_read_only %}<a class="sr-primary" href="{{ url_for('admin_ssiap_reissue') }}">Régénérer un diplôme</a>{% endif %}
+  </header>
+  {% if request.args.get('regenere') and rows|selectattr('trainee_id','equalto',request.args.get('regenere'))|list %}
+    <div class="sr-notice" role="status"><strong>Le diplôme est prêt.</strong><a href="{{ url_for('admin_ssiap_manual_pdf', key=request.args.get('regenere')) }}">Télécharger le PDF avec son QR code</a></div>
+  {% endif %}
+  <section class="sr-panel" aria-label="Registre des diplômes">
+    <form class="sr-filters" method="get">
+      <label>Rechercher<input type="search" name="q" value="{{ request.args.get('q','') }}" placeholder="Nom, prénom ou numéro"></label>
+      <label>Année d’examen<select name="annee"><option value="">Toutes les années</option>{% for y in years %}<option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></label>
+      <button class="sr-secondary" type="submit">Rechercher</button>
+      {% if request.args.get('q') or year %}<a href="{{ url_for('admin_ssiap_registry') }}">Effacer</a>{% endif %}
+    </form>
+    <div class="sr-listtitle"><h2>Registre</h2><span>{{ rows|length }} diplôme{{ 's' if rows|length != 1 }}</span></div>
+    {% if rows %}<div class="sr-tablewrap"><table><thead><tr><th scope="col">Titulaire</th><th scope="col">Diplôme</th><th scope="col">Examen</th><th scope="col">Origine</th><th scope="col">Actions</th></tr></thead><tbody>
+    {% for r in rows %}<tr>
+      <td><strong>{{ r.first_name }} {{ r.last_name }}</strong><small>Né(e) le {{ r.birth_date }}</small></td>
+      <td><span class="sr-level">{{ r.level }}</span><small class="sr-ref">{{ r.number }}</small></td>
+      <td>{{ r.exam_date }}<small>{{ r.exam_number }}</small></td>
+      <td>{{ 'Réédition manuelle' if r.manual else 'Session' }}{% if r.retired %}<small>Ancienne édition</small>{% endif %}</td>
+      <td>{% if r.retired %}<small>Hors vérification</small>{% else %}<div class="sr-actions">
+        <a href="{{ url_for('admin_ssiap_manual_pdf',key=r.trainee_id) if r.manual else url_for('admin_ssiap_registry_session_pdf',session_id=r.session_id,trainee_id=r.trainee_id) }}">Télécharger le PDF</a>
+        {% if not is_read_only %}<a href="{{ url_for('admin_ssiap_reissue',key=r.trainee_id) if r.manual else url_for('admin_trainees',session_id=r.session_id,diplome=r.last_name) }}">Corriger</a>{% endif %}
+      </div>{% endif %}</td>
+    </tr>{% endfor %}</tbody></table></div>
+    {% else %}<p class="sr-empty">{{ 'Aucun diplôme ne correspond à cette recherche.' if request.args.get('q') or year else 'Les diplômes émis depuis les sessions et les rééditions manuelles apparaîtront ici.' }}</p>{% endif %}
+  </section>
+</main>
+{% endblock %}

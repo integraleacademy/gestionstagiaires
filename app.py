@@ -38,6 +38,7 @@ from qonto_bank_transfers import (bank_transfer_paid_cents, match_bank_transfers
                                  bank_transfer_candidates, verified_bank_transfer)
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 import ssiap_diploma_numbers
+import ssiap_diploma_registry
 from email_design import render_email as render_academy_email, normalize_email_text_signature
 import afc_schedule
 import uv_questionnaires
@@ -3315,7 +3316,7 @@ def protect_sensitive_routes():
 def inject_read_only():
     if request.endpoint == "admin_ended_session_cards":
         return {"is_read_only": session.get("admin_role") == "viewer"}
-    if request.endpoint in {"home", "admin_trainee_email_history"} or (request.endpoint or "").startswith("manuals_shop."):
+    if request.endpoint in {"home", "admin_trainee_email_history", "public_ssiap_diploma"} or (request.endpoint or "").startswith("manuals_shop."):
         return {}
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
@@ -11993,8 +11994,8 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "personal_id": st.get("id") or "",
         "registration_cancelled": _trainee_registration_is_cancelled(st),
         "afc_withdrawal_last_day": st.get("afc_withdrawal_last_day") or "",
-        "last_name": st.get("nom") or "",
-        "first_name": st.get("prenom") or "",
+        "last_name": st.get("nom") or st.get("last_name") or "",
+        "first_name": st.get("prenom") or st.get("first_name") or "",
         "email": st.get("email") or "",
         "phone": st.get("telephone") or "",
         "birth_date": st.get("date_naissance") or st.get("birth_date") or "",
@@ -12003,6 +12004,10 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "address": st.get("adresse") or st.get("address") or "",
         "zip_code": st.get("code_postal") or st.get("zip_code") or "",
         "city": st.get("ville") or st.get("city") or "",
+        "birth_country": st.get("birth_country") or st.get("pays_naissance") or "",
+        "civility": st.get("civility") or st.get("civilite") or "",
+        "identity_photo": st.get("identity_photo") or "",
+        **{k: v for k, v in st.items() if k.startswith("ssiap_")},
         "nom_naissance": st.get("nom_naissance") or "",
         "comment": st.get("commentaire") or "",
         "cnaps": (st.get("cnaps") or "INCONNU"),
@@ -24496,7 +24501,7 @@ SSIAP_DIPLOMA_TEMPLATE = os.path.join(
     "diplome-ssiap1-20261028.pdf",
 )
 SSIAP_DIPLOMA_LOCK_FILE = os.path.join(PERSIST_DIR, "ssiap_diplomas.lock")
-SSIAP_DIPLOMA_NUMBER_RE = re.compile(r"^083-8323-1-(\d{4})-(\d{5})$")
+SSIAP_DIPLOMA_NUMBER_RE = re.compile(r"^083-8323-(?P<level>[123])-(?P<year>\d{4})-(?P<seq>\d{5})$")
 SSIAP_BIRTH_DEPARTMENT_CACHE: Dict[str, str] = {}
 
 
@@ -24692,31 +24697,46 @@ def _ssiap_diploma_photo_path(trainee: Dict[str, Any]) -> str:
 
 
 def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any], *, lookup_department: bool = True) -> Dict[str, str]:
+    config = ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap"))
+    exam_date = _ssiap_diploma_exam_date(session_item, trainee)
+    approval = str(config.get("approval") or "")
+    if approval == ssiap_exam.DEFAULTS["approval"] and exam_date and datetime.datetime.strptime(exam_date, "%d/%m/%Y").date() < datetime.date(2026, 5, 29):
+        approval = ""
     return {
+        "session_id": str(session_item.get("id") or ""),
         "trainee_id": str(trainee.get("id") or ""),
+        "retake_source": (trainee.get("_retake") or {}).get("source_session", ""),
+        "internal": ssiap_diploma_registry.internal(sys.modules[__name__], session_item),
+        "version": str(trainee.get("ssiap_diploma_number_updated_at") or trainee.get("ssiap_diploma_issued_at") or ""),
+        "photo_reference": str(trainee.get("identity_photo") or ""),
+        "first_name": _ssiap_diploma_first_name(trainee.get("ssiap_diploma_first_name", trainee.get("first_name"))),
+        "last_name": normalize_last_name(trainee.get("ssiap_diploma_last_name", trainee.get("last_name")) or ""),
+        "level": config["level"], "issuer": "Intégrale Academy", "approval": approval,
+        "exam_place": config.get("location", ""), "issue_place": "Puget-sur-Argens", "issue_date": exam_date,
+        "representative": "Clément VAILLANT – Directeur général",
         "name": _ssiap_diploma_display_name(trainee),
         "birth_date": _diploma_date_fr(
             trainee.get("ssiap_diploma_birth_date", trainee.get("birth_date")) or ""
         ),
         "birth_place": _ssiap_birth_place_label(trainee, lookup_department=lookup_department),
-        "exam_date": _ssiap_diploma_exam_date(session_item, trainee),
-        "exam_number": str(ssiap_exam.settings(ssiap_exam.for_family(session_item, "ssiap")).get("exam_number") or "").strip(),
+        "exam_date": exam_date,
+        "exam_number": str(config.get("exam_number") or "").strip(),
         "number": str(trainee.get("ssiap_diploma_number") or "").strip(),
         "photo_path": _ssiap_diploma_photo_path(trainee),
     }
 
 
-def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
+def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int, level: str = "1") -> int:
     highest = 0
     for session_item in data.get("sessions", []):
         for trainee in ssiap_diploma_numbers.numbering_trainees(sys.modules[__name__], session_item):
             match = SSIAP_DIPLOMA_NUMBER_RE.match(str(trainee.get("ssiap_diploma_number") or "").strip())
-            if match and int(match.group(1)) == year:
-                highest = max(highest, int(match.group(2)))
+            if match and match["level"] == level and int(match["year"]) == year:
+                highest = max(highest, int(match["seq"]))
 
     sequences = data.setdefault("ssiap_diploma_sequences", {})
     try:
-        highest = max(highest, int(sequences.get(str(year)) or 0))
+        highest = max(highest, int(sequences.get(ssiap_diploma_numbers.sequence_key(level, year)) or 0))
     except (TypeError, ValueError):
         pass
     return highest + 1
@@ -24852,10 +24872,11 @@ def _reserve_ssiap_diploma_numbers(
             raise ValueError("Tous les diplômes générés en masse doivent avoir la même année d'examen.")
         year = next(iter(exam_years))
 
+        level = exam_config["level"][-1]
         previous_years = []
         for trainee in selected_trainees:
             match = SSIAP_DIPLOMA_NUMBER_RE.fullmatch(str(trainee.get("ssiap_diploma_number") or ""))
-            if match and int(match.group(1)) != year:
+            if match and (int(match["year"]) != year or match["level"] != level):
                 previous_years.append(copy.deepcopy(trainee))
                 ssiap_diploma_numbers.change_number(
                     sys.modules[__name__], session_item, trainee, "", "exam_year_changed",
@@ -24870,17 +24891,22 @@ def _reserve_ssiap_diploma_numbers(
                 if existing_number:
                     diploma_number_counts[existing_number] = diploma_number_counts.get(existing_number, 0) + 1
 
-        next_sequence = _next_ssiap_diploma_sequence(numbering_data, year)
+        reserved = ssiap_diploma_numbers.reserved_numbers(sys.modules[__name__], data, session_item)
+        next_sequence = _next_ssiap_diploma_sequence(numbering_data, year, level)
         diploma_rows = []
         for trainee in selected_trainees:
             diploma_number = str(trainee.get("ssiap_diploma_number") or "").strip()
             match = SSIAP_DIPLOMA_NUMBER_RE.match(diploma_number)
             if (
                 not match
-                or int(match.group(1)) != year
+                or int(match["year"]) != year
+                or match["level"] != level
                 or diploma_number_counts.get(diploma_number, 0) > 1
             ):
-                diploma_number = f"083-8323-1-{year}-{next_sequence:05d}"
+                diploma_number = f"083-8323-{level}-{year}-{next_sequence:05d}"
+                while diploma_number in reserved:
+                    next_sequence += 1
+                    diploma_number = f"083-8323-{level}-{year}-{next_sequence:05d}"
                 next_sequence += 1
                 ssiap_diploma_numbers.change_number(
                     sys.modules[__name__], session_item, trainee, diploma_number, "issued",
@@ -24890,7 +24916,8 @@ def _reserve_ssiap_diploma_numbers(
 
         session_item["trainees"] = registered
         session_item.pop("stagiaires", None)
-        sequences[str(year)] = next_sequence - 1
+        sequences[ssiap_diploma_numbers.sequence_key(level, year)] = next_sequence - 1
+        ssiap_diploma_registry.remember_issued(data, diploma_rows)
         return {"session": session_item, "diplomas": diploma_rows}
 
     result = _atomic_update_data(allocate)
@@ -24972,6 +24999,9 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
 
 def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]], *, preview: bool = False) -> BytesIO:
     from ssiap_diploma_documents import diplomas_pdf
+    if not preview:
+        diplomas = [dict(row, verification_url=ssiap_diploma_registry.verification_url(sys.modules[__name__], row))
+                    if row.get("internal") and row.get("number") else row for row in diplomas]
     return diplomas_pdf(diplomas, SSIAP_DIPLOMA_TEMPLATE, _draw_pdf_cover_image, preview=preview)
 
 
@@ -29888,6 +29918,8 @@ def _detokenize_path(token: str) -> str:
     root = os.path.realpath(PERSIST_DIR)
     if candidate != root and not candidate.startswith(root + os.sep):
         abort(403)
+    if Path(candidate).is_relative_to(Path(root) / ssiap_diploma_registry.PRIVATE_KEYS):
+        abort(404)
     return candidate
 
 
@@ -59544,6 +59576,7 @@ if _partner_postgres_active():
 
 import ssiap_routes
 ssiap_routes.register(app, sys.modules[__name__])
+ssiap_diploma_registry.register(app, sys.modules[__name__])
 ssiap_exam.register(app, sys.modules[__name__])
 import identity_photos
 identity_photos.register(app, sys.modules[__name__])

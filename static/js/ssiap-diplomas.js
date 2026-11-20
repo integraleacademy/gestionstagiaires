@@ -216,6 +216,12 @@
     }
     if (!dirty && !busy) { data = undefined; if (!panel.hidden) act(load); }
   });
+  const registryName = new URLSearchParams(window.location.search).get('diplome');
+  if (registryName) {
+    search.value = registryName;
+    document.getElementById('btnSsiapExam')?.click();
+    dialog.querySelector('[data-exam-tab="diplomas"]')?.click();
+  }
   // Closing the exam retains the draft. Clicking its backdrop never closes it.
   window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
 })();

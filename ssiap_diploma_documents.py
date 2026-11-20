@@ -1,5 +1,6 @@
 """SSIAP diploma overlays and the postal covering letter for the DDSIS."""
 import datetime as dt
+from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -11,7 +12,10 @@ from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.lib.utils import ImageReader
+from reportlab.lib.utils import ImageReader, simpleSplit
+from reportlab.graphics.barcode.qr import QrCodeWidget
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics import renderPDF
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 from reportlab.platypus import BaseDocTemplate, Frame, Image, KeepTogether, LongTable, NextPageTemplate, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle
@@ -38,6 +42,87 @@ def watermark(pdf, width, height, text="APERÇU - NON VALABLE"):
     pdf.restoreState()
 
 
+def draw_verification(pdf, url, height):
+    size = 26 * mm
+    x = PHOTO_RIGHT - (PHOTO_WIDTH + size) / 2
+    y = height - PHOTO_TOP - PHOTO_HEIGHT - 10 - size
+    qr = QrCodeWidget(url, barWidth=size, barHeight=size, barBorder=4, barLevel="M")
+    pdf.saveState()
+    pdf.setFillColor(colors.white)
+    pdf.rect(x, y, size, size, stroke=0, fill=1)
+    drawing = Drawing(size, size)
+    drawing.add(qr)
+    renderPDF.draw(drawing, pdf, x, y)
+    pdf.setFillColor(colors.HexColor("#163f78"))
+    pdf.setFont("Helvetica-Bold", 8.5)
+    pdf.drawCentredString(x + size / 2, y - 7, "Vérifiez-moi")
+    pdf.linkURL(url, (x, y - 10, x + size, y + size), relative=0, thickness=0)
+    pdf.restoreState()
+
+
+@lru_cache(maxsize=2)
+def archive_artwork(template_path):
+    """Keep the supplied logo, colour artwork and rules, removing all fixed claims and signatures."""
+    import pymupdf
+    with pymupdf.open(template_path) as doc:
+        page = doc[0]
+        for image in page.get_image_info(xrefs=True):
+            if image["bbox"][1] > 500 and image["xref"]:
+                page.delete_image(image["xref"])
+        page.add_redact_annot(page.rect, fill=False)
+        page.apply_redactions(images=0, graphics=0, text=0)
+        return doc.tobytes(garbage=4, deflate=True)
+
+
+def archive_layout(pdf, row, height):
+    from ssiap_diploma_registry import LEVELS
+    from ssiap_exam_pdf import FONT, BOLD
+
+    def centered(value, x, top, width, size=10, *, font=FONT, color="#202c40", lines=1):
+        value = str(value or "")
+        if not value:
+            return
+        while True:
+            wrapped = simpleSplit(value, font, size, width)
+            if len(wrapped) <= lines or size <= 5:
+                break
+            size -= .5
+        pdf.setFillColor(colors.HexColor(color))
+        for index, line in enumerate(wrapped):
+            fitted = min(size, width / max(pdfmetrics.stringWidth(line, font, 1), 1))
+            pdf.setFont(font, fitted)
+            pdf.drawCentredString(x, height - top - index * (size + 2), line)
+
+    level = row["level"]
+    centered("INTÉGRALE", 82, 157, 145, 20, font=BOLD, color="#ffffff")
+    centered("ACADEMY", 82, 183, 133, 20, font=BOLD, color="#ffffff")
+    centered("Diplôme", 505, 51, 380, 20, font=BOLD)
+    centered(LEVELS[level].upper(), 508, 75, 394, 12.5, font=BOLD, lines=2)
+    centered(level, 505, 119, 320, 20, font=BOLD, color="#d33a38")
+    centered(row.get("registration"), 480, 152, 430, 10, lines=2)
+    centered(row["issuer"], 465, 187, 510, 14, font=BOLD)
+    centered(row.get("issuer_details"), 460, 205, 510, 9, lines=2)
+    centered(row.get("approval"), 452, 236, 525, 10, lines=2)
+    centered("Diplôme délivré à", 443, 278, 580, 11)
+    centered(row["name"], 440, 306, 630, 22, font=BOLD)
+    centered("Né(e) le " + row["birth_date"] + " à " + row["birth_place"], 440, 331, 645, 12, lines=2)
+    centered("A satisfait aux épreuves de l’examen " + level + " du " + row["exam_date"],
+             425, 369, 710, 12, font=BOLD)
+    centered(row.get("exam_place"), 425, 386, 640, 10, lines=2)
+    centered("Conformément au procès-verbal du jury d’examen et à l’arrêté du 2 mai 2005 modifié.",
+             425, 413, 710, 9)
+    centered("Examen n° " + row["exam_number"], 425, 427, 695, 11)
+    centered("Diplôme n° " + row["number"], 425, 452, 695, 15, font=BOLD)
+    centered("Fait à " + row["issue_place"] + ", le " + row["issue_date"], 380, 482, 650, 10)
+    centered("Le représentant du centre", 250, 517, 280, 10)
+    centered(row.get("representative"), 250, 534, 270, 10, font=BOLD, lines=2)
+    centered("Le représentant du DDSIS", 535, 517, 265, 10)
+    centered(row.get("jury_representative"), 535, 534, 265, 10, font=BOLD, lines=2)
+    pdf.setStrokeColor(colors.HexColor("#8b929b"))
+    for x in (172, 457):
+        pdf.line(x, height - 567, x + 155, height - 567)
+
+
 def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
     """Preserve the supplied vector template and its signature at its native size."""
     template = PdfReader(template_path)
@@ -58,17 +143,25 @@ def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
         line.textOut(text)
         pdf.drawText(line)
 
+    variants = []
     for row in diplomas:
+        variant = row.get("manual") or row.get("level", "SSIAP 1") != "SSIAP 1" or ("approval" in row and row["approval"] != "Agrément SSIAP n°8323 délivré par la Préfecture du Var le 29/05/2026")
+        variants.append(variant)
         draw_photo(pdf, str(row.get('photo_path') or ''), PHOTO_RIGHT - PHOTO_WIDTH,
                    page_height - PHOTO_TOP - PHOTO_HEIGHT, PHOTO_WIDTH, PHOTO_HEIGHT)
-        field(row['exam_date'], 611, 317.1919, 195)
-        field(row['name'], 460, 348.7038, 346)
-        field(row['birth_date'], 460, 364.4597, 346)
-        field(row['birth_place'], 460, 380.2156, 346)
-        field(row['name'], 493, 458.9953, 313)
-        field(row['number'], 493, 474.7513, 313)
-        field(row.get('exam_number') or ('À renseigner' if preview else ''), 475, 490.5072, 331)
-        field(row['exam_date'], 180, 491.5701, 165)
+        if variant:
+            archive_layout(pdf, row, page_height)
+        else:
+            field(row['exam_date'], 611, 317.1919, 195)
+            field(row['name'], 460, 348.7038, 346)
+            field(row['birth_date'], 460, 364.4597, 346)
+            field(row['birth_place'], 460, 380.2156, 346)
+            field(row['name'], 493, 458.9953, 313)
+            field(row['number'], 493, 474.7513, 313)
+            field(row.get('exam_number') or ('À renseigner' if preview else ''), 475, 490.5072, 331)
+            field(row['exam_date'], 180, 491.5701, 165)
+        if row.get("verification_url") and not preview:
+            draw_verification(pdf, row["verification_url"], page_height)
         if preview:
             watermark(pdf, page_width, page_height)
         pdf.showPage()
@@ -76,10 +169,12 @@ def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
     overlay.seek(0)
     overlays = PdfReader(overlay)
     writer = PdfWriter()
-    for page in overlays.pages:
+    archive_template = PdfReader(BytesIO(archive_artwork(template_path))) if any(variants) else None
+    for page, variant in zip(overlays.pages, variants):
+        background = archive_template if variant else template
         # Each merged page needs independent streams and resources.
-        writer.reset_translation(template)
-        combined = writer.add_page(template.pages[0])
+        writer.reset_translation(background)
+        combined = writer.add_page(background.pages[0])
         # The supplied PDF has a non-zero MediaBox origin (8.58 pt vertically).
         combined.merge_transformed_page(page, Transformation().translate(
             tx=float(combined.mediabox.left), ty=float(combined.mediabox.bottom)))
