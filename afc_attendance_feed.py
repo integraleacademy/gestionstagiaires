@@ -33,7 +33,7 @@ def select_training(services, data, source_id, start, end):
 
 def enrolled_records(services, training):
     if isinstance(training.get('trainees'), list):
-        return [(t, t) for t in services._registered_trainees(training)]
+        return [(t, t) for t in services._registered_trainees(training, include_withdrawn=True)]
     records = []
     for raw in training.get('stagiaires') or []:
         if not isinstance(raw, dict) or services._trainee_registration_is_cancelled(raw):
@@ -61,7 +61,7 @@ def roster(services, data, training):
             if len(legacy) == 1 and sum(afc_enrolments.same_legacy_contact(t, legacy[0]) for _, t in records) == 1:
                 candidate = legacy[0]
         identifier = (candidate or {}).get('identifiant_ft') or trainee.get('identifiant_ft')
-        period = afc_schedule.effective_session(training, trainee)
+        period = afc_schedule.participation_period(training, trainee)
         row = {'id': trainee['id'], 'lastName': trainee.get('last_name') or '',
                'firstName': trainee.get('first_name') or '', 'france_travail_id': str(identifier or '').strip(),
                'entryDate': period['date_start'], 'exitDate': period['date_end'], 'ranHours': trainee.get('afc_ran_hours')}

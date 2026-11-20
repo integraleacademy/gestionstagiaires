@@ -8,6 +8,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+from zoneinfo import ZoneInfo
 
 
 SESSION_DATES = {
@@ -18,6 +19,7 @@ PERIOD_DATES = {"date_start": "Début de formation", "date_end": "Fin de formati
 TRAINEE_DATES = {
     "training_date_start": "Début de formation du stagiaire",
     "training_date_end": "Fin de formation du stagiaire",
+    "afc_withdrawal_last_day": "Dernier jour de formation en cas d’abandon",
 }
 TITLE = "AFC APS + SSIAP 1 + SST + Habilitation électrique"
 
@@ -76,8 +78,14 @@ def trainee_update(training, trainee, payload):
     result = {"training_date_end": ""}
     if "training_date_start" in payload:
         result["training_date_start"] = date(payload["training_date_start"], TRAINEE_DATES["training_date_start"])
+    if "afc_withdrawal_last_day" in payload:
+        result["afc_withdrawal_last_day"] = date(payload["afc_withdrawal_last_day"], TRAINEE_DATES["afc_withdrawal_last_day"])
     effective = effective_session(training, {**trainee, **result})
     _ordered(effective.get("date_start"), effective.get("date_end"), "Période du stagiaire")
+    last_day = result.get("afc_withdrawal_last_day", trainee.get("afc_withdrawal_last_day"))
+    if last_day and ((effective["date_start"] and last_day < effective["date_start"])
+                     or (effective["date_end"] and last_day > effective["date_end"])):
+        raise ValueError("Le dernier jour de formation doit être compris dans la période du stagiaire.")
     return result
 
 
@@ -93,6 +101,21 @@ def effective_session(training, trainee):
         "date_start": trainee.get("training_date_start") or training.get("date_start") or training.get("date_debut") or "",
         "date_end": training.get("date_end") or training.get("date_fin") or "",
     }
+
+
+def participation_period(training, trainee):
+    """Date range for attendance. The signed programme keeps its scheduled end."""
+    scheduled = effective_session(training, trainee)
+    return {"date_start": scheduled.get("date_start", ""),
+            "date_end": trainee.get("afc_withdrawal_last_day") or scheduled.get("date_end", "")}
+
+
+def has_withdrawn(trainee, on_date=None):
+    last_day = (trainee or {}).get("afc_withdrawal_last_day")
+    if not last_day:
+        return False
+    day = on_date or dt.datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
+    return last_day < day
 
 
 def document_context(training, trainee, fr_date, *, strict=False):

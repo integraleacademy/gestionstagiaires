@@ -277,10 +277,13 @@ def photo_path(services, trainee):
 
 
 def active_candidates(services, training, *, data=None, writable=False):
-    if security_exam_jury.level(training) and hasattr(services, '_registered_trainees'):
-        return services._registered_trainees(training)
-    candidates = [t for t in services._session_trainees_list(training) if not services._trainee_registration_is_cancelled(t)]
     config = settings(training)
+    if security_exam_jury.level(training) and hasattr(services, '_registered_trainees'):
+        return [t for t in services._registered_trainees(training, include_withdrawn=True)
+                if not afc_schedule.has_withdrawn(t, config["date"])]
+    candidates = [t for t in services._session_trainees_list(training)
+                  if not services._trainee_registration_is_cancelled(t)
+                  and not afc_schedule.has_withdrawn(t, config["date"])]
     candidates.extend(exam_retakes.participants(services, training, data=data, kind=config["level"],
                                                 exam_day=config["date"], writable=writable))
     return sorted(candidates, key=lambda t: (str(t.get('last_name', '')).casefold(), str(t.get('first_name', '')).casefold()))

@@ -2,11 +2,12 @@
 {% include "_afc_style.html" %}
 <section class="afc-individual" aria-labelledby="afcIndividualTitle">
   <h2 id="afcIndividualTitle">Dates de formation de ce stagiaire</h2>
-  <p>Parcours AFC APS + SSIAP 1. La date de début peut être personnalisée. La fin est commune à toute la session : {{ session.date_start|frdate }} → {{ session.date_end|frdate }}.</p>
+  <p>Le parcours AFC est prévu du {{ session.date_start|frdate }} au {{ session.date_end|frdate }}. En cas d’abandon, indiquez le dernier jour inclus dans les feuilles de présence.</p>
   <form id="afcIndividualDatesForm">
     <div class="afc-individual__fields">
       <label for="afcTraineeStart">Date de début<input id="afcTraineeStart" type="date" value="{{ trainee.training_date_start or '' }}" {% if is_read_only %}disabled{% endif %}></label>
       <label for="afcTraineeEnd">Fin commune de la session<input id="afcTraineeEnd" type="date" value="{{ session.date_end or '' }}" readonly></label>
+      <label for="afcWithdrawalLastDay">Dernier jour de formation en cas d’abandon (inclus)<input id="afcWithdrawalLastDay" type="date" max="{{ session.date_end or '' }}" value="{{ trainee.afc_withdrawal_last_day or '' }}" {% if is_read_only %}disabled{% endif %}></label>
       <button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>Enregistrer les dates</button>
     </div>
     <div id="afcIndividualFeedback" class="afc-individual__feedback" role="status" aria-live="polite"></div>
@@ -30,9 +31,14 @@
     button.disabled = true;
     feedback.textContent = 'Enregistrement…';
     try{
+      const changes = {};
+      const start = document.getElementById('afcTraineeStart');
+      const lastDay = document.getElementById('afcWithdrawalLastDay');
+      if (start.value !== start.defaultValue) changes.training_date_start = start.value;
+      if (lastDay.value !== lastDay.defaultValue) changes.afc_withdrawal_last_day = lastDay.value;
       const response = await fetch({{ url_for('api_update_trainee', session_id=session.id, trainee_id=trainee.id)|tojson }}, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({training_date_start:document.getElementById('afcTraineeStart').value})
+        body:JSON.stringify(changes)
       });
       const result = await response.json();
       if(!response.ok || !result.ok) throw new Error(result.error || 'Enregistrement impossible.');
