@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 import argparse
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+from urllib.parse import parse_qs, urlsplit
 
 import psycopg
 from psycopg import sql
@@ -175,6 +177,63 @@ def logged_in(campus, index, barrier=None):
     return client, personal
 
 
+def single_login(manager, campus, dsn):
+    """Exercise the actual learner login and rendered links across both applications."""
+    client = requests.Session()
+    client.trust_env = False
+    client.verify = campus.cert
+    personal = "/espace/bench-token-000"
+    verify(client.post(manager.base + personal + "/login",
+                       data=dict(last_name="Learner 0", birth="1990-03-12"),
+                       allow_redirects=False, timeout=15), 302)
+    page = verify(client.get(manager.base + personal, timeout=15))
+    links = [html.unescape(url) for url in re.findall(r'href="([^"]+)"', page.text)]
+    target = personal + "/questionnaires-uv/2"
+    link = next(url for url in links if url.startswith(campus.base) and
+                parse_qs(urlsplit(url).query).get("next") == [target])
+
+    def grant(url=link):
+        client.cookies.pop("integrale_campus", None)
+        initiated = verify(client.get(url, allow_redirects=False, timeout=15), 302)
+        assert initiated.headers["Location"].startswith(manager.base + personal + "/campus/autoriser?")
+        authorized = verify(client.get(initiated.headers["Location"], allow_redirects=False, timeout=15), 302)
+        assert authorized.headers["Cache-Control"] == "private, no-store"
+        assert authorized.headers["Referrer-Policy"] == "no-referrer"
+        callback = authorized.headers["Location"]
+        assert callback.startswith(campus.base + "/connexion/gestion?code=")
+        return callback
+
+    callback = grant()
+    verify(requests.get(callback, verify=campus.cert, timeout=15), 400)
+    accepted = verify(client.get(callback, allow_redirects=False, timeout=15), 303)
+    assert accepted.headers["Location"] == target
+    assert 'id="uv-experience"' in verify(client.get(campus.base + target, timeout=15)).text
+    verify(client.get(callback, timeout=15), 400)
+    assert client.get(link, allow_redirects=False, timeout=15).headers["Location"] == target
+
+    expired = grant()
+    code = parse_qs(urlsplit(expired).query)["code"][0]
+    with psycopg.connect(dsn) as conn:
+        conn.execute("UPDATE campus_directory.login_handoffs SET expires_at=now()-interval '1 second' WHERE code_hash=%s",
+                     (hashlib.sha256(code.encode()).hexdigest(),))
+    verify(client.get(expired, timeout=15), 400)
+
+    bound = grant()
+    code = parse_qs(urlsplit(bound).query)["code"][0]
+    with psycopg.connect(dsn) as conn:
+        conn.execute("UPDATE campus_directory.login_handoffs SET state_hash=%s WHERE code_hash=%s",
+                     (hashlib.sha256(b"other-browser").hexdigest(), hashlib.sha256(code.encode()).hexdigest()))
+    verify(client.get(bound, timeout=15), 400)
+    forged = manager.base + "/espace/bench-token-001/campus/autoriser?state=" + secrets.token_urlsafe(32)
+    unauthorized = verify(client.get(forged, allow_redirects=False, timeout=15), 302)
+    assert "/connexion/gestion" not in unauthorized.headers["Location"]
+
+    callback = grant(campus.base + personal + "?from=gestion&next=https://example.invalid")
+    accepted = verify(client.get(callback, allow_redirects=False, timeout=15), 303)
+    assert accepted.headers["Location"] == personal
+    return client, target
+
+
 def historical_vtc_access(campus):
     for label in ("complet", "pratique", "vehicule", "attente"):
         with requests.Session() as client:
@@ -258,7 +317,10 @@ def exercise(temp, dsn, people):
         manager.wait()
         portal = verify(requests.get(manager.base + "/espacestagiaire", verify=manager.cert, timeout=10))
         assert f'href="{campus.base}/"' in portal.text
+        transferred, target = single_login(manager, campus, dsn)
         manager.stop()
+        assert 'id="uv-experience"' in verify(transferred.get(campus.base + target, timeout=15)).text
+        transferred.close()
         historical_vtc_access(campus)
         native_smoke(campus, course, second, partner_token)
         questions = next(r["questions"] for r in uv.bank()["courses"]["aps"]["units"] if r["number"] == 4)
@@ -315,6 +377,7 @@ def exercise(temp, dsn, people):
             distinct_saved_answers=people*len(questions), verified_admin_scores=people,
             post_p95_seconds=round(sorted(samples)[int(.95*len(samples))],3),
             native_player_asset_heartbeat=True, partner_entitlement=True, historic_resume_reset=True,
+            single_login_handoff=True, handoff_replay_expiry_browser_binding=True,
             manager_offline_at_login=True, manager_restart_at_question=11),indent=2))
     except BaseException:
         for server in (campus,manager):

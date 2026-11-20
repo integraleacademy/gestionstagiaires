@@ -37,7 +37,7 @@
             <button type="submit" class="uvhub-link">Remettre à zéro</button>
           </form>
           {% endif %}
-          {% elif uv_questionnaires.available %}<a class="uvhub-link is-primary" href="{{ campus_public_url|default('') }}{{ url_for('public_uv_questionnaire', token=token, number=uv.number) }}">{% if uv.completed %}Voir la correction{% elif uv.in_progress %}Reprendre le questionnaire →{% else %}Commencer le questionnaire →{% endif %}</a>
+          {% elif uv_questionnaires.available %}<a class="uvhub-link is-primary" href="{{ campus_link(token, url_for('public_uv_questionnaire', token=token, number=uv.number)) if campus_link is defined else url_for('public_uv_questionnaire', token=token, number=uv.number) }}">{% if uv.completed %}Voir la correction{% elif uv.in_progress %}Reprendre le questionnaire →{% else %}Commencer le questionnaire →{% endif %}</a>
           {% else %}<span class="uvhub-disabled">Disponible au début du présentiel</span>{% endif %}
         </div>
       </article>
