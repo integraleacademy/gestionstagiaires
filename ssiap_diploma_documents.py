@@ -42,10 +42,11 @@ def watermark(pdf, width, height, text="APERÇU - NON VALABLE"):
     pdf.restoreState()
 
 
-def draw_verification(pdf, url, height):
+def draw_verification(pdf, url, width):
     size = 26 * mm
-    x = PHOTO_RIGHT - (PHOTO_WIDTH + size) / 2
-    y = height - PHOTO_TOP - PHOTO_HEIGHT - 10 - size
+    # Clear of both signature lines and above the red bottom rule.
+    x = width - 9.5 * mm - size
+    y = 11 * mm
     qr = QrCodeWidget(url, barWidth=size, barHeight=size, barBorder=4, barLevel="M")
     pdf.saveState()
     pdf.setFillColor(colors.white)
@@ -54,8 +55,14 @@ def draw_verification(pdf, url, height):
     drawing.add(qr)
     renderPDF.draw(drawing, pdf, x, y)
     pdf.setFillColor(colors.HexColor("#163f78"))
-    pdf.setFont("Helvetica-Bold", 8.5)
-    pdf.drawCentredString(x + size / 2, y - 7, "Vérifiez-moi")
+    label = "Vérifiez-moi"
+    text = pdf.beginText(x + (size - pdfmetrics.stringWidth(label, "Helvetica-Bold", 8.5)) / 2, y - 7)
+    text.setFont("Helvetica-Bold", 8.5)
+    text.setCharSpace(0)
+    text.setWordSpace(0)
+    text.setHorizScale(100)
+    text.textOut(label)
+    pdf.drawText(text)
     pdf.linkURL(url, (x, y - 10, x + size, y + size), relative=0, thickness=0)
     pdf.restoreState()
 
@@ -125,6 +132,8 @@ def archive_layout(pdf, row, height):
 
 def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
     """Preserve the supplied vector template and its signature at its native size."""
+    from ssiap_diploma_model import draw_mentions, stock_changes, stock_without_slots
+
     template = PdfReader(template_path)
     page_width, page_height = map(float, (template.pages[0].mediabox.width, template.pages[0].mediabox.height))
     overlay = BytesIO()
@@ -143,13 +152,20 @@ def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
         line.textOut(text)
         pdf.drawText(line)
 
-    variants = []
+    backgrounds = []
+    stocks = {("SSIAP 1", frozenset()): template}
     for row in diplomas:
-        variant = row.get("manual") or row.get("level", "SSIAP 1") != "SSIAP 1" or ("approval" in row and row["approval"] != "Agrément SSIAP n°8323 délivré par la Préfecture du Var le 29/05/2026")
-        variants.append(variant)
+        level = row.get("level", "SSIAP 1")
+        changes = stock_changes(row) if level == "SSIAP 1" else {}
+        stock = (level, frozenset(changes))
+        if stock not in stocks:
+            artwork = (stock_without_slots(template_path, stock[1]) if level == "SSIAP 1"
+                       else archive_artwork(template_path))
+            stocks[stock] = PdfReader(BytesIO(artwork))
+        backgrounds.append(stocks[stock])
         draw_photo(pdf, str(row.get('photo_path') or ''), PHOTO_RIGHT - PHOTO_WIDTH,
                    page_height - PHOTO_TOP - PHOTO_HEIGHT, PHOTO_WIDTH, PHOTO_HEIGHT)
-        if variant:
+        if level != "SSIAP 1":
             archive_layout(pdf, row, page_height)
         else:
             field(row['exam_date'], 611, 317.1919, 195)
@@ -159,9 +175,12 @@ def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
             field(row['name'], 493, 458.9953, 313)
             field(row['number'], 493, 474.7513, 313)
             field(row.get('exam_number') or ('À renseigner' if preview else ''), 475, 490.5072, 331)
-            field(row['exam_date'], 180, 491.5701, 165)
+            if "issue_place" not in changes:
+                field(row.get("issue_date") or row["exam_date"], 180, 491.5701, 165)
+            if changes or row.get("manual"):
+                draw_mentions(pdf, page_height, changes, row)
         if row.get("verification_url") and not preview:
-            draw_verification(pdf, row["verification_url"], page_height)
+            draw_verification(pdf, row["verification_url"], page_width)
         if preview:
             watermark(pdf, page_width, page_height)
         pdf.showPage()
@@ -169,9 +188,7 @@ def diplomas_pdf(diplomas, template_path, draw_photo, *, preview=False):
     overlay.seek(0)
     overlays = PdfReader(overlay)
     writer = PdfWriter()
-    archive_template = PdfReader(BytesIO(archive_artwork(template_path))) if any(variants) else None
-    for page, variant in zip(overlays.pages, variants):
-        background = archive_template if variant else template
+    for page, background in zip(overlays.pages, backgrounds):
         # Each merged page needs independent streams and resources.
         writer.reset_translation(background)
         combined = writer.add_page(background.pages[0])

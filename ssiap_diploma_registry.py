@@ -17,11 +17,12 @@ import ijson
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESSIV
 from flask import abort, make_response, redirect, render_template, request, send_file, session, url_for
+from PIL import Image
 
 import ssiap_diploma_numbers as numbers
 import ssiap_exam as exam
 import ssiap_exam_diplomas as details
-from identity_photos import MAX_SOURCE_BYTES, decode_photo
+from identity_photos import MAX_SOURCE_BYTES, decode_photo, printable_portrait
 
 PRIVATE_KEYS = "ssiap_verification_private"
 MANUAL = "ssiap_manual_diplomas"
@@ -202,6 +203,17 @@ def prepare_portrait(upload):
     return output.getvalue()
 
 
+def verification_portrait(path):
+    """Embed the printable crop in the verified response without exposing the upload."""
+    if not path:
+        return None
+    try:
+        with printable_portrait(path) as photo:
+            return "data:image/jpeg;base64," + base64.b64encode(photo.getbuffer()).decode("ascii")
+    except (OSError, ValueError, Image.DecompressionBombError):
+        return None
+
+
 def store_portrait(path, content):
     dest = Path(path)
     dest.parent.mkdir(exist_ok=True, mode=0o700)
@@ -231,8 +243,9 @@ def register(app, services):
     def public_ssiap_diploma(token):
         payload = decode_link(services, token)
         record = public_record(services, payload) if payload else None
-        return private(make_response(render_template("ssiap_diploma_verify.html", diploma=record, levels=LEVELS),
-                                     200 if record else 404))
+        portrait = verification_portrait(record["photo_path"]) if record else None
+        return private(make_response(render_template("ssiap_diploma_verify.html", diploma=record,
+                                                    levels=LEVELS, portrait=portrait), 200 if record else 404))
 
     @app.get("/admin/outils/diplomes-ssiap")
     @services.admin_login_required
