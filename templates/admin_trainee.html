@@ -21,7 +21,7 @@
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261117-apercu-mail') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-sheet.css', v='20261120-formule') }}">
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/registration-confirmation.css', v='20261117') }}">
 {% include "_registration_confirmation.html" %}
@@ -459,37 +459,6 @@
       </div>
 
       {% if is_vtc %}
-      <section class="card vtc-individual-offer" id="vtcIndividualOffer"
-               data-update-url="{{ url_for('api_update_vtc_individual_offer',session_id=session.id,trainee_id=trainee.id) }}"
-               data-current-offer="{{ trainee.vtc_offer or 'full' }}"
-               data-read-only="{{ '1' if is_read_only else '0' }}"
-               style="margin:12px 0;padding:16px;border:1px solid #cbd5e1;border-radius:14px;">
-        <h3 style="margin:0 0 6px;font-size:17px;">Formule Chauffeur VTC</h3>
-        <p class="hint" style="margin:0 0 12px;">Choisissez une seule formule. Le prix et les documents sont mis à jour automatiquement pour ce stagiaire.</p>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="vtcPracticeOnly" {% if trainee.vtc_offer == 'practice' %}checked{% endif %} {{ read_only_attr }}
-                   style="width:19px;height:19px;flex-shrink:0;">
-            <span><strong>Formation pratique uniquement</strong> · <strong>600 € TTC</strong><br>
-              <span class="hint">Formation pratique + prêt du véhicule le jour de l’examen. Sans e-learning ni formation théorique.</span>
-            </span>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="vtcVehicleOnly" {% if trainee.vtc_offer == 'vehicle' %}checked{% endif %} {{ read_only_attr }}
-                   style="width:19px;height:19px;flex-shrink:0;">
-            <span><strong>Prêt du véhicule uniquement</strong> · <strong>150 € TTC</strong><br>
-              <span class="hint">Prêt du véhicule à doubles commandes le jour de l’examen. Sans formation ni e-learning.</span>
-            </span>
-          </label>
-        </div>
-        <p class="hint" id="vtcIndividualOfferStatus" role="status" aria-live="polite" style="margin:12px 0 0;">
-          {% if trainee.vtc_offer in ['practice','vehicle'] %}Convention spécifique disponible dans Automatisation. Aucun e-learning envoyé pour cette formule.{% else %}Aucune case cochée : parcours VTC complet.{% endif %}
-        </p>
-        {% if trainee.vtc_offer == 'vehicle' and show_automation %}
-        <a class="btn btn-outline" style="margin-top:10px;" href="{{ url_for('admin_preview_aps_convocation',session_id=session.id,trainee_id=trainee.id) }}"
-           target="_blank" rel="noopener">Prévisualiser le document à présenter aux examinateurs</a>
-        {% endif %}
-      </section>
       <div class="trainee-vtc-training-dates">
         <span class="mono trainee-vtc-training-dates__field">
           Dates réelles de formation VTC :
@@ -603,6 +572,65 @@
   </div>
 </div>
 
+{% macro cancel_signature_button(convention) -%}
+  {% if convention.offer_lock == 'pending' and not trainee.company_convention and not is_read_only and not automation_locked %}
+    <div class="convention-cancel-action">
+      <button class="btn btn-outline convention-cancel-button" type="button"
+              data-cancel-convention="{{ url_for('api_cancel_convention_signature', session_id=session.id, trainee_id=trainee.id) }}"
+              data-request-id="{{ convention.signature_request_id }}">Annuler la demande de signature</button>
+      <span class="convention-cancel-feedback" role="status" aria-live="polite"></span>
+    </div>
+  {% endif %}
+{%- endmacro %}
+
+{% if is_vtc %}
+  {% set offer = trainee.vtc_offer or 'full' %}
+  {% set convention = automation_status.convention if show_automation else {} %}
+  {% set offer_lock = convention.offer_lock|default('') %}
+  <section class="card vtc-offer-panel" id="vtcIndividualOffer" aria-labelledby="vtcOfferTitle"
+           data-update-url="{{ url_for('api_update_vtc_individual_offer', session_id=session.id, trainee_id=trainee.id) }}"
+           data-current-offer="{{ offer }}">
+    <header class="vtc-offer-panel__header">
+      <h2 id="vtcOfferTitle">Formule Chauffeur VTC</h2>
+      <span class="vtc-offer-current">Formule actuelle <strong>{{ {'practice': 'Formation pratique', 'vehicle': 'Prêt du véhicule'}.get(offer, 'Parcours complet') }}</strong></span>
+    </header>
+    <fieldset class="vtc-offer-options" aria-labelledby="vtcOfferTitle" {% if offer_lock or is_read_only or automation_cancelled %}disabled{% endif %}>
+      <label class="vtc-offer-option">
+        <input type="checkbox" id="vtcPracticeOnly" value="practice" {% if offer == 'practice' %}checked{% endif %}>
+        <span class="vtc-offer-option__copy">
+          <strong>Formation pratique uniquement</strong>
+          <span>Formation pratique et prêt du véhicule le jour de l’examen.</span>
+        </span>
+        <span class="vtc-offer-price">600 € <small>TTC</small></span>
+      </label>
+      <label class="vtc-offer-option">
+        <input type="checkbox" id="vtcVehicleOnly" value="vehicle" {% if offer == 'vehicle' %}checked{% endif %}>
+        <span class="vtc-offer-option__copy">
+          <strong>Prêt du véhicule uniquement</strong>
+          <span>Véhicule à doubles commandes pour l’examen pratique.</span>
+        </span>
+        <span class="vtc-offer-price">150 € <small>TTC</small></span>
+      </label>
+    </fieldset>
+    <p class="vtc-offer-help">Les deux formules excluent la théorie et l’e-learning.{% if offer in ['practice', 'vehicle'] and not offer_lock and not is_read_only and not automation_cancelled %} Décochez la formule pour revenir au parcours complet.{% endif %}</p>
+    {% if offer_lock == 'pending' %}
+      <div class="vtc-offer-notice">
+        <div><strong>Demande de signature en cours</strong><p>La formule pourra être modifiée après l’annulation de la demande.</p></div>
+        {{ cancel_signature_button(convention) }}
+      </div>
+    {% elif offer_lock == 'signed' %}
+      <div class="vtc-offer-notice"><strong>Convention signée · Formule verrouillée</strong></div>
+    {% elif convention.status == 'canceled' %}
+      <div class="vtc-offer-notice vtc-offer-notice--closed"><strong>Demande de signature annulée</strong></div>
+    {% endif %}
+    <p class="vtc-offer-feedback" id="vtcIndividualOfferStatus" role="status" aria-live="polite"></p>
+    {% if offer == 'vehicle' and show_automation %}
+      <a class="btn btn-outline vtc-offer-preview" href="{{ url_for('admin_preview_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}"
+         target="_blank" rel="noopener">Prévisualiser le document à présenter aux examinateurs</a>
+    {% endif %}
+  </section>
+{% endif %}
+
 {% if show_candidate_sheet %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #22c55e;">
   <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
@@ -637,7 +665,7 @@
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
       <div class="automation-badge automation-badge--{% if automation_locked %}locked{% elif auto_global == 'complete' %}complete{% elif auto_global == 'error' %}error{% elif auto_global == 'in_progress' %}waiting{% elif auto_global == 'blocked' %}blocked{% else %}action{% endif %}">{% if automation_cancelled %}{{ automation_icon('lock') }}Automatisation désactivée{% elif automation_locked %}{{ automation_icon('lock') }}Module verrouillé{% elif auto_global == 'complete' %}{{ automation_icon('check') }}À jour{% elif auto_global == 'error' %}{{ automation_icon('alert') }}Erreur{% elif auto_global == 'in_progress' %}{{ automation_icon('hourglass','automation-icon--hourglass') }}En cours{% elif auto_global == 'blocked' %}{{ automation_icon('lock') }}Bloqué{% else %}{{ automation_icon('clock') }}En cours{% endif %}</div>
       <form method="post" action="{{ url_for('admin_reset_trainee_automations', session_id=session.id, trainee_id=trainee.id) }}" onsubmit="return window.confirm('Souhaitez-vous une remise à 0 des automatisations ? Cette action supprimera les documents et statuts automatisés du stagiaire.');">
-        <button class="btn btn-outline" type="submit" {% if automation_locked or is_read_only %}disabled{% endif %}>Annuler</button>
+        <button class="btn btn-outline" type="submit" {% if automation_locked or is_read_only %}disabled{% endif %}>Réinitialiser les automatisations</button>
       </form>
     </div>
   </header>
@@ -651,7 +679,7 @@
       <strong>{{ auto.ready_documents|default(0) }} / {{ auto.total_documents|default(4) }} prêts</strong>
     </summary>
     <div class="automation-grid">
-    <details class="automation-card automation-doc automation-card--{{ c.card_tone|default('pending') }}"{% if c.preparation_failed %} open{% endif %}><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('file') }}</span><div class="automation-doc__title"><h3>{{ "Convention entreprise" if trainee.company_convention else "Convention" }}{% if is_vtc and trainee.vtc_offer == 'vehicle' %} · Prêt de véhicule{% elif is_vtc and trainee.vtc_offer == 'practice' %} · Pratique + véhicule{% endif %}</h3><p>Document contractuel à générer, envoyer et faire signer.</p></div><span class="automation-status automation-status--{{ c.tone }}">{{ automation_icon(c.icon, c.icon_class|default('')) }}{{ c.label }}</span><div class="automation-doc__summary-action"><a class="btn btn-outline automation-preview-convention" href="{{ c.view_url if (c.status == 'signed' or trainee.company_convention) and c.view_url else url_for('admin_preview_convention', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="{{ 'Voir la convention signée' if c.status == 'signed' else 'Voir la convention avec les informations actuelles de la fiche' }}">{{ automation_icon('file') }}Prévisualiser</a>{% if c.status == 'signed' and c.download_url %}<a class="btn btn-outline automation-download-signed" href="{{ c.download_url }}" onclick="event.stopPropagation()" aria-label="Télécharger ou retrouver la convention de formation signée">{{ automation_icon('download') }}{% if c.signed_pdf_available %}Télécharger la convention signée{% else %}Retrouver la convention signée{% endif %}</a>{% endif %}{% if company_convention_available and (trainee.company_convention or trainee.company_convention_copy_path) and not is_read_only and not automation_locked %}<a class="btn btn-outline" href="{{ url_for('admin_company_convention', session_id=session.id, trainee_id=trainee.id, _anchor='signature' if trainee.company_convention or trainee.company_convention_copy_path else none) }}" onclick="event.stopPropagation()">Signature entreprise</a>{% endif %}{% if not trainee.company_convention %}<form class="automation-loading-form" data-convention-transmission-form="true"{% if c.status in ['waiting_signature','sent','signed'] %} data-yousign-force-new="true"{% endif %} method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()">{% if c.status in ['waiting_signature','sent','signed'] %}<input type="hidden" name="force_new" value="1">{% endif %}<button class="btn btn-primary" type="submit" {% if is_read_only or automation_locked or not c.can_send %}disabled{% endif %}>{% if c.status in ['waiting_signature','sent','signed'] %}Annuler et régénérer{% else %}{{ c.primary_action }}{% endif %}</button></form>{% endif %}</div></summary>
+    <details class="automation-card automation-doc automation-card--{{ c.card_tone|default('pending') }}"{% if c.preparation_failed %} open{% endif %}><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('file') }}</span><div class="automation-doc__title"><h3>{{ "Convention entreprise" if trainee.company_convention else "Convention" }}{% if is_vtc and trainee.vtc_offer == 'vehicle' %} · Prêt de véhicule{% elif is_vtc and trainee.vtc_offer == 'practice' %} · Pratique + véhicule{% endif %}</h3><p>Document contractuel à générer, envoyer et faire signer.</p></div><span class="automation-status automation-status--{{ c.tone }}">{{ automation_icon(c.icon, c.icon_class|default('')) }}{{ c.label }}</span><div class="automation-doc__summary-action"><a class="btn btn-outline automation-preview-convention" href="{{ c.view_url if (c.status == 'signed' or trainee.company_convention) and c.view_url else url_for('admin_preview_convention', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="{{ 'Voir la convention signée' if c.status == 'signed' else 'Voir la convention avec les informations actuelles de la fiche' }}">{{ automation_icon('file') }}Prévisualiser</a>{% if c.status == 'signed' and c.download_url %}<a class="btn btn-outline automation-download-signed" href="{{ c.download_url }}" onclick="event.stopPropagation()" aria-label="Télécharger ou retrouver la convention de formation signée">{{ automation_icon('download') }}{% if c.signed_pdf_available %}Télécharger la convention signée{% else %}Retrouver la convention signée{% endif %}</a>{% endif %}{% if company_convention_available and (trainee.company_convention or trainee.company_convention_copy_path) and not is_read_only and not automation_locked %}<a class="btn btn-outline" href="{{ url_for('admin_company_convention', session_id=session.id, trainee_id=trainee.id, _anchor='signature' if trainee.company_convention or trainee.company_convention_copy_path else none) }}" onclick="event.stopPropagation()">Signature entreprise</a>{% endif %}{{ cancel_signature_button(c) }}{% if not trainee.company_convention %}<form class="automation-loading-form" data-convention-transmission-form="true"{% if c.status in ['waiting_signature','sent','signed'] %} data-yousign-force-new="true" data-convention-signed="{{ '1' if c.status == 'signed' else '0' }}"{% endif %} method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()">{% if c.status in ['waiting_signature','sent','signed'] %}<input type="hidden" name="force_new" value="1">{% endif %}<button class="btn btn-primary" type="submit" {% if is_read_only or automation_locked or not c.can_send %}disabled{% endif %}>{% if c.status == 'signed' %}Générer une nouvelle version{% elif c.status in ['waiting_signature','sent'] %}Annuler et régénérer{% else %}{{ c.primary_action }}{% endif %}</button></form>{% endif %}</div></summary>
       <div class="automation-card-details automation-doc__body"><div class="automation-meta">{% for step in c.timeline_steps %}<div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{{ step.state }}"></i><span>{{ step.label }}</span><strong>{{ step.value }}</strong></div>{% endfor %}<div class="automation-meta__row"><i class="automation-meta__dot"></i><span>{{ "Entreprise" if trainee.company_convention else "Email destinataire" }}</span><strong>{{ trainee.company_convention.name if trainee.company_convention else c.recipient_email or '—' }}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>ID Yousign</span><strong class="mono">{{ c.signature_request_id or '—' }}</strong></div>{% if c.signed_pdf_request_id and c.signed_pdf_request_id != c.signature_request_id %}<div class="automation-meta__row"><i class="automation-meta__dot"></i><span>ID Yousign du PDF signé retrouvé</span><strong class="mono">{{ c.signed_pdf_request_id }}</strong></div>{% endif %}</div>{% if c.error %}
         <div class="automation-error">{{ c.error }}{% if c.previous_signed_at %} La convention précédente a été signée le {{ c.previous_signed_at }}.{% endif %}</div>
       {% endif %}
@@ -2691,8 +2719,8 @@
 }|tojson }}
 </script>
 <script src="{{ url_for('static', filename='js/convocation-jobs.js', v='20261117-1') }}"></script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261117-cnaps') }}"></script>
-{% if is_vtc %}<script src="{{ url_for('static', filename='js/vtc-individual-offers.js', v='20261120-1') }}"></script>{% endif %}
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261120-signature') }}"></script>
+{% if is_vtc %}<script src="{{ url_for('static', filename='js/vtc-individual-offers.js', v='20261120-2') }}"></script>{% endif %}
   
 
 <!-- ===================== -->

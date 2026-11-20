@@ -18994,6 +18994,7 @@ def admin_sessions_conventions():
         {"key": "sent", "label": "Envoyée"},
         {"key": "signed", "label": "Signée"},
         {"key": "expired", "label": "Expirée"},
+        {"key": "canceled", "label": "Signature annulée"},
         {"key": "refused", "label": "Refusée"},
         {"key": "error", "label": "Erreur"},
         {"key": "registration_cancelled", "label": "Inscriptions annulées"},
@@ -19067,7 +19068,7 @@ def admin_sessions_conventions():
                 or _recoverable_yousign_convention_request_id(trainee)
             )
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
-            row_needs_action = not registration_cancelled and status_key in {"not_generated", "generated", "expired", "refused"}
+            row_needs_action = not registration_cancelled and status_key in {"not_generated", "generated", "expired", "refused", "canceled"}
             row_needs_printing = _convention_needs_printing(sess, trainee, status_key)
             is_problem = status_key in {"error", "expired", "refused"}
 
@@ -28036,22 +28037,23 @@ def api_update_vtc_individual_offer(session_id: str, trainee_id: str):
             raise ValueError("Le dossier est annulé.")
         current_offer = vtc_individual_offers.offer(trainee)
         if current_offer != requested:
-            signature_state = trainee.get("convention_signature") or trainee.get("convocation_signature") or {}
-            if (signature_state.get("signature_request_id") or signature_state.get("signed_pdf_path")
-                    or signature_state.get("status") in ("done", "signed", "completed")
-                    or trainee.get("convention_legacy_signed_at")):
-                raise ValueError(
-                    "Une convention a déjà été envoyée pour signature ou signée. "
-                    "Annulez ou traitez d'abord cette demande Yousign avant de modifier la formule."
-                )
+            signature_lock = _convention_offer_lock(trainee)
+            if signature_lock == "signed":
+                raise ValueError("La convention est signée. La formule VTC est verrouillée.")
+            if signature_lock:
+                raise ValueError("Annulez la demande de signature Yousign en cours avant de modifier la formule.")
+            signature_state = _yousign_state(trainee)
+            if signature_state.get("signature_request_id"):
+                _archive_yousign_convention_state(trainee, "vtc_offer_changed")
             vtc_individual_offers.update(trainee, requested, default_training_price("VTC"))
             if requested == "full":
                 # Returning to the complete package must restore the native VTC
                 # assignment even when enrolment originally had no e-learning.
                 vtc_elearning_activation.schedule_new_enrolment(
                     sys.modules[__name__], training, trainee)
-            trainee.pop("convention_signature", None)
-            trainee.pop("convocation_signature", None)
+            if not signature_state.get("stopped_request_id"):
+                trainee.pop("convention_signature", None)
+                trainee.pop("convocation_signature", None)
             for key in ("convention_aps_pdf_path", "convention_aps_docx_path",
                         "convention_aps_status", "convention_aps_generated_at",
                         "convocation_aps_pdf_path", "convocation_aps_docx_path",
@@ -36463,7 +36465,7 @@ def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     """Return the Yousign convention state, keeping legacy convocation data readable."""
     state = trainee.get("convention_signature") if isinstance(trainee.get("convention_signature"), dict) else None
     legacy_state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else None
-    if state is None:
+    if not state:
         state = legacy_state or {}
     trainee["convention_signature"] = state
     # Compatibility: old production records and older code paths still read this key.
@@ -37246,7 +37248,7 @@ def _auto_send_convention_signature_if_needed(
     if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
         return False
     state = _yousign_state(trainee)
-    if state.get("signature_request_id") or state.get("signature_email_sent_at"):
+    if state.get("signature_request_id") or state.get("signature_email_sent_at") or state.get("stopped_request_id"):
         return False
     if trigger == "create_100_cpf":
         should_send = _is_trainee_financed_100_percent_cpf(session_obj, trainee)
@@ -37289,6 +37291,43 @@ def _archive_yousign_convention_state(trainee: Dict[str, Any], reason: str) -> N
         archived["archived_at"] = _now_iso()
         archived["archive_reason"] = reason
         archive.append(archived)
+
+
+CONVENTION_CLOSED_UNSIGNED = {"canceled", "cancelled", "expired", "declined", "refused", "rejected", "deleted"}
+
+
+def _convention_offer_lock(trainee: Dict[str, Any]) -> str:
+    state = _yousign_state(trainee)
+    status = _normalize_yousign_status(state.get("status"))
+    if (_trainee_convention_is_signed(trainee) or state.get("signed_pdf_path") or status == "completed"
+            or trainee.get("convention_status") == "signed" or trainee.get("convention_aps_status") == "signed"):
+        return "signed"
+    if state.get("signature_request_id") and status not in CONVENTION_CLOSED_UNSIGNED:
+        return "pending"
+    return ""
+
+
+def _stop_convention_request_at_yousign(request_id: str) -> str:
+    path = f"/signature_requests/{request_id}"
+    status = _yousign_signature_request_status(_yousign_json("GET", path))
+    if status in {"ongoing", "approval"}:
+        try:
+            _yousign_json("POST", path + "/cancel", json={
+                "reason": "other", "custom_note": "Annulation de la demande depuis la fiche stagiaire.",
+            })
+            return "canceled"
+        except YousignAPIError as exc:
+            if exc.status_code not in {400, 409, 422}:
+                raise
+            # The signer or another administrator may have acted after our GET.
+            status = _yousign_signature_request_status(_yousign_json("GET", path))
+            if status in {"ongoing", "approval"}:
+                raise
+    if status in CONVENTION_CLOSED_UNSIGNED:
+        return status
+    if status in {"done", "signed", "completed"}:
+        raise ValueError("La convention a déjà été signée sur Yousign. Elle ne peut plus être annulée.")
+    raise ValueError("Yousign ne permet pas d’annuler la demande dans son état actuel.")
 
 
 def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = "other") -> None:
@@ -40887,9 +40926,11 @@ def _convention_automation_status_key(trainee: Dict[str, Any]) -> str:
     raw_status = _normalize_yousign_status(state.get("status"))
     if raw_status in {"error", "download_error"}:
         return "error"
-    if raw_status in {"declined", "refused"}:
+    if raw_status in {"declined", "refused", "rejected"}:
         return "refused"
-    if raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
+    if raw_status in {"canceled", "cancelled", "deleted"}:
+        return "canceled"
+    if raw_status == "expired" or _yousign_signature_link_is_expired(state):
         return "expired"
     if _trainee_convention_is_signed(trainee):
         return "signed"
@@ -41046,6 +41087,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "signed": ("Signée", "check", "complete", "done", "Convention signée"),
         "refused": ("Refusée", "alert", "error", "blocked", "Créer une nouvelle demande"),
         "expired": ("Expirée", "alert", "error", "blocked", "Créer une nouvelle demande"),
+        "canceled": ("Signature annulée", "file", "muted", "pending", "Créer une nouvelle demande"),
         "error": ("Erreur", "alert", "error", "blocked", "Réessayer"),
     }
     c_label, c_icon, c_tone, c_card_tone, c_primary_action = convention_labels.get(convention_status, convention_labels["error"])
@@ -41086,6 +41128,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "convention": {
             "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
             "primary_action": c_primary_action, "can_send": True, "can_download": bool(convention_download_url),
+            "offer_lock": _convention_offer_lock(trainee),
             "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
             "preparation_failed": preparation_failed, "previous_signed_at": previous_signed_at,
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") if has_signature_request else "",
@@ -41103,7 +41146,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "timeline_steps": [
                 {"label": "Générée", "value": generated_at or "Pas encore effectué", "state": "done" if generated_at else "blocked"},
                 {"label": "Envoyée", "value": sent_at or "Pas encore effectué", "state": "done" if sent_at else ("pending" if has_generated_convention else "blocked")},
-                {"label": "Signature", "value": ("Signée le " + signed_at) if signed_at else ("En attente de signature" if has_signature_request else "Pas encore effectué"), "state": "done" if signed_at else ("blocked" if convention_status in {"refused", "expired"} else "pending" if has_signature_request else "blocked")},
+                {"label": "Signature", "value": ("Signée le " + signed_at) if signed_at else (c_label if convention_status in {"canceled", "expired", "refused"} else "En attente de signature" if has_signature_request else "Pas encore effectué"), "state": "done" if signed_at else ("blocked" if convention_status in {"refused", "expired"} else "pending" if has_signature_request else "blocked")},
             ],
         },
         "convocation": {
@@ -52772,6 +52815,57 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
 
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/cancel")
+@admin_login_required
+@admin_write_required
+def api_cancel_convention_signature(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True)
+    request_id = payload.get("request_id") if isinstance(payload, dict) else None
+    if not isinstance(request_id, str) or not request_id.strip():
+        return jsonify(ok=False, error="La référence de la demande de signature est manquante."), 400
+
+    def target(data):
+        training, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+        if not trainee:
+            abort(404)
+        if not _automation_is_enabled(training, trainee):
+            abort(403)
+        if trainee.get("company_convention"):
+            raise ValueError("Gérez cette signature dans la convention entreprise.")
+        state = _yousign_state(trainee)
+        if _convention_offer_lock(trainee) == "signed":
+            raise ValueError("La convention est déjà signée. Elle ne peut plus être annulée.")
+        current_id = state.get("signature_request_id") or state.get("stopped_request_id")
+        if current_id != request_id:
+            raise ValueError("La demande de signature a changé. Rechargez la fiche stagiaire.")
+        return trainee, state
+
+    def record(data):
+        trainee, state = target(data)
+        if state.get("stopped_request_id") != request_id:
+            now = _now_iso()
+            _archive_yousign_convention_state(trainee, "closed_by_admin")
+            state.clear()  # Retire the signing link, reminders and both legacy aliases together.
+            state.update(status=status, stopped_request_id=request_id, stopped_at=now)
+            trainee.update(convention_aps_status=status, convention_status="soon", updated_at=now)
+            label = "Demande de signature annulée" if status in {"canceled", "cancelled"} else "Demande de signature clôturée"
+            append_trainee_history_event(trainee, label, "Convention du stagiaire · Yousign", "action", now)
+        return {"ok": True, "status": state["status"]}
+
+    try:
+        _, state = target(load_data(run_background_tasks=False))
+        if state.get("stopped_request_id") == request_id:
+            return jsonify(ok=True, status=state["status"])
+        # Do not hold the shared data-store lock during either provider call.
+        status = _stop_convention_request_at_yousign(request_id)
+        return jsonify(_atomic_update_data(record))
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 409
+    except (RuntimeError, requests.RequestException) as exc:
+        app.logger.warning("[YOUSIGN] convention cancellation trainee=%s: %s", trainee_id, _sanitize_yousign_error(exc))
+        return jsonify(ok=False, error="L’annulation n’a pas pu être confirmée. Réessayez dans quelques instants."), 502
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/legacy-signed")
