@@ -108,6 +108,37 @@ def test_reversed_individual_period_is_rejected_without_save(client, training, t
     save.assert_not_called()
 
 
+def test_withdrawal_keeps_historical_attendance_and_replacement_starts_separately(client, training, trainee, monkeypatch):
+    training.update(date_start="2020-11-16", date_end="2021-02-15")
+    trainee.update(training_date_start="2020-11-16")
+    replacement = {"id": "T2", "training_date_start": "2020-11-20", "documents": []}
+    training["trainees"] = [trainee, replacement]
+    monkeypatch.setattr(app, "load_data", lambda **kw: {"sessions": [training]})
+    monkeypatch.setattr(app, "save_data", lambda data: None)
+    monkeypatch.setenv("AFC_ATTENDANCE_SYNC_TOKEN", "test-attendance")
+    url = f"/api/sessions/{training['id']}/stagiaires/{trainee['id']}/update"
+    for invalid in ("2020-11-15", "2021-02-16", "invalid"):
+        assert client.post(url, json={"afc_withdrawal_last_day": invalid}).status_code == 400
+        assert "afc_withdrawal_last_day" not in trainee
+
+    assert client.post(url, json={"afc_withdrawal_last_day": "2020-11-18"}).status_code == 200
+    assert not afc_schedule.has_withdrawn(trainee, "2020-11-18")
+    assert afc_schedule.has_withdrawn(trainee, "2020-11-19")
+    assert app._registered_trainees(training) == [replacement]
+    assert not app._trainee_registration_is_cancelled(trainee)
+    assert afc_schedule.effective_session(training, trainee)["date_end"] == "2021-02-15"
+    response = client.get("/api/integrations/plateformegestion/afc-attendance",
+                          query_string={"session_id": training["id"]},
+                          headers={"Authorization": "Bearer test-attendance"})
+    assert response.status_code == 200
+    periods = {row["id"]: (row["entryDate"], row["exitDate"]) for row in response.json["students"]}
+    assert periods == {trainee["id"]: ("2020-11-16", "2020-11-18"), "T2": ("2020-11-20", "2021-02-15")}
+    assert client.post(url, json={"training_date_start": "2020-11-19"}).status_code == 400
+    assert client.post(url, json={"afc_withdrawal_last_day": ""}).status_code == 200
+    assert app._registered_trainees(training) == [trainee, replacement]
+    assert afc_schedule.participation_period(training, trainee)["date_end"] == training["date_end"]
+
+
 def test_new_trainee_dates_are_saved_before_any_document_automation(client, training):
     with patch.object(app, "load_data", return_value={"sessions": [training]}), \
          patch.object(app, "save_data"), patch.object(app, "brevo_send_email") as mail:

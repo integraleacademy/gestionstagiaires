@@ -12,6 +12,7 @@ import os
 import time
 import uuid
 from zoneinfo import ZoneInfo
+import afc_schedule
 
 
 STATE_KEY = "training_attestation_automation"
@@ -97,6 +98,8 @@ def _scheduled_date(services, training, kind, trainee=None):
 
 def _is_due(services, training, trainee, kind, today, activated_on, now):
     config = KINDS[kind]
+    if afc_schedule.has_withdrawn(trainee, today.isoformat()):
+        return False
     if trainee.get(config["sent_key"]) or not _has_template(services, training, kind):
         return False
     due = _scheduled_date(services, training, kind, trainee)
@@ -310,11 +313,13 @@ def run(services, *, now=None, dry_run=False, limit=5):
             stored = _state(current_trainee, kind, create=True)
             if str(stored.get("id") or "") != attempt_id:
                 return {"send": False}
-            if services._trainee_registration_is_cancelled(current_trainee):
+            withdrawn = afc_schedule.has_withdrawn(current_trainee, today.isoformat())
+            if withdrawn or services._trainee_registration_is_cancelled(current_trainee):
                 stored.update({
                     "pending": False,
                     "email_status": "DESACTIVE",
-                    "error": "Automatisation désactivée : l'inscription est annulée.",
+                    "error": ("Automatisation désactivée après abandon." if withdrawn
+                              else "Automatisation désactivée : l'inscription est annulée."),
                     "finished_at": now.isoformat(),
                 })
                 current_trainee[config["status_key"]] = "disabled"

@@ -11935,14 +11935,15 @@ def _reactivate_trainee_automations(trainee: Dict[str, Any]) -> None:
             trainee.pop("training_attestation_automation", None)
 
 
-def _registered_trainees(source: Any) -> List[Dict[str, Any]]:
-    """Return active registrations without deleting cancelled records."""
+def _registered_trainees(source: Any, *, include_withdrawn: bool = False) -> List[Dict[str, Any]]:
+    """Return current registrations, optionally including historical AFC participants."""
     trainees = _session_trainees_list(source) if isinstance(source, (dict, exam_context.ExamContext)) else source
     if not isinstance(trainees, list):
         return []
     return [
         trainee for trainee in trainees
         if isinstance(trainee, dict) and not _trainee_registration_is_cancelled(trainee)
+        and (include_withdrawn or not afc_schedule.has_withdrawn(trainee))
     ]
 
 
@@ -11987,6 +11988,7 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "id": st.get("id") or ("TRN-" + uuid.uuid4().hex[:8].upper()),
         "personal_id": st.get("id") or "",
         "registration_cancelled": _trainee_registration_is_cancelled(st),
+        "afc_withdrawal_last_day": st.get("afc_withdrawal_last_day") or "",
         "last_name": st.get("nom") or "",
         "first_name": st.get("prenom") or "",
         "email": st.get("email") or "",
@@ -26046,7 +26048,7 @@ def admin_trainees(session_id: str):
         edof_prefill=edof_prefill, edof_prefill_error=edof_prefill_error,
         cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
-        afc_training_dates={t.get("id"): _trainee_training_session(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
+        afc_training_dates={t.get("id"): afc_schedule.participation_period(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
         vtc_appointments={t.get("id"): _vtc_practice_appointment(s, t) for t in registered} if is_vtc else {},
         vtc_roster_groups=vtc_practice.roster_groups(s, registered) if is_vtc else {},
@@ -28037,8 +28039,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
     allowed = {
-        "training_date_start",
-        "training_date_end",
+        *afc_schedule.TRAINEE_DATES,
         "convention_status",
         "convention_saisie_done",
         "convention_signed_done",
@@ -33310,12 +33311,10 @@ def admin_test_fr_notify_bulk(session_id: str):
     if not s:
         abort(404)
 
-    trainees = _session_trainees_list(s)
-    total = len(_registered_trainees(trainees))
+    trainees = _registered_trainees(s)
+    total = len(trainees)
     sent = 0
     for t in trainees:
-        if _trainee_registration_is_cancelled(t):
-            continue
         payload = _build_test_fr_payload(t, s, code, deadline, "notify")
         email = (t.get("email") or "").strip()
         phone = (t.get("phone") or "").strip()
@@ -35960,6 +35959,7 @@ def _automation_is_enabled(
         bool(_automation_document_config(session_obj).get("enabled"))
         and _automation_partner_module_enabled()
         and not _trainee_registration_is_cancelled(trainee)
+        and not afc_schedule.has_withdrawn(trainee)
     )
 
 
@@ -41166,7 +41166,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
         ssiap_pathway=ssiap_pathways.resolve(s, t),
-        training_dates=_trainee_training_session(s, t),
+        training_dates=afc_schedule.participation_period(s, t) if afc_schedule.enabled(s) else _trainee_training_session(s, t),
         trainee=t,
         show_vae=show_vae,
         show_professional_experience_sheet=_professional_experience_sheet_is_available(s),

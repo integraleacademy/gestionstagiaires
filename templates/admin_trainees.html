@@ -508,6 +508,7 @@
     </thead>
 
     <tbody>
+      {% set active_ids = registered_trainees|map(attribute='id')|list %}
       {% for t in trainees %}
 {% set slot = (t.vtc_appointment if is_all_vtc else (vtc_appointments|default({})).get(t.id)) if is_vtc and not t.registration_cancelled else none %}
 {% set vtc_book_address_complete = (t.address or "")|trim and (t.zip_code or "")|trim and (t.city or "")|trim %}
@@ -521,6 +522,7 @@
     data-ssiap-pathway="{{ t.ssiap_pathway or 'ssiap' }}"
     data-trainee-id="{{ t.id }}"
     data-session-id="{{ t.source_session_id or session.id }}"
+    data-registration-inactive="{{ '1' if t.registration_cancelled or (t.afc_withdrawal_last_day and t.id not in active_ids) else '0' }}"
     data-registration-cancelled="{{ '1' if t.registration_cancelled else '0' }}"
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
@@ -564,6 +566,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   {% if session.afc_enabled and afc_training_dates %}
   {% set dates = afc_training_dates.get(t.id, {}) %}
   <div class="muted" style="font-size:12px;margin-top:7px;">{{ dates.date_start|frdate }} → {{ dates.date_end|frdate }}</div>
+  {% if t.afc_withdrawal_last_day %}<div><span class="registration-cancelled-badge">Abandon · dernier jour le {{ t.afc_withdrawal_last_day|frdate }}</span></div>{% endif %}
   <a href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=t.id) }}#afcIndividualTitle" style="font-size:12px;">Modifier les dates</a>
   {% endif %}
   {% if t.registration_cancelled %}
@@ -3300,7 +3303,7 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
     const counter = document.querySelector("[data-cnaps-accepted-count]");
     if(!counter) return;
     const acceptedCount = Array.from(document.querySelectorAll("[data-cnaps]"))
-      .filter(span => span.closest("[data-registration-cancelled]")?.dataset.registrationCancelled !== "1")
+      .filter(span => span.closest("[data-registration-inactive]")?.dataset.registrationInactive !== "1")
       .filter(span => isCnapsAcceptedForCounter(span.textContent))
       .length;
     counter.textContent = String(acceptedCount);
@@ -3503,7 +3506,7 @@ function isLivret2ValidatedDashboardStatus(status){
 function updateVaeDashboardCounts(){
   const counts = { no_login: 0, new_vae_request_72h: 0, l1_pending_transmission: 0, non_recevable: 0 };
   getVaeDashboardRows().forEach(tr => {
-    if(tr.getAttribute("data-registration-cancelled") === "1") return;
+    if(tr.getAttribute("data-registration-inactive") === "1") return;
     const status = normalizeVaeDashboardStatus(tr.getAttribute("data-vae-status") || "livret_1_todo");
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
