@@ -85,4 +85,4 @@ def install(host):
         endpoint = request.endpoint or ""
         if ((endpoint.startswith("native_elearning.") and request.path.startswith("/espace/"))
                 or endpoint in {"public_uv_questionnaire", "manuals_shop.elearning_access"}):
-            return redirect(base + request.path, code=302)
+            return redirect(base + request.full_path.removesuffix("?"), code=302)

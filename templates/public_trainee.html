@@ -1001,7 +1001,7 @@
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
   {% endif %}
 
-  {% if campus_public_url and (uv_questionnaires or aps_elearning_enabled or a3p_elearning_enabled or mac_aps_elearning_enabled) and (token_safe) %}
+  {% if campus_public_url and (uv_questionnaires or aps_elearning_enabled or session.aps_native_modules or session.aps_native_course_id) and (token_safe) %}
   <p><a class="btn" href="{{ campus_public_url }}/espace/{{ (token_safe)|urlencode }}" rel="noreferrer">Accéder directement au Campus</a></p>
   {% endif %}
   {% with uv_admin=false %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
@@ -1039,7 +1039,7 @@
       <section class="card aps-elearning-card" aria-labelledby="macapsElearningTitle">
         <div class="aps-elearning-content"><h2 id="macapsElearningTitle">Espace e-learning MAC APS</h2>
           <p>Vos cours illustrés, situations professionnelles, QCM et vidéos. Le parcours pédagogique est accessible à partir du {{ session.date_start|frdate }}.</p>
-          <div class="aps-elearning-actions"><a class="btn" href="{{ url_for('native_elearning.learner_path', token=token_safe) }}">Accéder à mon parcours MAC APS</a><span class="aps-elearning-copy-status">Progression, réponses et temps actif enregistrés</span></div>
+          <div class="aps-elearning-actions"><a class="btn" href="{{ campus_public_url|default('') }}{{ url_for('native_elearning.learner_path', token=token_safe) }}">Accéder à mon parcours MAC APS</a><span class="aps-elearning-copy-status">Progression, réponses et temps actif enregistrés</span></div>
           <p class="aps-elearning-note">Ce suivi numérique accompagne votre stage. Les exercices pratiques se réalisent avec votre formateur.</p>
         </div>
       </section>
@@ -1049,7 +1049,7 @@
       <section class="card aps-elearning-card" aria-labelledby="a3pElearningTitle">
         <div class="aps-elearning-content"><h2 id="a3pElearningTitle">Espace e-learning A3P</h2>
           <p>Vos cours, applications, questionnaires et fiches de synthèse. Le parcours est accessible à partir du {{ session.date_start|frdate }}.</p>
-          <div class="aps-elearning-actions"><a class="btn" href="{{ url_for('native_elearning.learner_path', token=token_safe) }}">Accéder à mon parcours A3P</a><span class="aps-elearning-copy-status">Progression, réponses et temps actif enregistrés</span></div>
+          <div class="aps-elearning-actions"><a class="btn" href="{{ campus_public_url|default('') }}{{ url_for('native_elearning.learner_path', token=token_safe) }}">Accéder à mon parcours A3P</a><span class="aps-elearning-copy-status">Progression, réponses et temps actif enregistrés</span></div>
         </div>
       </section>
     {% endif %}
@@ -1155,7 +1155,7 @@
           </div>
         {% elif session.aps_native_modules or session.aps_native_course_id %}
           <div class="aps-elearning-actions">
-            <a class="btn" href="{{ url_for('native_elearning.learner_path', token=token_safe) }}">🚀 Accéder à mon parcours {{ 'VTC' if show_vtc else 'APS' }}</a>
+            <a class="btn" href="{{ campus_public_url|default('') }}{{ url_for('native_elearning.learner_path', token=token_safe) }}">🚀 Accéder à mon parcours {{ 'VTC' if show_vtc else 'APS' }}</a>
             {% if not show_vtc %}<span class="aps-elearning-copy-status">Progression et temps actif enregistrés</span>{% endif %}
           </div>
         {% elif aps_link_is_valid %}

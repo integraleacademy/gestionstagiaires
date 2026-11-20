@@ -166,6 +166,14 @@ def logged_in(campus, index, barrier=None):
 
 
 def native_smoke(campus, course, second_question, partner_token):
+    with requests.Session() as link:
+        link.trust_env = False
+        link.verify = campus.cert
+        path = "/espace/bench-token-000/questionnaires-uv/2"
+        login = verify(link.get(campus.base + path))
+        csrf = field(login.text, r'name="csrf" value="([^"]+)"')
+        done = verify(link.post(login.url, data=dict(csrf=csrf, last_name="Learner 0", birth="1990-03-12")))
+        assert done.url == campus.base + path and 'id="uv-experience"' in done.text
     learner, personal = logged_in(campus, 0)
     url = campus.base + personal
     original = verify(learner.get(url+"/questionnaires-uv/2")).text

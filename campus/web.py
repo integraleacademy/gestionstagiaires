@@ -98,6 +98,26 @@ def create_app():
             if not activated:
                 return "Le Campus sera ouvert après la reprise des dossiers pédagogiques.", 503, {"Retry-After": "60"}
 
+    def return_to(token):
+        home = url_for("public_trainee_space", token=token)
+        target = request.args.get("next") or ""
+        path = target.partition("?")[0]
+        learning = (path == home + "/elearning" or
+                    path.startswith((home + "/elearning/", home + "/questionnaires-uv/")))
+        if (learning and ".." not in path.split("/") and "#" not in target and
+                "\\" not in target and not any(ord(c) < 32 for c in target)):
+            return target
+        return home
+
+    @app.before_request
+    def keep_learning_destination():
+        endpoint = request.endpoint or ""
+        token = (request.view_args or {}).get("token") or ""
+        if (request.method == "GET" and token and not token.startswith("el_") and
+                (endpoint == "public_uv_questionnaire" or endpoint.startswith("native_elearning.")) and
+                request.path.startswith("/espace/") and not authed(token)):
+            return redirect(url_for("public_trainee_login", token=token, next=request.full_path.removesuffix("?")))
+
     @app.after_request
     def privacy(response):
         if request.endpoint != "static":
@@ -118,7 +138,7 @@ def create_app():
     @app.route("/espace/<token>/login", methods=["GET", "POST"], endpoint="public_trainee_login")
     def login(token=None):
         if token and authed(token):
-            return redirect(url_for("public_trainee_space", token=token))
+            return redirect(return_to(token))
         error = ""
         if request.method == "POST":
             check_csrf()
@@ -128,7 +148,7 @@ def create_app():
             found = directory.authenticate(request.form.get("last_name", ""), request.form.get("birth", ""), token)
             if found:
                 sign_in(found)
-                return redirect(url_for("public_trainee_space", token=found), code=303)
+                return redirect(return_to(found), code=303)
             directory.note_failure(limiter)
             error = "Accès introuvable. Vérifiez votre nom et votre date de naissance, ou utilisez votre lien personnel."
         return render_template("campus/login.html", csrf=csrf(), error=error), (401 if error else 200)
