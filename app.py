@@ -36465,8 +36465,8 @@ def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     """Return the Yousign convention state, keeping legacy convocation data readable."""
     state = trainee.get("convention_signature") if isinstance(trainee.get("convention_signature"), dict) else None
     legacy_state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else None
-    if not state:
-        state = legacy_state or {}
+    if state is None or (not state and legacy_state):
+        state = legacy_state if legacy_state is not None else {}
     trainee["convention_signature"] = state
     # Compatibility: old production records and older code paths still read this key.
     trainee["convocation_signature"] = state
