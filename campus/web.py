@@ -4,11 +4,13 @@ import hmac
 import os
 from pathlib import Path
 import secrets
+import time
 from types import SimpleNamespace
+from urllib.parse import quote, urlencode
 
 from flask import (Blueprint, Flask, abort, g, redirect, render_template,
                    request, session, url_for)
-from campus import catalog, db, directory, migration
+from campus import catalog, db, directory, handoff, migration
 from elearning_native.paths import assigned_modules
 from elearning_native.mac_aps import is_training as is_mac_aps
 from elearning_native.web import create_native_elearning_blueprint
@@ -30,6 +32,7 @@ def create_app():
                       UV_QUESTIONNAIRE_DB_PATH=str(data_dir / "uv-questionnaires.sqlite3"))
     directory.initialize()
     catalog.initialize()
+    handoff.initialize()
 
     def record(token):
         cache = g.setdefault("campus_records", {})
@@ -99,15 +102,7 @@ def create_app():
                 return "Le Campus sera ouvert après la reprise des dossiers pédagogiques.", 503, {"Retry-After": "60"}
 
     def return_to(token):
-        home = url_for("public_trainee_space", token=token)
-        target = request.args.get("next") or ""
-        path = target.partition("?")[0]
-        learning = (path == home + "/elearning" or
-                    path.startswith((home + "/elearning/", home + "/questionnaires-uv/")))
-        if (learning and ".." not in path.split("/") and "#" not in target and
-                "\\" not in target and not any(ord(c) < 32 for c in target)):
-            return target
-        return home
+        return handoff.destination(token, request.args.get("next"))
 
     @app.before_request
     def keep_learning_destination():
@@ -172,6 +167,13 @@ def create_app():
 
     @app.get("/espace/<token>")
     def public_trainee_space(token):
+        if request.args.get("from") == "gestion" and not token.startswith("el_"):
+            if authed(token):
+                return redirect(return_to(token))
+            if admin_base and record(token) and not record(token)[2]:
+                state = secrets.token_urlsafe(32)
+                session["campus_handoff"] = dict(token=token, state=state, target=return_to(token), issued=time.time())
+                return redirect(admin_base + "/espace/" + quote(token, safe="") + "/campus/autoriser?" + urlencode({"state": state}))
         if not authed(token):
             return redirect(url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_login", token=token))
         training, learner = pair(token)
@@ -187,6 +189,20 @@ def create_app():
                     accessible=accessible, legacy_url=external_vtc or external_aps,
                     dossier_url=(admin_base + "/espace/" + token) if admin_base and not record(token)[2] else "",
                     csrf=csrf())
+
+    @app.get("/connexion/gestion")
+    def management_login():
+        pending = session.pop("campus_handoff", None)
+        if not pending or not 0 <= time.time() - pending.get("issued", 0) <= 120:
+            abort(400)
+        token = pending["token"]
+        if not handoff.consume(token, pending["state"], request.args.get("code", "")):
+            abort(400)
+        entry = record(token)
+        if not entry or entry[2]:
+            abort(403)
+        sign_in(token)
+        return redirect(handoff.destination(token, pending["target"]), code=303)
 
     @app.post("/deconnexion")
     def logout():

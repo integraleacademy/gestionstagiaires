@@ -3,12 +3,13 @@ import hashlib
 import os
 from pathlib import Path
 import threading
+from urllib.parse import quote, urlencode
 
 from psycopg.conninfo import conninfo_to_dict
 
-from flask import g, redirect, request, session
+from flask import abort, g, redirect, request, session
 
-from campus import db, directory, migration
+from campus import db, directory, handoff, migration
 from campus.links import origin
 
 
@@ -24,7 +25,15 @@ def read_source(host):
 
 def install(host):
     base = origin()
+
+    def campus_link(token, target=None):
+        path = handoff.destination(token, target)
+        if not session.get(f"public_auth_{token}"):
+            return base + path
+        return base + "/espace/" + quote(token, safe="") + "?" + urlencode({"from": "gestion", "next": path})
+
     host.app.jinja_env.globals["campus_public_url"] = base
+    host.app.jinja_env.globals["campus_link"] = campus_link
     host.app.jinja_env.globals["campus_external_vtc"] = directory.external_vtc_course
     # Render stops the old disk-backed instance before this new worker starts.
     # At this point nobody can still write its SQLite databases. Enabling this
@@ -72,6 +81,22 @@ def install(host):
     state["wake"].set()
     thread.start()
 
+    @host.app.get("/espace/<token>/campus/autoriser")
+    def campus_authorize(token):
+        state = request.args.get("state", "")
+        if not handoff.valid_nonce(state):
+            abort(400)
+        if not session.get(f"public_auth_{token}"):
+            return redirect(base + "/espace/" + quote(token, safe="") + "/login")
+        entry = directory.lookup(token)
+        if not entry or entry[2]:
+            abort(403)
+        code = handoff.issue(token, state)
+        response = redirect(base + "/connexion/gestion?" + urlencode({"code": code}))
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
     @host.app.after_request
     def update_enrolments(response):
         if (request.method in {"POST", "PATCH", "PUT", "DELETE"} and response.status_code < 400
@@ -86,4 +111,6 @@ def install(host):
         endpoint = request.endpoint or ""
         if ((endpoint.startswith("native_elearning.") and request.path.startswith("/espace/"))
                 or endpoint in {"public_uv_questionnaire", "manuals_shop.elearning_access"}):
-            return redirect(base + request.full_path.removesuffix("?"), code=302)
+            path = request.full_path.removesuffix("?")
+            token = (request.view_args or {}).get("token", "")
+            return redirect(campus_link(token, path) if request.path.startswith("/espace/") else base + path, code=302)
