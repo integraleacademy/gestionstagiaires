@@ -17,7 +17,12 @@ main {max-width: 774px; padding: 14px 20px 66px; margin: auto}
 .identity,.facts {padding: 26px 42px}
 .facts {border-top: 1px solid #e0e7ee}
 h2 {margin: 0 0 18px; font-size: 12px; line-height: 1.5; letter-spacing: .105em; text-transform: uppercase; color: #48617d}
-.holder {margin: -6px 0 18px; font-size: clamp(24px,4vw,33px); letter-spacing: -.05em; line-height: 1.2; overflow-wrap: anywhere}
+.holder-header {display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:18px}
+.holder-header > div {min-width:0}
+.holder-header h2 {margin-bottom:7px}
+.portrait {flex:none; display:block; width:98px; height:126px; object-fit:cover; border-radius:8px; outline:1px solid #14273d20; outline-offset:-1px}
+.no-portrait {color:#5b6b7e; margin:7px 0 0; font-size:13px}
+.holder {margin: 0; font-size: clamp(24px,4vw,33px); letter-spacing: -.05em; line-height: 1.2; overflow-wrap: anywhere}
 .holder strong {font-weight: 730}
 dl {margin: 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 19px 25px}
 dt {font-size: 13px; margin-bottom: 4px; color: #5b6b7e}
@@ -28,6 +33,7 @@ dd {margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere}
 .unavailable .identity p {line-height: 1.6; color: #4c5d72}
 .unavailable a {color: #154994; font-weight: 650}
 @media (max-width:560px) {
+  .portrait {width:77px; height:99px}.holder-header {gap:12px}
   .mast {min-height: 65px; padding: 12px 17px}.brand {font-size: 17px}.brand img {width: 32px; height: 32px}
   .mast-title {max-width: 92px; text-align: right; font-size: 11px}
   main {padding: 6px 12px 30px}.certificate {border-radius: 17px}
