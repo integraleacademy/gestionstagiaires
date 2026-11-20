@@ -20,6 +20,21 @@ COMMON_HOURS = (273, 21, 45)
 PLANNING_SESSION = "1c391db936"
 PLANNING_DATES = {"54": "2026-11-16", "40": "2026-11-18", "0": "2026-11-26"}
 TARGET = {"54": 8, "40": 2, "0": 2}
+# Corrected teaching calendar for the November 2026 session. The two
+# final RAN days are six hours each (54 hours in the complete course).
+RAN_DAYS = {"2026-11-16": 7, "2026-11-17": 7, "2026-11-18": 7, "2026-11-19": 7,
+            "2026-11-20": 7, "2026-11-23": 7, "2026-11-24": 6, "2026-11-25": 6}
+
+
+def remaining_ran(training):
+    if training.get("id") != PLANNING_SESSION:
+        return {}
+    return {start: sum(hours for day, hours in RAN_DAYS.items() if day >= start)
+            for start in (*RAN_DAYS, PLANNING_DATES["0"])}
+
+
+def known_hours(value):
+    return type(value) is int and 0 <= value <= max(PROFILES)
 
 
 def config(training):
@@ -44,7 +59,7 @@ def revision(services, training, data=None):
     value = {"config": config(training), "start": training.get("date_start"),
              "end": training.get("date_end"), "scores": suggestion(services, training, data)["scores"], "trainees": [
                  {key: trainee.get(key) for key in (
-                     "id", "first_name", "last_name", "afc_ran_hours", "training_date_start", "afc_start_override")}
+                     "id", "first_name", "last_name", "afc_ran_hours", "training_date_start", "afc_start_override", "afc_ran_from_planning")}
                  for trainee in participants(services, training)]}
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
@@ -54,23 +69,30 @@ def view(services, training, data=None):
     proposed = suggestion(services, training, data)
     rows = []
     counts = {str(hours): 0 for hours in PROFILES}
+    calendar = remaining_ran(training)
     for trainee in participants(services, training):
         hours = trainee.get("afc_ran_hours")
-        if type(hours) is not int or hours not in PROFILES:
+        if not known_hours(hours):
             hours = None
-        start = trainee.get("afc_start_override") or settings["dates"].get(str(hours), "")
         actual_start = afc_schedule.effective_session(training, trainee).get("date_start", "")
-        if hours is not None:
+        override = trainee.get("afc_start_override") or ""
+        individual_start = override or trainee.get("training_date_start") or ""
+        from_planning = bool(trainee.get("afc_ran_from_planning") or (
+            individual_start in calendar and individual_start not in settings["dates"].values() and hours is None))
+        if from_planning:
+            override = individual_start
+        start = override or settings["dates"].get(str(hours), "")
+        if hours in PROFILES:
             counts[str(hours)] += 1
         rows.append({"id": str(trainee["id"]),
                      "last_name": services.normalize_last_name(trainee.get("last_name") or ""),
                      "first_name": services.normalize_first_name(trainee.get("first_name") or ""),
                      "ran_hours": hours, "start": start, "current_start": actual_start,
-                     "start_override": trainee.get("afc_start_override") or "",
+                     "start_override": override, "from_planning": from_planning,
                      "test": proposed["scores"].get(str(trainee["id"])),
                      "suggested_hours": (proposed["profiles"] or {}).get(str(trainee["id"])),
                      "date_conflict": hours is not None and start != actual_start})
-    return {**settings, "rows": rows, "counts": counts, "suggestion": proposed,
+    return {**settings, "rows": rows, "counts": counts, "suggestion": proposed, "planned_hours": calendar,
             "revision": revision(services, training, data),
             "csrf": session.setdefault("afc_hours_csrf", secrets.token_urlsafe(32)),
             "read_only": session.get("admin_role") == "viewer"}
@@ -121,19 +143,25 @@ def update(services, data, session_id, payload):
         if not isinstance(overrides, dict) or not set(overrides).issubset(choices):
             raise ValueError("Les dates individuelles ne correspondent pas aux candidats.")
         changes = []
+        calendar = remaining_ran(training)
         for trainee in rows:
-            hours = choices[str(trainee["id"])]
-            if hours is not None and (type(hours) is not int or hours not in PROFILES):
-                raise ValueError("Choisissez 54 h, 40 h ou sans RAN pour chaque candidat.")
             override = afc_schedule.date(overrides.get(str(trainee["id"]), trainee.get("afc_start_override") or ""), "Date d’entrée individuelle")
             if override and ((training.get("date_start") and override < training["date_start"])
                              or (training.get("date_end") and override > training["date_end"])):
                 raise ValueError("La date individuelle doit être comprise dans la période de la session.")
-            values = {"afc_ran_hours": hours, "afc_start_override": override}
+            hours = choices[str(trainee["id"])]
+            from_planning = hours == "planning"
+            if from_planning:
+                if override not in calendar:
+                    raise ValueError("Choisissez une date d’entrée prévue au calendrier RAN pour le calcul individuel.")
+                hours = calendar[override]
+            elif hours is not None and (type(hours) is not int or hours not in PROFILES):
+                raise ValueError("Choisissez un profil RAN ou le calcul selon la date d’entrée.")
+            values = {"afc_ran_hours": hours, "afc_start_override": override, "afc_ran_from_planning": from_planning}
             if hours is not None:
-                if not dates[str(hours)]:
+                if not from_planning and not dates[str(hours)]:
                     raise ValueError(f"Renseignez la date d’entrée du profil à {hours} h.")
-                values.update(afc_schedule.trainee_update(training, trainee, {
+                values.update(afc_schedule.trainee_update(training, {**trainee, **values}, {
                     "training_date_start": override or dates[str(hours)]}))
             changes.append((trainee, values))
     except ValueError as exc:
@@ -173,6 +201,9 @@ def workbook(training, state):
     sheet["A3"] = (f"{len(state['rows'])} candidats · "
                    f"{state['counts']['54']} à 54 h de RAN · "
                    f"{state['counts']['40']} à 40 h · {state['counts']['0']} sans RAN")
+    individual = sum(row["ran_hours"] not in PROFILES for row in state["rows"])
+    if individual:
+        sheet["A3"] = f"{sheet['A3'].value} · {individual} avec un volume individuel"
     sheet["A3"].font = Font(name="Calibri", size=11, color="53645F")
     headers = ["Nom", "Prénom", "Formation professionnelle (h)", "RAN – Remise à niveau (h)",
                "Préparation à l’après-formation (h)", "Soutien personnalisé (h)", "Date de début de formation"]

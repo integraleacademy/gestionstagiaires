@@ -7,6 +7,22 @@ import edof_directory as directory
 INTERVAL = 300
 
 
+def refresh_accepted(context, witness, vault, owner, checkpoint):
+    """Refresh the official accepted list even if the folder was never seen as validated."""
+    from edof_server_browser import read_recent_directory
+
+    key = directory.accepted_key(owner)
+    attempt = "accepted-attempt:" + owner
+    last = max((vault.get(key) or {}).get("checked", 0), vault.get(attempt) or 0)
+    if time.time() - last < INTERVAL:
+        return
+    vault.put(attempt, time.time(), ttl=900)
+    fresh = read_recent_directory(context, witness, "accepted", checkpoint, {})
+    if any(directory.normalized(row["state"]) not in directory.ACCEPTED_STATES for row in fresh["rows"].values()):
+        raise directory.IncompleteDirectory("scope")
+    vault.put(key, fresh, ttl=directory.TTL)
+
+
 def refresh(context, witness, vault, owner, checkpoint):
     # The regular notProcessed poll cannot discover a dossier already submitted
     # by the OF, nor a later FT solicitation on an existing validated dossier.

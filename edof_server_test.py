@@ -1298,6 +1298,7 @@ def register_routes(app, store, *, admin_required, can_access, legacy=None):
             return jsonify(ok=False, error=str(exc)), 400
         snapshot = directory.dated_snapshot(vault().get(directory.record_key(user))) if store.connector_key else None
         snapshot = directory.with_validated(snapshot, vault().get(directory.validated_key(user))) if store.connector_key else snapshot
+        snapshot = directory.with_accepted(snapshot, vault().get(directory.accepted_key(user))) if store.connector_key else snapshot
         hits = []
         if snapshot:
             store.use_directory(user)

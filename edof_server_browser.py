@@ -542,7 +542,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             # The portal sorts the planned session; beginDate may be an actual entry.
             day = directory.session_date(info.get("sessionStartDate") or item.get("beginDate"))
             if folder in seen:
-                if (not started_in_archive or state == "notProcessed" or not day
+                if (not started_in_archive or state in {"notProcessed", "accepted"} or not day
                         or day >= directory.FIRST_SESSION or folder in rows or overlap_retry):
                     raise directory.IncompleteDirectory("page_overlap")
                 archive_overlap = True
@@ -551,6 +551,8 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
                 if previous and day > previous:
                     ordered = False
                 previous = day
+            if state == "accepted" and directory.normalized(item.get("currentState") or "") not in directory.ACCEPTED_STATES:
+                raise directory.IncompleteDirectory("scope")
             if day and day < directory.FIRST_SESSION:
                 continue
             archive_only = False
@@ -573,7 +575,7 @@ def read_recent_directory(context, witness, state, checkpoint, progress, *, size
             raise directory.IncompleteDirectory("count")
         progress.update(pages=index+1, seen=len(rows))
         # An older item among recent ones does not finish the catalogue. Read the next page.
-        if len(seen) == total or (ordered and archive_only and state != "notProcessed" and not overlap_retry):
+        if len(seen) == total or (ordered and archive_only and state not in {"notProcessed", "accepted"} and not overlap_retry):
             if cursor:
                 cursor.clear()
             return {**({"crm_contacts": request_contacts} if state == "notProcessed" else {}), "rows":rows, "checked":time.time(), "scope":{"all":"all", "accepted":"accepted"}.get(state,"pending")}
@@ -1526,11 +1528,12 @@ def _run_browser(spec, *, live=None, traffic=None):
                 clock_event("verified", fresh=not reused)
                 progress("pending_verified")
                 if on_production_service() and not spec.get("full_sync"):
-                    from edof_funding_watch import refresh as refresh_funding
-                    try:
-                        refresh_funding(context, witness, vault, spec["owner"], checkpoint)
-                    except (ValueError, TypeError, OSError, BrowserError):
-                        pass  # Keep the verified new-request list and previous funding evidence.
+                    from edof_funding_watch import refresh as refresh_funding, refresh_accepted
+                    for refresh_list in (refresh_accepted, refresh_funding):
+                        try:
+                            refresh_list(context, witness, vault, spec["owner"], checkpoint)
+                        except (ValueError, TypeError, OSError, BrowserError):
+                            pass  # Keep the previous complete snapshot on an optional read failure.
                 # Read the official billing tab periodically in the same session,
                 # so validation of a service does not wait for the next full scan.
                 if on_production_service() and not spec.get("full_sync") and time.time()-(vault.get("billing-attempt:"+spec["owner"]) or 0)>=300:
@@ -1681,7 +1684,7 @@ def _run_browser(spec, *, live=None, traffic=None):
                     pass
                 # The complete list already contains accepted dossiers. A second scan is redundant.
                 vault.put(directory.accepted_key(spec["owner"]),{"checked":snapshot["checked"],"scope":"accepted",
-                          "rows":{k:r for k,r in snapshot["rows"].items() if directory.normalized(r["state"]) in {"accepted","accepte"}}},ttl=directory.TTL)
+                          "rows":{k:r for k,r in snapshot["rows"].items() if directory.normalized(r["state"]) in directory.ACCEPTED_STATES}},ttl=directory.TTL)
                 vault.put("browser",session_cookies(context.storage_state()),ttl=86400)
                 clock_event("verified",fresh=not reused)
                 return {"code":"directory_ready","stage":stage,"candidate_count":len(snapshot["rows"]),

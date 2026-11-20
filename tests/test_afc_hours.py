@@ -246,3 +246,22 @@ def test_test_based_allocation_is_previewed_then_saved_and_new_scores_invalidate
     assert training["afc_hours"]["positioning_scores"]["T00"]["score"] == 43
     assert client.get(urls(training)[2]).status_code == 200
     mail.assert_not_called()
+
+
+def test_late_entry_uses_the_actual_ran_days_in_documents_and_export(case):
+    client, training, _, mail = case
+    trainee = training["trainees"][0]
+    trainee.update(training_date_start="2026-11-20", afc_start_override="2026-11-20")
+    request = payload(client, training)
+    request["profiles"]["T00"] = "planning"
+    result = client.post(urls(training)[1], json=request)
+    assert result.status_code == 200, result.json
+    row = result.json["state"]["rows"][0]
+    assert (row["ran_hours"], row["from_planning"], row["start"]) == (26, True, "2026-11-20")
+    assert all(t["afc_ran_hours"] in afc_hours.PROFILES for t in training["trainees"][1:])
+    assert afc_schedule.document_context(training, trainee, str)["afc_document_duration"] == "365 heures"
+    sheet = load_workbook(io.BytesIO(client.get(urls(training)[2]).data)).active
+    assert sheet["D6"].value == 26 and sheet["G6"].value == dt.datetime(2026, 11, 20)
+    assert afc_schedule.trainee_update(training, trainee, {"training_date_start": "2026-11-23"})["afc_ran_hours"] == 19
+    assert afc_hours.remaining_ran({**training, "id": "unrelated"}) == {}
+    mail.assert_not_called()

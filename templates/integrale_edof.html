@@ -187,6 +187,7 @@
   <div class="wedof-panel-header"><div>
     <span class="wedof-section-label">{{ 'Suivi des opérations' if section=='automations' else groups[group] }}</span>
     <h2>{{ 'Échéances prévues' if tab == 'due' else tabs.get(tab, 'Dossiers CPF') }}</h2>
+    {% if tab in ['to_register', 'accepted'] and checked %}<p>Dernière lecture des dossiers acceptés le {{ checked }}.</p>{% endif %}
     {% if section == 'automations' %}<p>{{ 'Actions prévues ce jour, à l’heure de Paris, dont la réception reste à confirmer par EDOF.' if tab=='today' else 'Chaque ligne correspond à une action. Les échéances sont affichées à l’heure de Paris.' }}</p>
     {% else %}<p>Du dossier le plus récent au plus ancien, selon la date de la demande ou, à défaut, de création. Les dossiers sans ces dates figurent en dernier, par date de statut.</p>{% endif %}
   </div>{% if checked %}<span class="wedof-result-summary">{{ total }} {{ 'action' if section=='automations' else 'dossier' }}{{ 's' if total != 1 }}</span>{% endif %}</div>
@@ -223,8 +224,8 @@
         <td data-label="Période"><div class="wedof-date-range"><span>Du {{ date_fr(r.session_start_date) }}</span><span>au {{ date_fr(r.session_end_date) }}</span>{% if r.entry_confirmed_on %}<small>Entrée confirmée le {{ date_fr(r.entry_confirmed_on) }}</small>{% endif %}</div></td>
         {% if testing %}<td data-label="Simulation">{{ simulation_labels.get(r.evaluation, 'Aucune action prévue') }}</td>{% endif %}
         <td data-label="Rattachement local"><div class="wedof-link-cell">
-          <span class="wedof-badge {{ 'is-success' if r.link else 'is-neutral' }}">{{ 'Associé' if r.link else 'Non associé' }}</span>
-          {% if r.link %}<a href="{{ url_for('admin_trainee_page', session_id=r.link.session_id, trainee_id=r.link.trainee_id) }}">Fiche stagiaire</a>{% endif %}
+          <span class="wedof-badge {{ 'is-success' if r.link and not r.link_issue else 'is-neutral' }}">{{ 'Rattachement à vérifier' if r.link_issue else 'Associé' if r.link else 'Non associé' }}</span>
+          {% if r.link and not r.link_issue %}<a href="{{ url_for('admin_trainee_page', session_id=r.link.session_id, trainee_id=r.link.trainee_id) }}">Fiche stagiaire</a>{% endif %}
           {% if previewing %}<small>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</small>{% if matches[r.folder_id].status == 'exact_match' %}<small>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}</small>{% endif %}{% endif %}
         </div></td>
         <td data-label="Actions"><div class="edof-row-actions">{% if batch_entries and r.entry_choice %}<label class="edof-entry-choice"><input form="edof-effective-entries" type="checkbox" name="entry" value="{{ r.entry_choice }}"> Entrée le {{ date_fr(r.session_start_date) }}</label>{% endif %}<a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
@@ -288,7 +289,7 @@
         {% if detail.display.scheduled %}<time datetime="{{ detail.display.scheduled.isoformat() }}">{{ detail.display.scheduled.strftime('%d/%m/%Y à %H h %M') }}</time>{% endif %}
         {% if detail.held or detail.display.block %}<span class="wedof-badge is-danger">Automatisation bloquée</span>{% elif active and detail.display.scheduled %}<span>Envoi automatique à partir de {{ detail.display.scheduled.hour }} h{% if detail.display.action == 'service_done' %} · 100 % selon les dates CPF{% endif %}.</span>{% endif %}
       </div>
-      <div><span>Rattachement local</span><strong>{{ 'Associé' if detail.display.link else 'Non associé' }}</strong></div>
+      <div><span>Rattachement local</span><strong>{{ 'Rattachement à vérifier' if detail.display.link_issue else 'Associé' if detail.display.link else 'Non associé' }}</strong></div>
     </div>
 
 <div class="actions"><a class="btn" href="{{ url_for('edof_server_test.index', fiche=detail.key, _anchor='dossier-lu') }}">Détail synchronisé</a>

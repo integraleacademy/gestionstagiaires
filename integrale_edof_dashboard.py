@@ -45,7 +45,7 @@ LABELS = {"accepted": "Accepté", "training": "En formation", "service": "Servic
           "invoiced": "Facturé", "request": "À traiter", "waiting": "En attente", "canceled": "Annulé",
           "out": "Sortie déclarée", "refused": "Refusé", "unknown": "État à vérifier"}
 STATE_KEYS = {
-    "accepted": {"accepted", "accepte", "dossier accepte", "accepte par le titulaire"},
+    "accepted": directory.ACCEPTED_STATES,
     "training": {"intraining", "en formation", "entree declaree", "entree en formation declaree"},
     "service": {"servicedonedeclared", "servicedonevalidated", "service fait declare", "service fait valide"},
     "invoiced": {"billed", "invoiced", "paid", "facture", "facturee", "paye"},
@@ -181,6 +181,9 @@ def refusal_marker(record):
 
 def dashboard_rows(snapshot, data, operations, now):
     links = {str(x.get("external_id")): x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active")}
+    registrations = {(str(group["id"]), str(t["id"])) for group in data.get("sessions", []) if group.get("id")
+                     for t in group.get("trainees", group.get("stagiaires", [])) if t.get("id") and not t.get("registration_cancelled")}
+    link_counts = Counter(str(x.get("external_id")) for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active"))
     blocked = active_blocks(data)
     rows, counts = [], Counter()
     for record in (snapshot or {}).get("rows", {}).values():
@@ -213,11 +216,14 @@ def dashboard_rows(snapshot, data, operations, now):
             tags.discard("ft_refused")
         if flags.get("registration_ignored"):
             tags.add("association_ignored")  # Shared, reversible hidden-dossiers view.
-        if kind == "accepted" and folder not in links and not flags.get("registration_ignored"):
+        link = links.get(folder)
+        link_issue = bool(link and (link_counts[folder] != 1 or
+                          (str(link.get("session_id")), str(link.get("trainee_id"))) not in registrations))
+        if kind == "accepted" and (not link or link_issue) and not flags.get("registration_ignored"):
             tags.add("to_register")
         counts.update(tags)
         rows.append({**record, "kind": kind, "label": LABELS[kind] if kind != "unknown" else record.get("state") or LABELS[kind],
-                     "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": links.get(folder),
+                     "scheduled": scheduled_time(kind, date), "action": action, "due": due, "evaluation": evaluation, "block": block, "tags": tags, "link": link, "link_issue": link_issue,
                      "comment": flags.get("comment", ""), "comment_version": flags.get("comment_version", 0),
                      "refusal_seen": refusal_seen, "refusal_marker": refusal_marker(record) if kind == "ft_refused" else "",
                      "registration_ignored": bool(flags.get("registration_ignored")),
@@ -366,8 +372,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         # Previously synchronized dossiers also contain French display dates.
         pending = vault().get(directory.pending_key(owner)) if store.connector_key else None
         accepted = vault().get(directory.accepted_key(owner)) if store.connector_key else None
-        combined = directory.with_accepted(directory.with_pending(saved, pending), accepted)
+        combined = directory.with_pending(saved, pending)
         combined = directory.with_validated(combined, vault().get(directory.validated_key(owner))) if store.connector_key else combined
+        combined = directory.with_accepted(combined, accepted)
         combined = invoicing.watched(combined, vault(), owner) if store.connector_key else combined
         combined = proposals.with_receipts(store.directory, owner, apply_confirmed_entries(combined, store.directory, owner))
         combined = invoicing.with_receipts(combined, store.directory, owner)
@@ -855,7 +862,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             match_counts=Counter(m["status"] for m in matches.values()), total=len(rows), counts=counts,
             rows=rows[(page-1)*25:page*25], page=page, pages=pages, query=request.args.get("q", "")[:140], simulation=simulation, testing=testing, simulation_labels=SIMULATION,
             catchup=catchup, history=history, history_alerts=history_alerts,
-            detail=detail, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp({"checked":snap["accepted_checked"]}) if snap and snap.get("accepted_checked") and tab=="accepted" else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today,
+            detail=detail, labels=LABELS, checked=(directory.stamp({"checked":snap["pending_checked"]}) if snap and snap.get("pending_checked") and tab=="request" else directory.stamp({"checked":snap["accepted_checked"]}) if snap and snap.get("accepted_checked") and tab in {"accepted", "to_register"} else directory.stamp(snap) if snap and snap.get("checked") else directory.stamp({"checked":snap["receipt_checked"]}) if snap and snap.get("receipt_checked") and tab!="request" else None), today=today,
             live=store.live_connection(owner, gmail["saved_session"], snapshot=snap), nonce=g.edof_nonce, jobs=store.latest(owner), efp=store.connection_status(owner, gmail["saved_session"]), gmail=gmail,
             scope=(snap or {}).get("scope", "open"), directory_enabled=store.directory_enabled(owner), snapshot_count=len((snap or {}).get("rows", {})),
             held=held, block_reasons=BLOCK_REASONS, action_labels=ACTION_LABELS,
