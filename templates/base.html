@@ -26,7 +26,7 @@
     "parcours_alternance.inbox", "parcours_alternance.detail",
     "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat",
     "admin_qonto_settings", "integrale_edof.index", "admin_wedof_requests", "admin_wedof", "admin_wedof_matching_preview", "admin_wedof_matching_sync_exact", "admin_cnaps_unknown", "admin_cnaps_tracking",
-    "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
+    "admin_afc", "vtc_orders.admin", "vtc_orders.detail", "admin_sessions_conventions", "admin_sessions_automations",
     "admin_sessions_billing", "admin_direct_debits", "admin_sessions_archived", "admin_cash_payments",
     "admin_ssiap_pathways", "admin_ssiap_trainee_pathway", "admin_ssiap_convocations", "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
     "admin_sales_tracking", "admin_cancellation_tracking", "admin_exams", "admin_exam_detail",
@@ -143,6 +143,8 @@
           {% else %}
             <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
           {% endif %}
+        {% elif show_admin_sidebar and request.blueprint == "vtc_orders" %}
+          <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
         {% elif is_partner_space %}
           <img class="partner-software-logo partner-software-logo--header" src="{{ url_for('static', filename='iaconnectpartenaires.png') }}" alt="Intégrale Connect Partenaires" loading="lazy">
           <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>

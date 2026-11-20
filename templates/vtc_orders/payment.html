@@ -1,6 +1,8 @@
 <section class="payment-panel" data-payment-state="{{payment}}" data-status-url="{{url_for('.payment_progress',key=key)}}">
 <div class="payment-heading"><p class="eyebrow">Paiement sécurisé</p><p class="total">{{150 if row.offer=='vehicule' else 600}} € <small>TTC</small></p></div>
-{% if payment=='ready' %}
+{% if payment=='offline' %}
+  <h2>Règlement par {{ methods[payment_method(row)]|lower }}</h2><p>Le centre suit votre règlement de {{ money(row.total_cents) }} et vous transmettra la facture acquittée après confirmation.</p>
+{% elif payment=='ready' %}
   <h2>Réglez votre réservation</h2><p>Réglez les {{150 if row.offer=='vehicule' else 600}} € par carte bancaire pour finaliser votre réservation.</p>
   <a class="button pay-button" href="{{url_for('.pay',key=key)}}" rel="noreferrer">Payer {{150 if row.offer=='vehicule' else 600}} € par carte <span aria-hidden="true">→</span></a>
   <p class="fine">Dès réception du paiement, vous recevrez votre facture et votre attestation par e-mail. Vous pourrez également les télécharger ici.</p>
@@ -16,7 +18,7 @@
   <h2>Le paiement est momentanément indisponible</h2><p>Votre demande est conservée. Le service réessaie automatiquement. Vous recevrez un e-mail dès que le lien sera prêt.</p>
 {% endif %}
 {% if payment in ['preparing','unavailable','processing','documents'] %}<p class="fine" data-wait-hint aria-live="polite"></p>{% endif %}
-{% if payment!='review' %}
+{% if payment not in ['review','offline'] %}
 <form method="post" class="secondary-action"><input type="hidden" name="csrf_token" value="{{csrf}}">
 <button name="action" value="refresh" class="text-action">{% if payment=='ready' %}J’ai déjà payé · actualiser mon dossier{% elif payment=='preparing' or payment=='unavailable' %}Actualiser la disponibilité du lien{% else %}Actualiser mon dossier{% endif %}</button></form>
 {% endif %}

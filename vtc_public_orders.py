@@ -1,17 +1,17 @@
 """Public VTC purchases, with Qonto collection and signed, practical-only agreements."""
 import datetime as dt
-import hashlib
 import secrets
-import os
 import re
 import time
 import uuid
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, abort, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, session, url_for
 
 import exam_retakes
 import exam_retakes_workflow as provider
+import vtc_order_agreements as agreements
+import vtc_order_finance as finance
 from manuals_commerce import ReviewRequired, collect_basket, safe_payment_url
 from vtc_order_documents import AREA, BOOKING, CENTRES, CMA, CONTACT, OFFERS, document
 from vtc_order_store import Store
@@ -20,7 +20,7 @@ PARIS = ZoneInfo("Europe/Paris")
 ORIGIN = "https://admissions.integraleconnect.com"
 STAGES = {"verify":"Adresse e-mail à confirmer", "calendar":"Rendez-vous CPF avec Cassandre",
           "planning":"Créneau de formation à fixer", "availability":"Créneau d’examen à confirmer",
-          "contract":"Contrat à signer", "delivery":"Prestations à réaliser", "billing":"Paiement par carte",
+          "contract":"Contrat à signer", "delivery":"Prestations à réaliser", "billing":"Règlement à suivre",
           "paid":"Commande réglée", "funded":"Financement CPF enregistré", "withdrawn":"Annulation demandée",
           "stopped":"Signature interrompue"}
 
@@ -33,12 +33,12 @@ def status_link(host, row):
     return ORIGIN + "/vtc/suivi/" + token(row)
 
 
-def notify(host, store, row, key, subject, message, paths=()):
+def notify(host, store, row, key, subject, message, paths=(), *, delivery_key=None):
     link = status_link(host, row)
     def content(_host, _row, _key, _link):
         actions = {
             "verify": "Confirmer mon adresse e-mail", "pay": "Accéder au paiement par carte",
-            "signature": "Accéder à la signature", "paid": "Retrouver ma facture et mon attestation",
+            "signature": "Accéder à la signature", "reminder": "Accéder à la signature", "paid": "Retrouver ma facture et mon attestation",
             "signed": "Retrouver mon contrat signé", "cpf": "Consulter mon dossier CPF",
         }
         action = actions.get(key, "Consulter mon dossier VTC")
@@ -52,7 +52,7 @@ def notify(host, store, row, key, subject, message, paths=()):
         text = "\n\n".join([f"Bonjour {row['person']['first_name']},", message, action + " : " + link,
                             summary, centre or AREA, CMA, CONTACT])
         return subject + " · Intégrale Academy", html, text
-    return provider.send_email(host, store, row, key, link, paths, content_builder=content)
+    return provider.send_email(host, store, row, key, link, paths, delivery_key=delivery_key, content_builder=content)
 
 
 def receipt(store, row):
@@ -67,9 +67,12 @@ def sync_card_billing(host, store, row):
     if not row.get("billing_flow"):
         legacy = any(row.get(key) for key in ("invoice_id", "invoice_started", "payment_id", "payment_started", "payment_url"))
         provider.checkpoint(store, row, billing_flow="invoice_first" if legacy else "payment_first")
+    retired = row.get("retired_payment_links", [])
+    suffix = f"-{len(retired)}" if retired else ""
     if row["billing_flow"] == "invoice_first":
         invoice = provider.ensure_invoice(host, store, row)
-        provider.ensure_payment(host, store, row, invoice)
+        provider.ensure_payment(host, store, row, invoice, idempotency_key="retake-payment-" + row["id"] + suffix,
+                                retired_link_ids=retired)
         return
     if row["billing_flow"] != "payment_first":
         raise ReviewRequired("Le mode de facturation VTC doit être vérifié.")
@@ -79,7 +82,7 @@ def sync_card_billing(host, store, row):
             "unit_price": {"value": f"{row['total_cents'] / 100:.2f}", "currency": "EUR"}}
     captured = collect_basket(host, order_id=row["id"], total_cents=row["total_cents"], items=[item],
                               state=row, save=lambda **fields: provider.checkpoint(store, row, **fields),
-                              idempotency_key="vtc-basket-" + row["id"], card_required=True)
+                              idempotency_key="vtc-basket-" + row["id"] + suffix, card_required=True, retired_link_ids=retired)
     if not captured:
         return
     capture = row["confirmed_payment"]
@@ -107,42 +110,24 @@ def advance(host, store, row):
             message = "Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre au sujet de votre financement CPF."
         elif row["offer"] == "formation":
             message = "Confirmez votre adresse pour préparer votre séance et signer votre contrat de formation en ligne."
+        elif finance.method(row) != "card":
+            message = "Confirmez votre adresse pour poursuivre votre réservation. Mode de règlement prévu : " + finance.METHODS[finance.method(row)] + "."
         elif row.get("exam_date"):
             message = "Confirmez votre adresse pour que notre équipe vérifie la disponibilité du véhicule à la date de votre examen. Nous vous préviendrons dès que vous pourrez payer."
         else:
             message = "Confirmez votre adresse pour accéder au paiement sécurisé de 150 € par carte bancaire."
         notify(host, store, row, "verify", "Confirmez votre adresse e-mail", message)
-    elif stage == "contract":
-        path = store.document(row["id"], "convention")
-        if not row.get("pdf_sha256"):
-            field = document(row, path, contract=True)
-            provider.checkpoint(store, row, signature_field=field, pdf_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
-        remote = provider.ensure_signature(host, store, row, name="Contrat de formation pratique VTC",
-                                           prefix="vtc", filename="Contrat-formation-pratique-VTC.pdf", notify=False)
-        if row.get("status") == "stopped":
-            row["stage"] = "stopped"
-        elif remote.get("status") in {"done","completed"}:
-            signed = store.document(row["id"], "signed")
-            if not signed.is_file():
-                result = host._yousign_request("GET", "/signature_requests/"+row["request_id"]+"/documents/download",
-                    params={"version":"completed","archive":"false"}, headers={"Accept":"application/pdf"})
-                provider.store_pdf(signed, result.content)
-            # Start the cooling-off period conservatively at the first verified completion.
-            row.setdefault("signed_day", exam_retakes.today())
-            notify(host, store, row, "signed", "Votre contrat de formation signé",
-                   "Votre contrat signé et votre attestation de mise à disposition sont joints.",
-                   [("Contrat-VTC-signe.pdf", signed), receipt(store,row)])
-            row["stage"] = "delivery"
-        else:
-            notify(host,store,row,"signature","Votre contrat VTC est prêt","Consultez puis signez votre contrat en ligne.",[("Contrat-VTC.pdf",path)])
-            return 180
     elif stage == "billing":
         if row["offer"] == "formation" and not store.document(row["id"],"completion").exists():
             document(row,store.document(row["id"],"completion"),completed=True)
         if not row.get("invoice_id") and not row.get("invoice_started"):
             row["vat_rate"] = "0"
+        is_card = finance.method(row) == "card"
         try:
-            sync_card_billing(host, store, row)
+            if is_card:
+                sync_card_billing(host, store, row)
+            else:
+                finance.sync_offline_billing(host, store, row)
         except Exception:
             row["billing_problem"] = True
             raise
@@ -159,8 +144,12 @@ def advance(host, store, row):
                    "Votre règlement est confirmé. Retrouvez votre facture et votre attestation pour l’examen dans votre dossier.",files)
             row["stage"] = "paid"
         else:
+            if not is_card and not (row.get("invoice_id") or row.get("manual_receipt") or row.get("invoice_requested")):
+                return -1
             if payment_state(row) == "ready":
-                notify(host,store,row,"pay","Votre paiement par carte VTC","Votre lien sécurisé de règlement par carte est disponible dans votre dossier.")
+                notify(host, store, row, "pay", "Votre paiement par carte VTC",
+                       "Votre lien sécurisé de règlement par carte est disponible dans votre dossier.",
+                       delivery_key="pay-" + str(len(row["retired_payment_links"])) if row.get("retired_payment_links") else "pay")
             return 90 if time.time()-row["created"] < 3600 else 900
     elif stage == "funded":
         notify(host,store,row,"cpf","Votre dossier CPF VTC","Le centre a confirmé la prise en charge de votre dossier CPF. Votre attestation est jointe.",[receipt(store,row)])
@@ -178,13 +167,21 @@ def process_pending(host):
                 if row.get("due",0) < 0 or row.get("due",0) > time.time():
                     continue
                 try:
+                    signature_wait = agreements.sync(host, store, row, notify, receipt)
+                    row["agreement_error"] = ""
+                except Exception as exc:
+                    signature_wait = 180
+                    row["agreement_error"] = host._sanitize_yousign_error(str(exc))[:400]
+                    host.app.logger.warning("vtc_order_signature id=%s type=%s", oid, type(exc).__name__)
+                try:
                     wait = advance(host, store, row)
                     row["error"] = ""
                 except Exception as exc:
                     wait = 180
                     row["error"] = host._sanitize_qonto_error(host._sanitize_yousign_error(str(exc)))[:400]
                     host.app.logger.warning("vtc_order_processing id=%s type=%s",oid,type(exc).__name__)
-                row["due"] = -1 if wait < 0 else time.time()+wait
+                waits = [delay for delay in (wait, signature_wait) if delay >= 0]
+                row["due"] = time.time() + min(waits) if waits else -1
                 store.save(row)
         except exam_retakes.RetakeError:
             continue
@@ -252,6 +249,8 @@ def payment_state(row):
     """Only an open, verified Qonto link may be offered to the candidate."""
     if row["stage"] != "billing":
         return row["stage"]
+    if finance.method(row) != "card":
+        return "offline"
     status = row.get("payment_status")
     if status == "paid":
         return "documents" if row.get("paid_cents") == row["total_cents"] else "review"
@@ -283,7 +282,9 @@ def register(app, host):
 
     def render(template, **values):
         return render_template("vtc_orders/"+template+".html", csrf=csrf_token(), offers=OFFERS, stages=STAGES,
-                               centres=CENTRES, area=AREA, cma=CMA, booking=BOOKING, today=exam_retakes.today(), **values)
+                               centres=CENTRES, area=AREA, cma=CMA, booking=BOOKING, today=exam_retakes.today(),
+                               payment_method=finance.method, methods=finance.METHODS, money=exam_retakes.money,
+                               agreement_state=agreements.state, agreement_labels=agreements.LABELS, **values)
 
     @bp.before_request
     def canonical_public_address():
@@ -361,10 +362,14 @@ def register(app, host):
                     action=request.form.get("action")
                     if action=="verify" and row["stage"]=="verify":
                         row["stage"]={"cpf":"calendar","formation":"planning","vehicule":"availability" if row["exam_date"] else "billing"}[row["offer"]]
-                        if row["stage"]=="planning" and row.get("selected_slot"):
+                        if row["stage"] == "planning" and row.get("slot") and agreements.locked(row):
+                            row["stage"] = {"signed": "delivery", "stopped": "stopped"}.get(agreements.state(row), "contract")
+                        elif row["stage"]=="planning" and row.get("selected_slot"):
                             slot=store.claim(row,earliest())
                             if slot:
-                                row.update(slot=slot,stage="contract")
+                                row.update(slot=slot, stage="contract", agreement_state="queued")
+                                if row.get("pdf_sha256"):
+                                    agreements.generate(store, row)
                         row["verified_at"]=exam_retakes.now()
                     elif action=="withdraw" and row["stage"]!="withdrawn":
                         row["previous_stage"]=row["stage"]
@@ -412,10 +417,25 @@ def register(app, host):
         staff()
         page=max(0,request.args.get("page",0,type=int))
         store=Store(host)
-        rows=store.recent(page)
-        return render("admin",rows=rows[:50],page=page,more=len(rows)>50,error=request.args.get("message",""),
-                      documents=lambda row: available_documents(store,row),slots=store.slots(earliest()),
+        q = request.args.get("q", "").strip()[:160]
+        offer = request.args.get("offer", "")
+        stage = request.args.get("stage", "")
+        filters = dict(q=q, offer=offer if offer in OFFERS else "", stage=stage if stage in STAGES else "")
+        rows = store.recent(min(page, 1000000), q, filters["offer"], filters["stage"])
+        return render("admin", rows=rows[:50], page=page, more=len(rows)>50, filters=filters, counts=store.offer_counts(),
+                      error=request.args.get("message",""), slots=store.slots(earliest()),
                       slot_key=session.setdefault("vtc_slot_form",uuid.uuid4().hex))
+
+    @bp.get("/admin/commandes-vtc/<oid>")
+    @host.admin_login_required
+    def detail(oid):
+        staff()
+        store = Store(host)
+        row = store.get(oid)
+        if not row:
+            abort(404)
+        return render("detail", row=row, docs=available_documents(store, row, admin=True),
+                      agreement_locked=agreements.locked(row))
 
     @bp.post("/admin/commandes-vtc/creneaux")
     @host.admin_login_required
@@ -439,6 +459,20 @@ def register(app, host):
         except ValueError as exc:
             return redirect(url_for(".admin",message=str(exc)),303)
 
+    @bp.get("/admin/commandes-vtc/<oid>/conventions/<int:version>.pdf")
+    @host.admin_login_required
+    def archived_agreement(oid, version):
+        staff()
+        store = Store(host)
+        row = store.get(oid)
+        if not row or not any(item["version"] == version for item in row.get("agreement_history", [])):
+            abort(404)
+        archive = store.document(oid, "convention").with_suffix(f".v{version}.pdf")
+        if not archive.is_file():
+            abort(404)
+        return send_file(archive, mimetype="application/pdf", as_attachment=True,
+                         download_name=f"Convention-VTC-{oid[:10]}-v{version}.pdf")
+
     @bp.get("/admin/commandes-vtc/<oid>/<kind>.pdf")
     @host.admin_login_required
     def admin_pdf(oid,kind):
@@ -447,7 +481,7 @@ def register(app, host):
         row=store.get(oid)
         if not row:
             abort(404)
-        return download(store,row,kind)
+        return download(store, row, kind, admin=True)
 
     @bp.post("/admin/commandes-vtc/<oid>")
     @host.admin_login_required
@@ -456,52 +490,165 @@ def register(app, host):
         staff()
         check_csrf()
         store=Store(host)
-        message=""
         try:
             with store.lock(oid):
-                row=store.get(oid)
+                row = store.get(oid)
                 if not row:
                     abort(404)
-                action=request.form.get("action")
-                if action=="schedule" and row["stage"] in {"planning","calendar"}:
-                    personal=row["offer"]=="formation"
-                    row["slot"]=schedule(request.form,personal)
-                    if row["exam_date"] and row["exam_date"] < row["slot"]["day"]:
-                        raise ValueError("La formation doit précéder l’examen.")
-                    if not personal:
-                        ref=request.form.get("cpf_reference","").strip()
-                        if not re.fullmatch(r"[0-9]{8,18}",ref) or request.form.get("funding_confirmed")!="yes":
-                            raise ValueError("Vérifiez le dossier accepté dans Mon Compte Formation et indiquez sa référence.")
-                        row["cpf_reference"]=ref
-                    row["stage"]="contract" if personal else "funded"
-                elif action=="available" and row["stage"]=="availability":
-                    row["stage"]="billing"
-                elif action=="delivered" and row["stage"]=="delivery":
-                    limit=dt.date.fromisoformat(row["signed_day"])+dt.timedelta(days=14)
-                    today=dt.date.fromisoformat(exam_retakes.today())
-                    if today<=limit or row["slot"]["day"]>today.isoformat() or row["exam_date"]>today.isoformat() or request.form.get("delivered")!="yes":
-                        raise ValueError("Confirmez les deux prestations réalisées après expiration du délai de rétractation.")
-                    row["stage"]="billing"
-                    row["performed_at"]=exam_retakes.now()
-                    row["days"]=[{"date":row["slot"]["day"]}]
-                elif action!="retry":
-                    raise ValueError("L’état de ce dossier a changé. Actualisez le suivi.")
-                row["due"]=0
+                action = request.form.get("action", "")
+                message, wake = manage_order(host, store, row, action, request.form)
+                if wake:
+                    row["due"] = 0
                 store.save(row)
-            exam_retakes.wake_worker(host)
+            if wake:
+                exam_retakes.wake_worker(host)
+            flash(message, "success")
         except ValueError as exc:
-            message=str(exc)
-        return redirect(url_for(".admin",message=message),303)
+            flash(str(exc), "error")
+        except Exception as exc:
+            from werkzeug.exceptions import HTTPException
+            if isinstance(exc, HTTPException):
+                raise
+            host.app.logger.warning("vtc_admin_action id=%s type=%s", oid, type(exc).__name__)
+            flash(host._sanitize_qonto_error(host._sanitize_yousign_error(str(exc)))[:400]
+                  or "La modification n’a pas pu être confirmée. Actualisez le dossier.", "error")
+        return redirect(url_for(".detail", oid=oid), 303)
     app.register_blueprint(bp)
 
 
-def available_documents(store,row):
-    kinds={"convention":"Contrat de formation","signed":"Contrat signé","vehicle":"Attestation véhicule","invoice":"Facture","completion":"Attestation de réalisation"}
+def read_slot(form, row):
+    slot = schedule(form, row["offer"] == "formation")
+    if row.get("exam_date") and row["exam_date"] < slot["day"]:
+        raise ValueError("La formation doit précéder l’examen.")
+    return slot
+
+
+def set_slot(store, row, form):
+    slot = read_slot(form, row)
+    if row.get("selected_slot") and not store.matches_slot(row["selected_slot"], slot):
+        row["_release_slot_id"] = row["selected_slot"]
+        row["selected_slot"] = ""
+    row["slot"] = slot
+
+
+def reserve_selected_slot(store, row):
+    if row.get("selected_slot"):
+        earliest_day = (dt.date.fromisoformat(exam_retakes.today()) + dt.timedelta(days=15)).isoformat()
+        if not store.claim(row, earliest_day):
+            raise ValueError("Le créneau sélectionné est complet ou fermé. Renseignez un autre créneau avant l’envoi.")
+
+
+def prepare_agreement(store, row, form):
+    if agreements.locked(row) or row["stage"] == "withdrawn":
+        raise ValueError("Cette convention est déjà engagée ou la commande a été annulée.")
+    for key, limit in (("address", 160), ("zip_code", 12), ("city", 90)):
+        if key in form:
+            value = form[key].strip()
+            if len(value) > limit or any(ord(c) < 32 for c in value):
+                raise ValueError("Vérifiez l’adresse du candidat.")
+            row["person"][key] = value
+    if "exam_centre" in form:
+        centre = form["exam_centre"]
+        if centre and centre not in CENTRES:
+            raise ValueError("Choisissez un centre d’examen proposé.")
+        row["exam_centre"] = centre
+    if "exam_date" in form:
+        row["exam_date"] = exam_retakes.date_value(form["exam_date"], "Examen") if form["exam_date"] else ""
+    if row["offer"] != "vehicule" and any(form.get(k) for k in ("day", "start", "end", "trainer")):
+        # A reserved or historical slot can be printed again at its original date.
+        if not all(form.get(k) == (row.get("slot") or {}).get(k) for k in ("day", "start", "end", "trainer")):
+            set_slot(store, row, form)
+    if row.get("slot") and row.get("exam_date") and row["exam_date"] < row["slot"]["day"]:
+        raise ValueError("La formation doit précéder l’examen.")
+    agreements.generate(store, row)
+    row.update(agreement_state="draft", agreement_error="", agreement_generated_at=exam_retakes.now())
+
+
+def manage_order(host, store, row, action, form):
+    stage = row["stage"]
+    state = agreements.state(row)
+    if action == "generate":
+        prepare_agreement(store, row, form)
+        return "Convention générée. Vous pouvez vérifier le PDF avant l’envoi.", False
+    if action == "send":
+        if state in {"queued", "sent", "signed"}:
+            return "La demande de signature est déjà enregistrée.", False
+        if stage == "withdrawn" or state != "draft" or form.get("revision") != row.get("pdf_sha256"):
+            raise ValueError("Rechargez et vérifiez la dernière convention générée avant l’envoi.")
+        agreements.validate_for_signature(row)
+        reserve_selected_slot(store, row)
+        if row["offer"] == "formation" and stage == "planning":
+            row["stage"] = "contract"
+        row.update(agreement_state="queued", agreement_queued_at=exam_retakes.now())
+        return "Envoi de la convention en signature demandé.", True
+    if action == "restart":
+        if form.get("confirm_restart") != "yes":
+            raise ValueError("Confirmez la reprise de la convention.")
+        agreements.restart(host, store, row, form.get("agreement_version", ""))
+        return "Convention à nouveau modifiable. Vérifiez le document avant un nouvel envoi.", False
+    if action == "remind" and state == "sent" and stage != "withdrawn":
+        day = exam_retakes.today()
+        if (row.get("emails", {}).get(agreements.delivery_key(row, "vtc-reminder-" + day)) or {}).get("sent_at"):
+            return "La relance a déjà été envoyée aujourd’hui.", False
+        row["agreement_reminder"] = day
+        return "Relance de signature demandée.", True
+    if action == "payment_method":
+        changed = finance.set_method(host, row, form.get("payment_method"), agreements.locked(row))
+        if changed and state == "draft":
+            agreements.generate(store, row)
+        return "Mode de paiement enregistré.", changed
+    if action == "invoice" and stage == "billing" and finance.method(row) not in {"card", "cpf"}:
+        row["invoice_requested"] = True
+        return "Génération de la facture Qonto demandée.", True
+    if action == "receive":
+        finance.record_receipt(row, form)
+        return "Encaissement enregistré. La facture sera rapprochée dans Qonto.", True
+    if action == "schedule" and stage in {"planning", "calendar"}:
+        personal = row["offer"] == "formation"
+        if agreements.locked(row) or (row.get("slot") and not form.get("day")):
+            if not row.get("slot"):
+                raise ValueError("Renseignez un créneau de formation avant la validation.")
+        else:
+            set_slot(store, row, form)
+        if not personal:
+            ref = form.get("cpf_reference", "").strip()
+            if not re.fullmatch(r"[0-9]{8,18}", ref) or form.get("funding_confirmed") != "yes":
+                raise ValueError("Vérifiez le dossier accepté dans Mon Compte Formation et indiquez sa référence.")
+            row["cpf_reference"] = ref
+        if state == "draft":
+            agreements.generate(store, row)
+        row["stage"] = "contract" if personal else "funded"
+        if personal:
+            reserve_selected_slot(store, row)
+            row["agreement_state"] = "queued"
+        return "Créneau enregistré." if personal else "Prise en charge CPF enregistrée.", True
+    if action == "available" and stage == "availability":
+        row["stage"] = "billing"
+        return "Disponibilité du véhicule confirmée.", True
+    if action == "delivered" and stage == "delivery":
+        limit = dt.date.fromisoformat(row["signed_day"]) + dt.timedelta(days=14)
+        today = dt.date.fromisoformat(exam_retakes.today())
+        if (today <= limit or row["slot"]["day"] > today.isoformat() or (row.get("exam_date") or "") > today.isoformat()
+                or form.get("delivered") != "yes"):
+            raise ValueError("Confirmez les deux prestations réalisées après expiration du délai de rétractation.")
+        row.update(stage="billing", performed_at=exam_retakes.now(), days=[{"date":row["slot"]["day"]}])
+        return "Prestations réalisées. Le règlement est ouvert.", True
+    if action == "retry":
+        return "Actualisation du dossier demandée.", True
+    raise ValueError("L’état de ce dossier a changé. Rechargez la fiche.")
+
+
+def available_documents(store, row, *, admin=False):
+    kinds = {"convention": "Convention", "signed": "Convention signée", "vehicle": "Attestation véhicule",
+             "invoice": "Facture", "completion": "Attestation de réalisation"}
+    if not admin and not (row.get("request_id") or row.get("signed_day")):
+        kinds.pop("convention")
     return {kind:label for kind,label in kinds.items() if store.document(row["id"],kind).is_file()}
 
 
-def download(store,row,kind):
-    if kind not in available_documents(store,row):
+def download(store, row, kind, *, admin=False):
+    if kind not in available_documents(store, row, admin=admin):
         abort(404)
-    return send_file(store.document(row["id"],kind),mimetype="application/pdf",as_attachment=True,
+    return send_file(store.document(row["id"], kind), mimetype="application/pdf",
+                     as_attachment=not (admin and request.args.get("apercu") == "1"),
                      download_name=f"VTC-{kind}-{row['id'][:10]}.pdf")

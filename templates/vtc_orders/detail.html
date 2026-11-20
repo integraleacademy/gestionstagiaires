@@ -1,0 +1,125 @@
+{% extends "vtc_orders/admin_layout.html" %}
+{% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf }}">{% endmacro %}
+{% macro slot_fields(slot, required=false) %}
+<div class="vtc-fields">
+  <label>Date de formation<input type="date" name="day" value="{{ slot.day if slot }}" {{ 'required' if required }}></label>
+  <label>Début<input type="time" name="start" value="{{ slot.start if slot }}" {{ 'required' if required }}></label>
+  <label>Fin<input type="time" name="end" value="{{ slot.end if slot }}" {{ 'required' if required }}></label>
+</div>
+<label>Nom et qualification du formateur<input name="trainer" maxlength="160" value="{{ slot.trainer if slot }}" {{ 'required' if required }}></label>
+{% endmacro %}
+{% block workspace %}
+{% set state = agreement_state(row) %}
+{% set current_method = payment_method(row) %}
+{% set edit = not is_read_only and row.stage != 'withdrawn' %}
+{% set manage = url_for('.manage', oid=row.id) %}
+<a class="vtc-back" href="{{ url_for('.admin') }}">← Commandes VTC</a>
+<header class="vtc-heading">
+  <div><h1>{{ row.person.first_name }} {{ row.person.last_name }}</h1><p>{{ offers[row.offer] }} · Commande {{ row.id[:10]|upper }} du {{ row.submitted_at[:10]|vtc_date }}</p></div>
+  <span class="vtc-badge is-{{ row.stage }}">{{ stages[row.stage] }}</span>
+</header>
+<div class="vtc-detail-grid">
+  <section class="card vtc-panel"><h2>Candidat et réservation</h2>
+    <dl class="vtc-facts">
+      <div><dt>Adresse e-mail</dt><dd><a href="mailto:{{ row.person.email }}">{{ row.person.email }}</a>{% if not row.verified_at %}<small>Confirmation en attente</small>{% endif %}</dd></div>
+      <div><dt>Téléphone</dt><dd><a href="tel:{{ row.person.phone }}">{{ row.person.phone }}</a></dd></div>
+      <div><dt>Centre d’examen</dt><dd>{{ centres.get(row.exam_centre, 'À préciser') }}</dd></div>
+      <div><dt>Date d’examen</dt><dd>{{ row.exam_date|vtc_date if row.exam_date else 'À confirmer par la CMA' }}</dd></div>
+      {% if row.slot %}<div><dt>Formation à Puget-sur-Argens</dt><dd>{{ row.slot.day|vtc_date }} · {{ row.slot.start }} – {{ row.slot.end }}<small>{{ row.slot.trainer }}</small></dd></div>{% endif %}
+      {% if row.cpf_reference %}<div><dt>Dossier CPF</dt><dd>{{ row.cpf_reference }}</dd></div>{% endif %}
+    </dl>
+  </section>
+  <section class="card vtc-panel"><div class="vtc-section-head"><h2>Financement et paiement</h2><strong>{{ money(row.total_cents) }} TTC</strong></div>
+    {% if row.stage == 'paid' %}<p class="vtc-badge is-paid">Réglé · {{ methods[current_method] }}</p>
+    {% elif row.stage == 'funded' %}<p class="vtc-badge is-funded">Prise en charge CPF validée</p>
+    {% else %}<p>Mode prévu <strong>{{ methods[current_method] }}</strong></p>{% endif %}
+    {% if row.invoice_number %}<p>Facture Qonto <strong>{{ row.invoice_number }}</strong></p>{% endif %}
+    {% if row.manual_receipt %}<p>Encaissement saisi le {{ row.manual_receipt.day|vtc_date }} · {{ row.manual_receipt.reference }}</p>{% endif %}
+    {% if edit and row.stage not in ['paid','funded'] and not row.manual_receipt %}
+      <form class="vtc-form" method="post" action="{{ manage }}">{{ csrf_field() }}
+        <label>Mode de paiement<select name="payment_method">{% for key,label in methods.items() %}{% if key != 'cpf' or row.offer != 'vehicule' %}<option value="{{ key }}" {{ 'selected' if key == current_method }}>{{ label }}</option>{% endif %}{% endfor %}</select></label>
+        {% if row.payment_id and current_method == 'card' %}<small>Le changement de mode fermera le lien carte si aucun règlement n’est engagé.</small>{% endif %}
+        {% if agreement_locked %}<small>La convention déjà envoyée conserve ses modalités d’origine.</small>{% endif %}
+        <button class="btn btn-outline" name="action" value="payment_method">Enregistrer le mode de paiement</button>
+      </form>
+    {% endif %}
+    {% if edit and row.stage == 'billing' and current_method not in ['card','cpf'] %}
+      <div class="vtc-divider">
+      {% if not row.invoice_id and not row.invoice_requested and not row.manual_receipt %}<form method="post" action="{{ manage }}">{{ csrf_field() }}<button class="btn btn-outline" name="action" value="invoice">Générer la facture Qonto</button></form>{% endif %}
+      {% if not row.manual_receipt %}
+      <details><summary>Enregistrer un encaissement</summary><form class="vtc-form" method="post" action="{{ manage }}">{{ csrf_field() }}
+        <label>Date du règlement<input type="date" name="paid_day" max="{{ today }}" required></label>
+        <label>Référence ou justificatif<input name="reference" maxlength="160" required></label>
+        <label class="vtc-check"><input type="checkbox" required name="received" value="yes"> Je confirme avoir reçu {{ money(row.total_cents) }} par {{ methods[current_method]|lower }}.</label>
+        <button class="btn btn-primary" name="action" value="receive">Confirmer l’encaissement</button>
+      </form></details>{% endif %}
+      </div>
+    {% endif %}
+    {% if row.vat_rate != '0' and (row.invoice_id or row.invoice_started) %}<p class="vtc-notice is-error">La facture a été établie avec l’ancien taux de TVA de {{ row.vat_rate }} %. Vérifiez sa régularisation dans Qonto.</p>{% endif %}
+  </section>
+</div>
+<section class="card vtc-panel">
+  <div class="vtc-section-head"><h2>Convention et signature électronique</h2><span class="vtc-badge is-{{ state }}">{{ agreement_labels[state] }}</span></div>
+  <p>{{ 'Convention de mise à disposition du véhicule à double commande pour l’examen.' if row.offer == 'vehicule' else 'Convention de formation pratique et de mise à disposition du véhicule pour l’examen.' }}</p>
+  {% if row.agreement_error %}<p class="vtc-notice is-error" role="alert">{{ row.agreement_error }}</p>{% endif %}
+  {% if edit and not agreement_locked %}
+    <form class="vtc-form" method="post" action="{{ manage }}">{{ csrf_field() }}
+      <details class="vtc-edit" {% if row.offer != 'vehicule' and not row.slot %}open{% endif %}><summary>Informations à reprendre dans la convention</summary>
+        <div class="vtc-fields"><label>Centre d’examen<select name="exam_centre"><option value="">À préciser</option>{% for key,label in centres.items() %}<option value="{{ key }}" {{ 'selected' if row.exam_centre == key }}>{{ label }}</option>{% endfor %}</select></label>
+          <label>Date d’examen, si connue<input type="date" name="exam_date" value="{{ row.exam_date or '' }}"></label></div>
+        <div class="vtc-fields"><label>Adresse<input name="address" maxlength="160" value="{{ row.person.address or '' }}"></label><label>Code postal<input name="zip_code" maxlength="12" value="{{ row.person.zip_code or '' }}"></label><label>Ville<input name="city" maxlength="90" value="{{ row.person.city or '' }}"></label></div>
+        {% if row.offer != 'vehicule' %}{{ slot_fields(row.slot) }}{% endif %}
+      </details>
+      <button class="btn {{ 'btn-outline' if state == 'draft' else 'btn-primary' }}" name="action" value="generate">{{ 'Régénérer la convention' if state == 'draft' else 'Générer la convention' }}</button>
+    </form>
+  {% endif %}
+  <div class="vtc-actions">
+    {% if 'convention' in docs %}<a class="btn btn-outline" href="{{ url_for('.admin_pdf', oid=row.id, kind='convention', apercu=1) }}" target="_blank" rel="noopener">Voir la convention (PDF)</a>{% endif %}
+    {% if edit and state == 'draft' %}
+      {% set missing_slot = row.offer != 'vehicule' and not row.slot %}
+      {% set missing_address = row.offer == 'formation' and not (row.person.address and row.person.city and row.person.zip_code) %}
+      <form method="post" action="{{ manage }}">{{ csrf_field() }}<input type="hidden" name="revision" value="{{ row.pdf_sha256 }}">
+        <button class="btn btn-primary" name="action" value="send" {% if missing_slot or missing_address %}disabled{% endif %}>Envoyer en signature électronique</button></form>
+      {% if missing_slot or missing_address %}<small>Pour envoyer la convention, complétez {{ 'le créneau de formation et le formateur' if missing_slot }}{{ ' ainsi que ' if missing_slot and missing_address }}{{ 'l’adresse du candidat' if missing_address }}, puis régénérez le PDF.</small>{% endif %}
+    {% elif edit and state == 'sent' %}
+      <form method="post" action="{{ manage }}">{{ csrf_field() }}<button class="btn btn-outline" name="action" value="remind">Relancer la signature</button></form>
+    {% endif %}
+    {% if edit and (row.agreement_error or state in ['queued','sent']) %}<form method="post" action="{{ manage }}">{{ csrf_field() }}<button class="btn btn-outline" name="action" value="retry">Actualiser la signature</button></form>{% endif %}
+    {% if 'signed' in docs %}<a class="btn btn-primary" href="{{ url_for('.admin_pdf', oid=row.id, kind='signed') }}">Télécharger la convention signée</a>{% endif %}
+  </div>
+  {% if row.signed_day %}<p class="muted">Signature confirmée le {{ row.signed_day|vtc_date }}.</p>{% elif state == 'sent' %}<p class="muted">La demande Yousign a été envoyée à {{ row.person.email }}.</p>{% endif %}
+  {% if edit and state in ['sent','queued','stopped'] %}
+  <details class="vtc-edit"><summary>Reprendre la convention</summary><form method="post" action="{{ manage }}" class="vtc-form">
+    {{ csrf_field() }}<input type="hidden" name="agreement_version" value="{{ row.agreement_version or 1 }}">
+    <label class="vtc-check"><input type="checkbox" name="confirm_restart" value="yes" required> Fermer la demande de signature précédente et préparer une nouvelle version.</label>
+    <button class="btn btn-outline" name="action" value="restart">Reprendre la convention</button>
+  </form></details>{% endif %}
+  {% if row.agreement_history %}<details><summary>Conventions précédentes</summary><div class="vtc-actions">
+    {% for item in row.agreement_history if item.sha256 %}<a class="btn btn-outline" href="{{ url_for('.archived_agreement', oid=row.id, version=item.version) }}">Version {{ item.version }} · {{ item.closed_at[:10]|vtc_date }} (PDF)</a>{% endfor %}
+  </div></details>{% endif %}
+</section>
+{% if row.stage in ['calendar','planning','availability','delivery','withdrawn'] or row.error %}
+<section class="card vtc-panel"><h2>Suivi de la réservation</h2>
+  {% if row.error %}<p class="vtc-notice is-error" role="alert">{{ row.error }}</p>{% endif %}
+  {% if row.stage == 'withdrawn' %}<p>Une annulation a été demandée. Vérifiez la convention et le règlement dans Qonto.</p>{% endif %}
+  {% if edit %}
+    {% if row.stage == 'calendar' %}
+      <form class="vtc-form" method="post" action="{{ manage }}">{{ csrf_field() }}
+        {% if not row.slot %}{{ slot_fields(row.slot, true) }}{% endif %}
+        <label>Référence du dossier CPF<input name="cpf_reference" pattern="[0-9]{8,18}" required></label>
+        <label class="vtc-check"><input required type="checkbox" name="funding_confirmed" value="yes"> Financement accepté sur Mon Compte Formation</label>
+        <button class="btn btn-primary" name="action" value="schedule">Valider la prise en charge CPF</button>
+      </form>
+    {% elif row.stage == 'availability' %}
+      <form method="post" action="{{ manage }}">{{ csrf_field() }}<button class="btn btn-primary" name="action" value="available">Confirmer la disponibilité du véhicule</button></form>
+    {% elif row.stage == 'delivery' %}
+      <form class="vtc-form" method="post" action="{{ manage }}">{{ csrf_field() }}<label class="vtc-check"><input type="checkbox" required name="delivered" value="yes"> La séance a eu lieu et le véhicule a été mis à disposition pour l’examen.</label><button class="btn btn-primary" name="action" value="delivered">Confirmer les prestations et ouvrir le règlement</button></form>
+    {% elif row.stage == 'planning' %}<p>Renseignez le créneau dans la convention, vérifiez le PDF puis envoyez-le en signature.</p>{% endif %}
+    {% if row.error %}<form method="post" action="{{ manage }}">{{ csrf_field() }}<button class="btn btn-outline" name="action" value="retry">Relancer le traitement</button></form>{% endif %}
+  {% endif %}
+</section>{% endif %}
+{% if 'invoice' in docs or 'vehicle' in docs or 'completion' in docs %}
+<section class="card vtc-panel"><h2>Autres documents</h2><div class="vtc-actions">
+  {% for kind,label in docs.items() if kind not in ['convention','signed'] %}<a class="btn btn-outline" href="{{ url_for('.admin_pdf', oid=row.id, kind=kind) }}">{{ label }} (PDF)</a>{% endfor %}
+</div></section>{% endif %}
+{% endblock %}

@@ -50,6 +50,9 @@ class Store:
     def save(self, row):
         row["updated_at"] = now()
         with self.connect() as db:
+            released = row.pop("_release_slot_id", None)
+            if released:
+                db.execute("DELETE FROM practical_seats WHERE order_id=? AND slot_id=?", (row["id"], released))
             db.execute("UPDATE orders SET stage=?,due=?,payload=? WHERE id=?",
                        (row["stage"], row.get("due",0), json.dumps(row), row["id"]))
 
@@ -62,9 +65,29 @@ class Store:
         with self.connect() as db:
             return [r[0] for r in db.execute("SELECT id FROM orders WHERE due>=0 AND due<=? ORDER BY due,created LIMIT 20", (time.time(),))]
 
-    def recent(self, page):
+    def recent(self, page, search="", offer="", stage=""):
+        clauses, args = [], []
+        if offer:
+            clauses.append("json_extract(payload, '$.offer') IN (?,?)")
+            args.extend((offer, "cpf" if offer == "formation" else offer))
+        if stage:
+            clauses.append("stage=?")
+            args.append(stage)
+        if search:
+            clauses.append("""instr(lower(id || ' ' || email || ' ' ||
+                json_extract(payload,'$.person.first_name') || ' ' || json_extract(payload,'$.person.last_name') || ' ' ||
+                json_extract(payload,'$.person.last_name') || ' ' || json_extract(payload,'$.person.first_name') || ' ' ||
+                coalesce(json_extract(payload,'$.person.phone'),'')), lower(?)) > 0""")
+            args.append(search)
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
         with self.connect() as db:
-            return [json.loads(r[0]) for r in db.execute("SELECT payload FROM orders ORDER BY created DESC LIMIT 51 OFFSET ?", (page*50,))]
+            rows = db.execute("SELECT payload FROM orders" + where + " ORDER BY created DESC, id LIMIT 51 OFFSET ?",
+                              (*args, page * 50))
+            return [json.loads(r[0]) for r in rows]
+
+    def offer_counts(self):
+        with self.connect() as db:
+            return dict(db.execute("SELECT json_extract(payload,'$.offer'), count(*) FROM orders GROUP BY 1"))
 
     def document(self, oid, kind):
         if not re.fullmatch(r"[0-9a-f]{32}", oid) or kind not in {"convention","signed","invoice","vehicle","completion"}:
@@ -88,20 +111,30 @@ class Store:
         with self.connect() as db:
             db.execute("UPDATE practical_slots SET active=0 WHERE id=?", (key,))
 
+    def matches_slot(self, key, slot):
+        with self.connect() as db:
+            record = db.execute("SELECT details FROM practical_slots WHERE id=?", (key,)).fetchone()
+        if not record:
+            return False
+        details = json.loads(record[0])
+        return all(details.get(k) == slot.get(k) for k in ("day", "start", "end", "trainer"))
+
     def claim(self, row, earliest):
         key = row.get("selected_slot")
         if not key:
             return None
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            existing = db.execute("""SELECT s.details FROM practical_seats p JOIN practical_slots s ON s.id=p.slot_id
+                                     WHERE p.order_id=? AND p.slot_id=?""", (row["id"], key)).fetchone()
+            if existing:
+                return json.loads(existing[0])
             record = db.execute("SELECT details, capacity FROM practical_slots WHERE id=? AND day>=? AND active=1",
                                 (key,earliest)).fetchone()
             if not record:
                 return None
-            # Recover the reservation if a process stopped between seat and order checkpoints.
-            if not db.execute("SELECT 1 FROM practical_seats WHERE order_id=? AND slot_id=?",(row["id"],key)).fetchone():
-                count = db.execute("SELECT COUNT(*) FROM practical_seats WHERE slot_id=?",(key,)).fetchone()[0]
-                if count >= record[1]:
-                    return None
-                db.execute("INSERT INTO practical_seats VALUES(?,?)", (row["id"],key))
+            count = db.execute("SELECT COUNT(*) FROM practical_seats WHERE slot_id=?", (key,)).fetchone()[0]
+            if count >= record[1]:
+                return None
+            db.execute("INSERT INTO practical_seats VALUES(?,?)", (row["id"],key))
         return json.loads(record[0])

@@ -205,7 +205,7 @@ def record_payment(store, row, status, paid_cents, url=''):
                confirmed_at=(row.get('confirmed_at') or now()) if confirmed else '')
 
 
-def ensure_payment(host,store,row,invoice):
+def ensure_payment(host,store,row,invoice, *, idempotency_key=None, retired_link_ids=()):
     payment = host.normalize_qonto_invoice_payment_data(invoice, {'amount_ttc': row['total_cents'] / 100})
     invoice_paid = payment['qonto_amount_paid_cents']
     if payment['qonto_payment_status'] == 'paid':
@@ -228,7 +228,7 @@ def ensure_payment(host,store,row,invoice):
         for page in range(1,21):
             response=host._qonto_request('GET','/v2/payment_links',params={'page':page,'per_page':100})
             links=response.get('payment_links',[])
-            matches=[l for l in links if l.get('invoice_id')==invoice['id']]
+            matches=[l for l in links if l.get('invoice_id')==invoice['id'] and l.get('id') not in retired_link_ids]
             if matches:
                 link=unique(matches,'Plusieurs liens de paiement correspondent à cette facture.')
                 break
@@ -246,7 +246,7 @@ def ensure_payment(host,store,row,invoice):
                   'amount':{'value':f"{row['total_cents']/100:.2f}",'currency':'EUR'},'potential_payment_methods':methods}}
         checkpoint(store,row,payment_started=now())
         try:
-            response=host._qonto_request('POST','/v2/payment_links',payload,idempotency_key='retake-payment-'+row['id'])
+            response=host._qonto_request('POST','/v2/payment_links',payload,idempotency_key=idempotency_key or 'retake-payment-'+row['id'])
         except Exception as exc:
             if getattr(exc,'status_code',None) in {400,401,403,422,429}:
                 checkpoint(store,row,payment_started='')

@@ -8,23 +8,29 @@
 {% if error %}<p class="error" role="alert">{{error}}</p>{% endif %}
 {% if row.stage!='billing' %}<section class="action-panel"><h2>{{stages[row.stage]}}</h2>{% endif %}
 {% if row.stage=='verify' %}
-<p>{% if row.offer=='vehicule' and not row.exam_date %}Confirmez votre adresse pour préparer le paiement du véhicule. Vous pourrez ensuite payer les 150 € par carte bancaire.{% elif row.offer=='vehicule' %}Confirmez votre adresse. Le centre vérifiera la disponibilité du véhicule le {{row.exam_date|vtc_date}} avant de vous adresser le lien de paiement.{% elif row.offer=='cpf' %}Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre.{% else %}Confirmez votre adresse pour poursuivre votre inscription à la séance pratique.{% endif %}</p>
-<form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="verify">{{'Confirmer et accéder au paiement' if row.offer=='vehicule' and not row.exam_date else 'Confirmer mon adresse et continuer'}} →</button></form>
+<p>{% if row.offer=='vehicule' and payment_method(row) != 'card' %}Confirmez votre adresse pour poursuivre la réservation. Le mode de règlement prévu est le suivant : {{ methods[payment_method(row)] }}.{% elif row.offer=='vehicule' and not row.exam_date %}Confirmez votre adresse pour préparer le paiement du véhicule. Vous pourrez ensuite payer les 150 € par carte bancaire.{% elif row.offer=='vehicule' %}Confirmez votre adresse. Le centre vérifiera la disponibilité du véhicule le {{row.exam_date|vtc_date}} avant de vous adresser le lien de paiement.{% elif row.offer=='cpf' %}Confirmez votre adresse pour choisir un rendez-vous téléphonique avec Cassandre.{% else %}Confirmez votre adresse pour poursuivre votre inscription à la séance pratique.{% endif %}</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{csrf}}"><button name="action" value="verify">{{'Confirmer et accéder au paiement' if row.offer=='vehicule' and not row.exam_date and payment_method(row)=='card' else 'Confirmer mon adresse et continuer'}} →</button></form>
 {% elif row.stage=='calendar' %}
 <p>Choisissez un créneau téléphonique avec Cassandre. Elle vous accompagne dans votre demande sur Mon Compte Formation. Votre place sera confirmée après validation du financement.</p>
 <a class="button" href="{{booking}}">Choisir mon rendez-vous téléphonique →</a>
 {% elif row.stage=='planning' %}<p>Le centre a reçu votre demande et vous proposera un créneau. Votre contrat nominatif sera ensuite disponible ici pour signature électronique.</p>
-{% elif row.stage=='availability' %}<p>Le centre vérifie la disponibilité du véhicule pour le {{row.exam_date|vtc_date}}. Vous recevrez votre lien de paiement par e-mail.</p>
+{% elif row.stage=='availability' %}<p>Le centre vérifie la disponibilité du véhicule pour le {{row.exam_date|vtc_date}}. {% if payment_method(row)=='card' %}Vous recevrez votre lien de paiement par e-mail.{% else %}Le centre vous indiquera les modalités de règlement par {{ methods[payment_method(row)]|lower }}.{% endif %}</p>
 {% elif row.stage=='contract' %}
 {% if row.signature_url %}<a class="button" rel="noreferrer" href="{{row.signature_url}}">Signer mon contrat en ligne →</a>{% else %}<p>Votre contrat et votre lien de signature sont en préparation. Vous les recevrez également par e-mail.</p>{% endif %}
-{% elif row.stage=='delivery' %}<p>Votre contrat est signé. Vous recevrez le lien de règlement après la réalisation des prestations.</p>
+{% elif row.stage=='delivery' %}<p>Votre contrat est signé. Le règlement par {{ methods[payment_method(row)]|lower }} interviendra après la réalisation des prestations.</p>
 {% elif row.stage=='billing' %}
 {% include 'vtc_orders/payment.html' %}
-{% elif row.stage=='paid' %}<p>Votre règlement de {{150 if row.offer=='vehicule' else 600}} € est confirmé. Conservez vos documents et transmettez votre convocation CMA au centre dès réception.</p>
+{% elif row.stage=='paid' %}<p>Votre règlement de {{money(row.total_cents)}} est confirmé. Conservez vos documents et transmettez votre convocation CMA au centre dès réception.</p>
 {% elif row.stage=='funded' %}<p>Votre financement CPF est confirmé par le centre. Votre inscription et vos justificatifs de financement sont disponibles sur Mon Compte Formation.</p>
 {% elif row.stage=='withdrawn' %}<p>Votre demande d’annulation est enregistrée. Le centre vous répondra par e-mail.</p>
 {% elif row.stage=='stopped' %}<p>Contactez le centre pour reprendre votre dossier.</p>{% endif %}
 {% if row.stage!='billing' %}</section>{% endif %}
+{% if row.stage not in ['contract','withdrawn','stopped'] and agreement_state(row) in ['sent','queued'] %}
+<section class="action-panel"><h2>Votre convention VTC</h2>
+{% if row.stage == 'verify' %}<p>Confirmez votre adresse e-mail pour accéder à votre convention.</p>
+{% elif row.signature_url %}<a class="button" rel="noreferrer" href="{{ row.signature_url }}">Signer ma convention en ligne →</a>
+{% else %}<p>Votre lien de signature est en préparation.</p>{% endif %}</section>
+{% endif %}
 {% if row.slot %}<p><strong>Votre formation à Puget-sur-Argens</strong><br>{{row.slot.day|vtc_date}} · {{row.slot.start}} – {{row.slot.end}}</p>{% endif %}
 {% if docs %}<section class="documents-panel"><h2>Vos documents</h2><ul class="document-links">{% for kind,label in docs.items() %}<li><a href="{{url_for('.pdf',key=key,kind=kind)}}">{{label}} (PDF)</a></li>{% endfor %}</ul></section>{% endif %}
 <div class="cma-note"><strong>Pensez à prévenir la CMA</strong><p>Lors de votre inscription à l’examen, indiquez que vous utiliserez le véhicule d’<b>Intégrale Academy – Intégrale Sécurité Formations</b> pour passer avec nos candidats. Transmettez-nous votre convocation dès réception.</p></div>

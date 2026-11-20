@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block extra_head %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-orders-admin.css', v='1') }}">
+{% endblock %}
+{% block content %}
+<div class="vtc-admin">
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <p class="vtc-notice {{ 'is-error' if category == 'error' }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</p>
+  {% endfor %}
+  {% block workspace %}{% endblock %}
+</div>
+{% endblock %}
