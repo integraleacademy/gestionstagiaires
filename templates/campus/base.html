@@ -1,5 +1,25 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}Campus{% endblock %} · Intégrale Academy</title>
-<link rel="stylesheet" href="{{ url_for('static',filename='css/campus.css') }}"></head>
-<body><header class="bar"><img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"><strong>Campus</strong></header>
-<main>{% block content %}{% endblock %}</main></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#182c30">
+  <title>{% block title %}Campus{% endblock %} · Intégrale Academy</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo-integrale.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/campus.css', v='20261120') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Aller au contenu</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="" width="44" height="44">
+        <div><strong>Intégrale Academy</strong><span>Campus de formation</span></div>
+      </div>
+      {% block header_actions %}<span class="header-label">Espace stagiaire</span>{% endblock %}
+    </div>
+  </header>
+  <main id="main-content" tabindex="-1">{% block content %}{% endblock %}</main>
+  <footer class="site-footer"><span>Intégrale Academy</span><span>Votre espace de formation</span></footer>
+</body>
+</html>
