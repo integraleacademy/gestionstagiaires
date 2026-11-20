@@ -10974,6 +10974,7 @@ def _sync_vtc_book_notification(data: Dict[str, Any], session_obj: Dict[str, Any
     trainee_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
     should_notify = (
         not _trainee_registration_is_cancelled(trainee)
+        and not vtc_individual_offers.reduced(trainee)
         and _is_vtc_book_address_complete(trainee)
         and not (trainee.get("vtc_book_sent_at") or "").strip()
     )
