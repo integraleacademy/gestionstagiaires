@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-vtc-tests
+      PERSIST_DIR: /tmp/gestionstagiaires-vtc-tests
       SECRET_KEY: vtc-test-only
     steps:
       - uses: actions/checkout@v5
