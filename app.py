@@ -28044,6 +28044,11 @@ def api_update_vtc_individual_offer(session_id: str, trainee_id: str):
                     "Annulez ou traitez d'abord cette demande Yousign avant de modifier la formule."
                 )
             vtc_individual_offers.update(trainee, requested, default_training_price("VTC"))
+            if requested == "full":
+                # Returning to the complete package must restore the native VTC
+                # assignment even when enrolment originally had no e-learning.
+                vtc_elearning_activation.schedule_new_enrolment(
+                    sys.modules[__name__], training, trainee)
             trainee.pop("convention_signature", None)
             trainee.pop("convocation_signature", None)
             for key in ("convention_aps_pdf_path", "convention_aps_docx_path",
