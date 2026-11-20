@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import re
 from vtc_elearning_activation import STATE_KEY, is_vtc, learner_session
+import vtc_individual_offers
 
 from .importer import CourseImportError
 from .paths import assigned_modules
@@ -86,6 +87,8 @@ def effective_learner_session(session_obj, trainee):
         return desp_vae_elearning.learner_session(session_obj, trainee)
     if aps_enrolments.is_native_aps_session(session_obj):
         return aps_enrolments.learner_session(session_obj)
+    if is_vtc(session_obj) and vtc_individual_offers.reduced(trainee):
+        return learner_session(session_obj, trainee)
     if is_vtc(session_obj) and isinstance(trainee.get(STATE_KEY), dict):
         return learner_session(session_obj, trainee)
     modules = assigned_modules(session_obj)

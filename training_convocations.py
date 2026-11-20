@@ -19,6 +19,8 @@ def source_hash(context, template_path):
 
 
 def current_source_hash(services, training, trainee):
+    if services.vtc_individual_offers.is_vtc(training) and services.vtc_individual_offers.vehicle(trainee):
+        return services.vtc_individual_offers.vehicle_hash(training, trainee)
     context = services._build_aps_convocation_context(copy.deepcopy(training), copy.deepcopy(trainee))
     template = services._ssiap_document_template(training, trainee, "convocation", services._aps_template_path)
     return source_hash(context, template)

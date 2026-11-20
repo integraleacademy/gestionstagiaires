@@ -13,6 +13,7 @@ import logging
 import re
 import threading
 import uuid
+import vtc_individual_offers
 from urllib.parse import quote
 
 STATE_KEY = "vtc_elearning_auto"
@@ -57,6 +58,7 @@ def eligible(host, training, trainee):
     return (is_vtc(training)
             and training.get("partner_id") in (None, "", host.INTEGRALE_PARTNER_ID)
             and not training.get("archived") and not training.get("cancelled")
+            and not vtc_individual_offers.reduced(trainee)
             and not host._trainee_registration_is_cancelled(trainee))
 
 
@@ -83,6 +85,10 @@ def new_assignment(now):
 
 def learner_session(training, trainee):
     """Return an individual view; never enable an entire shared session."""
+    if is_vtc(training) and vtc_individual_offers.reduced(trainee):
+        # This also hides an earlier activation when the commercial offer changes.
+        return {**training, "aps_elearning_enabled": False, "aps_native_modules": [],
+                "aps_native_course_id": "", "vtc_auto_access_available": False}
     state = trainee.get(STATE_KEY)
     if not is_vtc(training) or not isinstance(state, dict):
         return training
@@ -252,7 +258,8 @@ def _activate_individual(host, sid, tid, now):
     def activate(data):
         training, person = _find(host, data, sid, tid)
         if (not person or STATE_KEY in person or not _individual_grant_requested(training, person)
-                or not is_vtc(training) or host._trainee_registration_is_cancelled(person)
+                or not is_vtc(training) or vtc_individual_offers.reduced(person)
+                or host._trainee_registration_is_cancelled(person)
                 or training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID)):
             return {}
         state = new_assignment(now)
@@ -275,7 +282,9 @@ def _pending_activations(host, payload):
         if training.get("partner_id") not in (None, "", host.INTEGRALE_PARTNER_ID):
             continue
         for person in host._session_trainees_list(training):
-            if not isinstance(person, dict) or not person.get("id") or host._trainee_registration_is_cancelled(person):
+            if (not isinstance(person, dict) or not person.get("id")
+                    or vtc_individual_offers.reduced(person)
+                    or host._trainee_registration_is_cancelled(person)):
                 continue
             if STATE_KEY not in person and _individual_grant_requested(training, person):
                 pending.append((training["id"], person["id"], None))

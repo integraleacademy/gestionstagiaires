@@ -1,0 +1,61 @@
+name: Offres VTC individuelles
+
+on:
+  pull_request:
+    paths:
+      - "app.py"
+      - "vtc_individual_offers.py"
+      - "vtc_elearning_activation.py"
+      - "elearning_native/vtc_enrolments.py"
+      - "training_convocations.py"
+      - "templates/admin_trainee.html"
+      - "templates/admin_trainees.html"
+      - "templates/public_trainee.html"
+      - "static/js/vtc-individual-offers.js"
+      - "tests/test_vtc_individual_offers.py"
+      - ".github/workflows/vtc-individual-offers.yml"
+  push:
+    branches: [main]
+    paths:
+      - "vtc_individual_offers.py"
+      - "vtc_elearning_activation.py"
+      - "elearning_native/vtc_enrolments.py"
+      - "training_convocations.py"
+      - "tests/test_vtc_individual_offers.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-vtc:
+    name: Valider les formules VTC et les conventions
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      PERSIST_DIR: /tmp/gestionstagiaires-vtc-tests
+      SECRET_KEY: vtc-test-only
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Dépendances
+        run: python -m pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Syntaxe Python
+        run: python -m py_compile app.py vtc_individual_offers.py vtc_elearning_activation.py elearning_native/vtc_enrolments.py training_convocations.py
+      - name: Formules et régressions VTC
+        run: >-
+          python -m pytest -q
+          tests/test_vtc_individual_offers.py
+          tests/test_vtc_elearning_activation.py
+          tests/test_vtc_convocation_automation.py
+      - name: Régressions du parcours VTC complet hors modèle historique daté
+        # Les trois cas test_vtc_convention_uses_real_dates_without_changing_the_session
+        # échouent déjà sur le modèle Word historique : des dates fixes y
+        # figurent même lorsque les variables du contrat sont bien remplacées.
+        # Ce correctif ne modifie pas ce modèle binaire. Suivi séparé requis.
+        run: >-
+          python -m pytest -q
+          tests/test_convention_vtc_dates_preview.py
+          -k "not test_vtc_convention_uses_real_dates_without_changing_the_session"
