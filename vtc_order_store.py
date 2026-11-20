@@ -12,6 +12,7 @@ class Store:
     lock = RetakeStore.lock
 
     def __init__(self, host):
+        self.host = host
         self.root = Path(host.PERSIST_DIR) / "vtc_public_orders"
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.db = self.root / "orders.sqlite3"

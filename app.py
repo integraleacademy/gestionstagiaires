@@ -36379,6 +36379,30 @@ def _clean_yousign_pdf_anchors(pdf_path: str, anchors: List[Dict[str, Any]]) -> 
     from pypdf.generic import ContentStream, NameObject
 
     clean_path = os.path.splitext(pdf_path)[0] + "_clean.pdf"
+    # Word can encode each marker as subset-font glyphs. Removing its text by
+    # location also removes it from copying/search and preserves the signature frame.
+    import fitz
+    with fitz.open(pdf_path) as source:
+        by_page = {}
+        for anchor in anchors:
+            by_page.setdefault(anchor["page"] - 1, set()).add(anchor["raw"])
+        found = True
+        for index, labels in by_page.items():
+            page = source[index]
+            for label in labels:
+                hits = page.search_for(label)
+                if not hits:
+                    found = False
+                    break
+                for rect in hits:
+                    page.add_redact_annot(rect, fill=False, cross_out=False)
+            if not found:
+                break
+            page.apply_redactions(images=0, graphics=0)
+        if found:
+            source.save(clean_path, garbage=3, deflate=True)
+            return clean_path
+    # Historical PDFs with unusual text transforms need coordinate masking.
     reader = PdfReader(pdf_path)
     writer = PdfWriter()
     anchors_by_page: Dict[int, List[Dict[str, Any]]] = {}

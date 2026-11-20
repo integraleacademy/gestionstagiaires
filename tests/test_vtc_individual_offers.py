@@ -2,6 +2,9 @@
 from unittest import mock
 
 from docx import Document
+import fitz
+
+import convention_design
 import pytest
 
 import app
@@ -61,25 +64,59 @@ def test_no_elearning_even_for_previously_activated_account(vtc, kind, price):
 
 
 @pytest.mark.parametrize("kind, title, price", [
-    ("practice", "CONTRAT DE FORMATION PRATIQUE VTC", "600 €"),
-    ("vehicle", "CONVENTION DE MISE À DISPOSITION D’UN VÉHICULE", "150 €"),
+    ("practice", "Contrat de formation professionnelle", "600,00 € TTC"),
+    ("vehicle", "Convention de mise à disposition d’un véhicule", "150,00 € TTC"),
 ])
-def test_distinct_conventions_have_exact_prices_and_no_theory(vtc, kind, title, price):
+def test_generated_offer_uses_academy_model_and_signable_pdf(vtc, tmp_path, kind, title, price):
     training, trainee = vtc
     offers.update(trainee, kind, "1500")
-    document = offers._make_document(training, trainee, practice_slot={"date": "2026-12-01", "start": "09:00", "end": "12:00"})
-    body = "\n".join(p.text for p in document.paragraphs)
-    assert title in body
-    assert price in body
-    assert "{{s1|signature|160|80}}" in body
-    assert "Aptos" == document.styles["Normal"].font.name
-    assert "Aucune formation, aucun cours théorique" in body if kind == "vehicle" else "Objectifs : prise en charge" in body
+    training.update(practice_training_date="2026-12-01", practice_training_time="09:00")
+    trainee.update(vtc_exam_center="nice", personal_amount="1500")
+    word, pdf = app._generate_aps_convention_files(training, trainee, output_dir=tmp_path)
+    document = Document(word)
+    body = " ".join(document.element.body.xpath(".//w:t/text()"))
+    assert document.styles["Normal"].font.name == convention_design.FONT
+    assert title in body and price in body and "Camille EXEMPLE" in body
+    assert "Saint-Laurent-du-Var (06)" in body and "05/12/2026" in body
+    assert "105 heures" not in body and "1 500" not in body and "1500" not in body
+    assert body.count("{{s1|signature|") == 1 and body.count("{{") == 1
+    assert "Article 10" in body and "franchise" in body
+    assert bool(document.sections[0].header._element.xpath(".//w:drawing"))
+    if kind == "practice":
+        assert "Annexe 1 – Programme" in body and "RÈGLEMENT INTÉRIEUR" in body
+        assert "Article 13.4" in body and "09h00 à 12h30 (3 h 30)" in body
+        assert "Établir le prix d’une course" in body and "formation théorique" in body
+    else:
+        assert "RÈGLEMENT INTÉRIEUR" not in body and "Aucun acompte" not in body
+        assert "aucune formation" in body and "Utilisation et restitution" in body
+    clean, anchors = app._prepare_yousign_pdf_and_fields(pdf)
+    assert len(anchors) == 1
+    a = anchors[0]
+    with fitz.open(clean) as pages:
+        assert len(pages) >= (6 if kind == "practice" else 3)
+        page = pages[a["page"] - 1]
+        field = fitz.Rect(a["x"], a["y"], a["x"] + a["width"], a["y"] + a["height"])
+        assert page.rect.contains(field)
+        assert "Signature" in page.get_text() and not any("{{" in p.get_text() for p in pages)
+        assert all("INTÉGRALE" in p.get_text().upper() and "Page " in p.get_text() for p in pages)
+
+
+def test_offer_does_not_use_theory_exam_date_and_only_shows_matching_funding(vtc, tmp_path, monkeypatch):
+    training, trainee = vtc
+    training.pop("exam_practice_date")
+    training["exam_date"] = "2026-11-25"
+    trainee.update(vtc_offer="practice", cpf_amount="450", personal_amount="150")
+    monkeypatch.setattr(offers, "write_pdf", lambda host, doc, *args: doc)
+    doc = offers.convention(app, training, trainee, output_dir=tmp_path)
+    body = " ".join(doc.element.body.xpath(".//w:t/text()"))
+    assert "25/11/2026" not in body and "selon convocation officielle" in body
+    assert "450,00 €" in body and "150,00 €" in body and "Mon Compte Formation" in body
 
 
 def test_vehicle_examiner_pdf_is_only_vehicle_attestation(vtc):
     training, trainee = vtc
     offers.update(trainee, "vehicle", "1500")
-    document = offers._make_document(training, trainee, examiner=True)
+    document = offers._examiner_document(training, trainee)
     body = "\n".join(p.text for p in document.paragraphs)
     assert "DOCUMENT À PRÉSENTER AUX EXAMINATEURS" in body
     assert "Attestation de mise à disposition" in body

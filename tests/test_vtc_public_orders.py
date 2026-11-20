@@ -12,6 +12,9 @@ from vtc_order_store import Store
 
 
 def begin(host, offer, **extras):
+    from app import _find_libreoffice_binary, _prepare_yousign_pdf_and_fields
+    host._find_libreoffice_binary = _find_libreoffice_binary
+    host._prepare_yousign_pdf_and_fields = _prepare_yousign_pdf_and_fields
     host._is_external_partner_session = lambda: False
     host._current_partner_id = lambda: ""
     client = host.app.test_client()

@@ -8,11 +8,13 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
-import os
 from pathlib import Path
 import subprocess
 import tempfile
 import uuid
+
+from exam_retakes import money
+import vtc_offer_contracts
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -106,8 +108,18 @@ def _heading(doc, title):
     doc.add_heading(title, level=2)
 
 
-def _make_document(training, trainee, *, practice_slot=None, examiner=False):
+def _contract_document(training, trainee, *, practice_slot=None, reference=None, funding=(), cpf=False):
     kind = offer(trainee)
+    return vtc_offer_contracts.build(
+        practice=kind == PRACTICE, person=trainee, price=money(int(PRICES[kind]) * 100) + " TTC",
+        exam_day=trainee.get("vtc_practice_exam_date") or training.get("exam_practice_date"),
+        centre=CENTRES.get(str(trainee.get("vtc_exam_center") or "").lower()), slot=practice_slot,
+        reference=reference or (training.get("id"), trainee.get("id"), kind),
+        funding=funding, cpf=cpf,
+    )
+
+
+def _examiner_document(training, trainee):
     doc = Document()
     section = doc.sections[0]
     section.top_margin = Cm(1.7)
@@ -119,11 +131,7 @@ def _make_document(training, trainee, *, practice_slot=None, examiner=False):
     normal.font.size = Pt(10)
     normal.paragraph_format.space_after = Pt(6)
 
-    title = ("DOCUMENT À PRÉSENTER AUX EXAMINATEURS LE JOUR DE VOTRE EXAMEN PRATIQUE"
-             if examiner else
-             "CONVENTION DE MISE À DISPOSITION D’UN VÉHICULE – VTC"
-             if kind == VEHICLE else
-             "CONTRAT DE FORMATION PRATIQUE VTC ET MISE À DISPOSITION D’UN VÉHICULE")
+    title = "DOCUMENT À PRÉSENTER AUX EXAMINATEURS LE JOUR DE VOTRE EXAMEN PRATIQUE"
     heading = doc.add_heading(title, 0)
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in heading.runs:
@@ -140,101 +148,30 @@ def _make_document(training, trainee, *, practice_slot=None, examiner=False):
     )
     if not full_name:
         raise ValueError("Renseignez le prénom et le nom du candidat avant la génération du document.")
-    postal = ", ".join(filter(None, [
-        str(trainee.get("address") or "").strip(),
-        " ".join(filter(None, [
-            str(trainee.get("zip_code") or "").strip(),
-            str(trainee.get("city") or "").strip(),
-        ])),
-    ]))
     exam_date, centre = _exam_details(training, trainee)
     _heading(doc, "Candidat")
     _add(doc, "Nom et prénom : " + full_name)
-    if not examiner:
-        if postal:
-            _add(doc, "Adresse : " + postal)
-        _add(doc, "E-mail : " + str(trainee.get("email") or "") +
-             "  |  Téléphone : " + str(trainee.get("phone") or ""))
     if exam_date:
         _add(doc, "Date de l’examen pratique communiquée : " + exam_date)
     else:
         _add(doc, "Date de l’examen pratique : selon convocation officielle de la CMA")
     _add(doc, "Centre d’examen : " + centre)
 
-    if examiner:
-        _heading(doc, "Attestation de mise à disposition")
-        _add(doc, "Intégrale Sécurité Formations atteste mettre à la disposition du candidat "
-             + full_name + " un véhicule à doubles commandes pour son passage à l’épreuve "
-             "pratique de l’examen de chauffeur VTC, dans le cadre de la prestation convenue.")
-        _add(doc, "Cette attestation doit être présentée aux examinateurs avec la convocation "
-             "officielle délivrée par la Chambre de métiers et de l’artisanat. "
-             "Elle ne remplace pas la convocation de la CMA.")
-        _add(doc, "Pour organiser la présentation du véhicule et confirmer les informations "
-             "utiles à l’examen, contactez directement l’établissement.")
-        _add(doc, "Fait à Puget-sur-Argens, le " + dt.date.today().strftime("%d/%m/%Y") + ".")
-        _add(doc, SCHOOL + " – Coordonnées : " + SCHOOL_CONTACT)
-        return doc
-
-    _heading(doc, "Objet et contenu de la prestation")
-    if kind == PRACTICE:
-        _add(doc, "La prestation comprend exclusivement une séance de préparation à l’épreuve "
-             "pratique d’admission VTC, ainsi que la mise à disposition du véhicule à doubles "
-             "commandes le jour de l’examen pratique.")
-        _add(doc, "Objectifs : prise en charge d’un client, préparation de l’itinéraire, "
-             "conduite professionnelle en sécurité, mise en situation, examen blanc et "
-             "prise en main du véhicule. Suivi assuré par un formateur.")
-        slot = practice_slot or {}
-        if slot.get("date"):
-            times = " de " + str(slot.get("start") or "") + " à " + str(slot.get("end") or "") if slot.get("start") else ""
-            _add(doc, "Séance pratique : " + _date(slot["date"]) + times +
-                 ", au centre Intégrale Academy de Puget-sur-Argens.")
-        else:
-            _add(doc, "Séance pratique : date et horaire à convenir avec le candidat avant la prestation.")
-        _add(doc, "Public : candidats préparant l’épreuve pratique VTC. "
-             "Prérequis : permis B en cours de validité et admissibilité à l’épreuve pratique.")
-        _add(doc, "À l’issue de la séance, l’établissement peut délivrer une attestation "
-             "de réalisation de la formation pratique suivie.")
-    else:
-        _add(doc, "La prestation consiste exclusivement en la mise à disposition "
-             "d’un véhicule à doubles commandes le jour de l’épreuve pratique VTC.")
-        _add(doc, "Aucune formation, aucun cours théorique, aucun accès e-learning "
-             "et aucune séance de préparation pratique ne sont inclus.")
-        _add(doc, "Le candidat doit transmettre à Intégrale Academy sa convocation "
-             "officielle de la CMA afin de coordonner la mise à disposition du véhicule.")
-
-    _heading(doc, "Examen et modalités")
-    _add(doc, "L’examen pratique est organisé et évalué par la Chambre de métiers et de "
-         "l’artisanat (CMA). Les droits d’inscription et frais d’examen CMA ne sont pas compris "
-         "dans la présente prestation, sauf prise en charge expressément convenue par écrit.")
-    _add(doc, "La mise à disposition du véhicule est prévue pour le centre et la date "
-         "d’examen confirmés par l’organisateur. Le candidat doit présenter sa convocation "
-         "et les justificatifs exigés par la CMA.")
-    _add(doc, "La présente formule n’ouvre aucun accès à la formation théorique ni au e-learning.")
-
-    _heading(doc, "Prix et conditions de règlement")
-    _add(doc, "Prix forfaitaire TTC : " + PRICES[kind] + " €.", bold=True)
-    _add(doc, "Les modalités de paiement sont celles acceptées lors de l’inscription "
-         "et figurant sur la facture ou dans le dossier individuel du candidat.")
-
-    _heading(doc, "Report, annulation et rétractation")
-    _add(doc, "En cas de changement de date d’examen, le candidat informe le centre "
-         "dès réception de l’information. Toute modification de prestation fait l’objet "
-         "d’un accord préalable entre les parties.")
-    _add(doc, "En cas d’impossibilité de fournir la prestation du fait de l’établissement, "
-         "une nouvelle date sera proposée avec l’accord du candidat ou la prestation "
-         "non réalisée sera remboursée.")
-    _add(doc, "Lorsqu’un droit de rétractation s’applique à la conclusion à distance, "
-         "il s’exerce conformément aux dispositions légales en vigueur. "
-         "Contact : " + SCHOOL_CONTACT + ".")
-    _heading(doc, "Signature électronique du candidat")
-    _add(doc, "Je reconnais avoir pris connaissance de la nature et des limites de "
-         "la prestation ainsi que de son tarif forfaitaire TTC.")
-    p = doc.add_paragraph()
-    p.add_run("{{s1|signature|160|80}}")
+    _heading(doc, "Attestation de mise à disposition")
+    _add(doc, "Intégrale Sécurité Formations atteste mettre à la disposition du candidat "
+         + full_name + " un véhicule à doubles commandes pour son passage à l’épreuve "
+         "pratique de l’examen de chauffeur VTC, dans le cadre de la prestation convenue.")
+    _add(doc, "Cette attestation doit être présentée aux examinateurs avec la convocation "
+         "officielle délivrée par la Chambre de métiers et de l’artisanat. "
+         "Elle ne remplace pas la convocation de la CMA.")
+    _add(doc, "Pour organiser la présentation du véhicule et confirmer les informations "
+         "utiles à l’examen, contactez directement l’établissement.")
+    _add(doc, "Fait à Puget-sur-Argens, le " + dt.date.today().strftime("%d/%m/%Y") + ".")
+    _add(doc, SCHOOL + " – Coordonnées : " + SCHOOL_CONTACT)
     return doc
 
 
-def _write_pdf(host, document, output_dir, base):
+def write_pdf(host, document, output_dir, base):
     folder = Path(output_dir)
     folder.mkdir(parents=True, exist_ok=True)
     docx_path = folder / (base + ".docx")
@@ -261,8 +198,26 @@ def convention(host, training, trainee, session_id="", trainee_id="", *, output_
     key = "".join(c if c.isalnum() or c in "-_" else "_" for c in
                   (trainee.get("id") or trainee_id or uuid.uuid4().hex))
     slot = host._vtc_practice_appointment(training, trainee) if offer(trainee) == PRACTICE else None
-    doc = _make_document(training, trainee, practice_slot=slot)
-    return _write_pdf(host, doc, folder, "convention_vtc_" + offer(trainee) + "_" + key)
+    kind = offer(trainee)
+    funding = []
+    cpf = False
+    if kind == PRACTICE:
+        # Older enrolments can retain the amounts of the full course after an offer change.
+        # Only reproduce an allocation that reconciles with this particular contract.
+        amounts = {
+            "Compte personnel de formation": trainee.get("cpf_amount") or trainee.get("montant_cpf"),
+            "Autre financement": trainee.get("other_amount") or trainee.get("montant_autre"),
+            "Financement personnel": trainee.get("personal_amount") or trainee.get("montant_financement_personnel") or trainee.get("montant_personnel"),
+        }
+        cents = {label: round(host._parse_financial_amount(value) * 100) for label, value in amounts.items()}
+        if all(value >= 0 for value in cents.values()) and sum(cents.values()) == int(PRICES[kind]) * 100:
+            funding = [label + " – " + money(value) + "." for label, value in cents.items() if value]
+            cpf = bool(cents["Compte personnel de formation"])
+        elif any(cents.values()):
+            funding = ["Toute prise en charge est déterminée par l’accord du financeur correspondant à la présente formule."]
+    reference = (session_id or training.get("id"), trainee_id or trainee.get("id") or key, kind)
+    doc = _contract_document(training, trainee, practice_slot=slot, reference=reference, funding=funding, cpf=cpf)
+    return write_pdf(host, doc, folder, "convention_vtc_" + offer(trainee) + "_" + key)
 
 
 def vehicle_hash(training, trainee):
@@ -277,4 +232,4 @@ def vehicle_hash(training, trainee):
 def examiner_document(host, training, trainee, output_dir, base):
     if not is_vtc(training) or not vehicle(trainee):
         raise ValueError("Attestation réservée à la formule prêt du véhicule uniquement.")
-    return _write_pdf(host, _make_document(training, trainee, examiner=True), output_dir, base)
+    return write_pdf(host, _examiner_document(training, trainee), output_dir, base)
