@@ -5,6 +5,7 @@ import functools
 import hmac
 import secrets
 import sqlite3
+from campus import db as learning_db
 from pathlib import Path
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
@@ -38,9 +39,9 @@ def _training_code(value):
 def capture_module(database_path, access, course):
     """One read transaction freezes matching time, connections and assessment logs."""
     database_path = Path(database_path).resolve()
-    if not database_path.is_file():
+    if not learning_db.exists(database_path):
         return project_progress({}, course), [], []
-    with sqlite3.connect(database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as db:
+    with learning_db.connect(database_path, readonly=True, timeout=15) as db:
         db.row_factory = sqlite3.Row
         db.execute("BEGIN")
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}

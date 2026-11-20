@@ -1001,7 +1001,10 @@
 {% endif %}
 
 
-{% with uv_admin=true %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
+{% if campus_public_url and (uv_questionnaires or native_elearning_followup or desp_vae_aps_active) and (trainee.public_token or trainee.token) %}
+  <p><a class="btn" href="{{ campus_public_url }}/espace/{{ (trainee.public_token or trainee.token)|urlencode }}" rel="noreferrer">Lien Campus du stagiaire</a></p>
+  {% endif %}
+  {% with uv_admin=true %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
 
 {% if desp_vae_aps_active or (((session.training_type or "")|upper).startswith("APS") and session.aps_elearning_enabled and native_elearning_followup) %}
 <div class="card" id="apsElearningFollowup" style="grid-column:1 / -1;margin-top:16px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#fff);">

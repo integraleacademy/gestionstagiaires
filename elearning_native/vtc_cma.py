@@ -11,6 +11,7 @@ import math
 import re
 import secrets
 import sqlite3
+from campus import db as learning_db
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -358,12 +359,12 @@ def learner_attempt_summaries(db_path, session_id, trainee_id, *, limit=30):
     exam_seconds describes supplementary exam time, never curriculum time.
     """
     path = Path(db_path).resolve()
-    if not path.is_file() or not session_id or not trainee_id:
+    if not learning_db.exists(path) or not session_id or not trainee_id:
         return []
     limit = min(100, max(1, limit if isinstance(limit, int) and not isinstance(limit, bool) else 30))
     db = None
     try:
-        db = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=3)
+        db = learning_db.connect(path, readonly=True, timeout=3)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA query_only=ON")
         exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vtc_cma_attempts'").fetchone()
@@ -431,7 +432,7 @@ class CmaStore:
 
     @contextmanager
     def _db(self):
-        db = sqlite3.connect(self.path, timeout=15)
+        db = learning_db.connect(self.path, timeout=15)
         db.row_factory = sqlite3.Row
         try:
             db.execute("BEGIN IMMEDIATE")

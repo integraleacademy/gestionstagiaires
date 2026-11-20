@@ -48,3 +48,10 @@ if on_production_service():
             if not legacy_app._is_super_admin_session():
                 abort(403)
             return "Intégrale EDOF est en cours de transfert depuis Test V2.", 503
+
+# Only the administrative service does the one-time disk migration. Subsequent
+# runs reuse the verified result; the public Campus starts independently.
+import os as _os
+if _os.environ.get("CAMPUS_MANAGEMENT_MODE") == "active":
+    from campus.management import install as install_campus_management
+    install_campus_management(legacy_app)

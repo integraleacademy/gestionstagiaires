@@ -1001,6 +1001,9 @@
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
   {% endif %}
 
+  {% if campus_public_url and (uv_questionnaires or aps_elearning_enabled or a3p_elearning_enabled or mac_aps_elearning_enabled) and (token_safe) %}
+  <p><a class="btn" href="{{ campus_public_url }}/espace/{{ (token_safe)|urlencode }}" rel="noreferrer">Accéder directement au Campus</a></p>
+  {% endif %}
   {% with uv_admin=false %}{% include 'partials/uv_questionnaires.html' %}{% endwith %}
 
   {% if public_qcus %}

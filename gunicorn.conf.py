@@ -50,7 +50,7 @@ def post_worker_init(worker):
 
 def worker_exit(server, worker):
     import app as legacy_app
-    for name in ("qonto_webhook_worker", "vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker", "afc_training_mail_worker", "convocation_jobs"):
+    for name in ("campus_directory", "qonto_webhook_worker", "vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker", "afc_training_mail_worker", "convocation_jobs"):
         state = legacy_app.app.extensions.get(name)
         if state:
             state["stop"].set()

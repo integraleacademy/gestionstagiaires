@@ -141,7 +141,8 @@ def backup_state(services, reason='manual'):
     Use SQLite's backup API so acknowledged answers still in WAL are included.
     """
     path = _store_path(services)
-    if not path.is_file():
+    from campus import db as learning_db
+    if not learning_db.exists(path):
         return None
     periodic = reason in {'before-save', 'interval'}
     with _BACKUP_LOCK:
@@ -350,7 +351,7 @@ def _apply_action(services, trainee, course, number, row, attempt, payload, rece
     return state
 
 
-def register(app, services):
+def register(app, services, *, learner_lookup=None, public_only=False):
     original_loader = services.load_data
 
     def reset_csrf():
@@ -359,7 +360,8 @@ def register(app, services):
     app.jinja_env.globals['uv_reset_csrf'] = reset_csrf
 
     def public_context(token, number, access_status=403):
-        training, trainee = _public_pair(services, token, original_loader=original_loader)
+        training, trainee = (learner_lookup(token) if learner_lookup is not None else
+                             _public_pair(services, token, original_loader=original_loader))
         if not training or not trainee or not eligible(training):
             abort(404)
         if not available(services, training, trainee):
@@ -428,6 +430,9 @@ def register(app, services):
             response = jsonify(state)
         response.headers['Cache-Control'] = 'private, no-store'
         return response
+
+    if public_only:
+        return
 
     def admin_pair(session_id, trainee_id, number, data=None):
         if data is None:

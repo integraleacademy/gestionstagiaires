@@ -1,4 +1,6 @@
 """Individual APS access for an Intégrale DESP VAE registration."""
+
+from campus.links import origin as campus_origin
 import copy
 import datetime as dt
 import secrets
@@ -76,7 +78,7 @@ def register_routes(host):
         return URLSafeTimedSerializer(host.app.secret_key, salt="desp-vae-aps-access")
 
     def message(person, token):
-        url = host.PUBLIC_STUDENT_PORTAL_BASE.rstrip("/") + "/espace/" + quote(token, safe="")
+        url = campus_origin(host.PUBLIC_STUDENT_PORTAL_BASE) + "/espace/" + quote(token, safe="")
         return render_template("emails/desp_vae_aps_access.html", first_name=person.get("first_name"), access_url=url,
                                email_heading=SUBJECT, email_eyebrow="Intégrale Academy · DESP VAE")
 

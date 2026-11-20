@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: integrale-academy-campus
+    runtime: docker
+    region: frankfurt
+    plan: 1c-2g
+    branch: campus-production
+    autoDeployTrigger: "off"
+    dockerfilePath: ./campus/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: CAMPUS_STORAGE
+        value: postgres
+      - key: CAMPUS_DATABASE_URL
+        fromDatabase:
+          name: integrale-academy-campus-db
+          property: connectionString
+      - key: CAMPUS_SESSION_SECRET
+        generateValue: true
+      - key: CAMPUS_MANAGEMENT_URL
+        value: https://gestionstagiaires-r5no.onrender.com
+databases:
+  - name: integrale-academy-campus-db
+    databaseName: campus
+    user: campus
+    region: frankfurt
+    plan: 0.5c-1g
+    diskSizeGB: 5
+    ipAllowList: []
