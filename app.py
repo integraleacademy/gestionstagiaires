@@ -150,6 +150,7 @@ from wedof_discovery import merge_verified_folders, parse_timestamp as parse_wed
 from cpf_tracking import build_cpf_view, build_cpf_financial_status, has_cpf_financing, has_generated_cpf_invoice
 from vtc_cpf_guidance import build_confirmation_content
 import vtc_elearning_activation
+import vtc_individual_offers
 import desp_vae_elearning
 import vtc_practice
 from trainee_recovery import collapse_registration_copies
@@ -9368,6 +9369,8 @@ def _is_vtc_cm_reminder_auto_disabled(trainee: Dict[str, Any]) -> bool:
 
 
 def _compute_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> Optional[datetime.datetime]:
+    if vtc_individual_offers.reduced(trainee):
+        return None
     if _trainee_registration_is_cancelled(trainee):
         return None
     if _is_vtc_cm_reminder_auto_disabled(trainee):
@@ -27683,6 +27686,9 @@ def _new_session_trainee(s, payload):
     show_hosting = (training_type == "A3P")
     show_vae = (training_type == "DIRIGEANT VAE")
     default_price = default_training_price(training_type)
+    vtc_offer = vtc_individual_offers.validate(payload.get("vtc_offer") or "full") if is_vtc else ""
+    if vtc_offer in vtc_individual_offers.PRICES:
+        default_price = vtc_individual_offers.PRICES[vtc_offer]
 
     pathway_choice = str(payload.get("ssiap_pathway") or "ssiap")
     if ssiap_pathways.enabled(s) or payload.get("ssiap_pathway"):
@@ -27714,6 +27720,8 @@ def _new_session_trainee(s, payload):
         "dossier_status": "incomplete",
         "financement_status": "soon",
         "training_price": default_price if default_price is not None else "",
+        "vtc_offer": vtc_offer,
+        "vtc_full_price_before_offer": default_training_price(training_type) if is_vtc else "",
         "exclude_from_sales_tracking": False,
         "sales_tracking_amount": "",
         "registration_cancelled": False,
@@ -27869,8 +27877,13 @@ def api_create_trainee(session_id: str):
     if send_access:
         training_type = _session_get(s, "training_type", "")
         if "VTC" in (training_type or "").upper():
-            subject, html = build_vtc_onboarding_email(first_name, link)
-            sms = build_vtc_onboarding_sms(first_name, link)
+            if vtc_individual_offers.reduced(t):
+                subject = "Votre dossier VTC – Intégrale Academy"
+                html = build_student_access_email(first_name, vtc_individual_offers.LABELS[vtc_individual_offers.offer(t)], link)[1]
+                sms = f"Intégrale Academy : votre espace candidat VTC est disponible : {link}"
+            else:
+                subject, html = build_vtc_onboarding_email(first_name, link)
+                sms = build_vtc_onboarding_sms(first_name, link)
             email_ok = brevo_send_email(email, subject, html, trainee=t) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         elif (training_type or "") == "DIRIGEANT VAE":
@@ -28000,6 +28013,60 @@ def api_import_trainee_from_image():
 
 
 
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/vtc-offer")
+@admin_login_required
+@admin_write_required
+def api_update_vtc_individual_offer(session_id: str, trainee_id: str):
+    requested = (request.get_json(silent=True) or {}).get("offer")
+    try:
+        requested = vtc_individual_offers.validate(requested)
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+
+    def apply(data):
+        training = find_session(data, session_id)
+        trainee = find_trainee(training, trainee_id) if training else None
+        if not training or not trainee:
+            raise ValueError("Dossier stagiaire introuvable.")
+        if not vtc_individual_offers.is_vtc(training):
+            raise ValueError("Ces formules sont réservées exclusivement aux stagiaires VTC.")
+        if _trainee_registration_is_cancelled(trainee):
+            raise ValueError("Le dossier est annulé.")
+        current_offer = vtc_individual_offers.offer(trainee)
+        if current_offer != requested:
+            signature_state = trainee.get("convention_signature") or trainee.get("convocation_signature") or {}
+            if signature_state.get("signature_request_id") or signature_state.get("signed_pdf_path"):
+                raise ValueError(
+                    "Une convention a déjà été envoyée pour signature ou signée. "
+                    "Annulez ou traitez d'abord cette demande Yousign avant de modifier la formule."
+                )
+            vtc_individual_offers.update(trainee, requested, default_training_price("VTC"))
+            for key in ("convention_aps_pdf_path", "convention_aps_docx_path",
+                        "convention_aps_status", "convention_aps_generated_at",
+                        "convocation_aps_pdf_path", "convocation_aps_docx_path",
+                        "convocation_aps_source_hash", "convocation_aps_source_pdf_path",
+                        "convocation_aps_generated_at", "convocation_aps_sent_at",
+                        "convocation_aps_pdf_token", "vtc_practice_convocation_sent_at"):
+                trainee.pop(key, None)
+            if vtc_individual_offers.reduced(trainee):
+                trainee["elearning_link"] = ""
+                trainee["vtc_elearning_manual_ok"] = False
+            _refresh_vtc_cm_reminder_schedule(trainee)
+            append_trainee_history_event(
+                trainee, "Formule Chauffeur VTC modifiée",
+                vtc_individual_offers.LABELS.get(requested, "Parcours VTC complet")
+                + " – " + str(trainee.get("training_price") or "") + " € TTC", "status",
+            )
+            trainee["updated_at"] = _now_iso()
+        return {"ok": True, "offer": vtc_individual_offers.offer(trainee),
+                "training_price": trainee.get("training_price") or ""}
+
+    try:
+        return jsonify(_atomic_update_data(apply))
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 409
+
+
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/update")
 @admin_login_required
 @admin_write_required
@@ -28019,6 +28086,16 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    if vtc_individual_offers.is_vtc(s) and vtc_individual_offers.reduced(t):
+        if "training_price" in payload:
+            try:
+                if float(str(payload["training_price"]).replace(",", ".")) != float(vtc_individual_offers.PRICES[vtc_individual_offers.offer(t)]):
+                    return jsonify(ok=False, error="Le tarif de cette formule VTC est fixé automatiquement."), 409
+            except (ValueError, TypeError):
+                return jsonify(ok=False, error="Montant VTC invalide."), 400
+        if str(payload.get("elearning_link") or "").strip():
+            return jsonify(ok=False, error="Aucun e-learning n'est inclus dans cette formule VTC."), 409
+        payload["send_elearning_notification"] = False
     try:
         payload.update(afc_schedule.trainee_update(s, t, payload))
     except ValueError as exc:
@@ -32781,8 +32858,13 @@ def admin_send_access(session_id: str, trainee_id: str):
     training_type = _session_get(s, "training_type", "")
     if "VTC" in (training_type or "").upper():
         first_name = t.get("first_name", "")
-        subject, html = build_vtc_onboarding_email(first_name, link)
-        sms = build_vtc_onboarding_sms(first_name, link)
+        if vtc_individual_offers.reduced(t):
+            subject = "Votre dossier VTC – Intégrale Academy"
+            html = build_student_access_email(first_name, vtc_individual_offers.LABELS[vtc_individual_offers.offer(t)], link)[1]
+            sms = f"Intégrale Academy : votre espace candidat VTC est disponible : {link}"
+        else:
+            subject, html = build_vtc_onboarding_email(first_name, link)
+            sms = build_vtc_onboarding_sms(first_name, link)
         brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
     else:
@@ -40185,6 +40267,25 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
 
 
 def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "", *, cached_only: bool = False):
+    if vtc_individual_offers.is_vtc(session_obj) and vtc_individual_offers.vehicle(trainee):
+        source_hash = vtc_individual_offers.vehicle_hash(session_obj, trainee)
+        trainee_key = _safe_filename_part(trainee.get("id") or trainee_id)
+        base = f"convocation_vtc_vehicule_{trainee_key}_{source_hash[:16]}"
+        pair = training_convocations.cached_pair(
+            APS_CONVOCATION_DIR, base, trainee, source_hash, _is_pdf_file)
+        if cached_only:
+            return pair
+        if pair is None:
+            with training_convocations.generation_lock(APS_CONVOCATION_DIR):
+                pair = training_convocations.cached_pair(
+                    APS_CONVOCATION_DIR, base, trainee, source_hash, _is_pdf_file)
+                if pair is None:
+                    pair = vtc_individual_offers.examiner_document(
+                        sys.modules[__name__], session_obj, trainee, APS_CONVOCATION_DIR, base)
+        training_convocations.remember_download(trainee)
+        trainee["convocation_aps_source_hash"] = source_hash
+        trainee["convocation_aps_source_pdf_path"] = pair[1]
+        return pair
     template_path = _ssiap_document_template(session_obj, trainee, "convocation", _aps_template_path)
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
@@ -40547,7 +40648,10 @@ def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str])
     document.save(docx_path)
 
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "", *, output_dir: Optional[str] = None) -> Tuple[str, str]:
-    """Generate the APS training convention used exclusively for Yousign."""
+    """Generate the convention selected for this person, including reduced VTC offers."""
+    if vtc_individual_offers.is_vtc(session_obj) and vtc_individual_offers.reduced(trainee):
+        return vtc_individual_offers.convention(
+            sys.modules[__name__], session_obj, trainee, session_id, trainee_id, output_dir=output_dir)
     config = _automation_document_config(session_obj)
     if not config.get("enabled"):
         raise RuntimeError("La convention automatisée n’est pas proposée pour cette formation.")
@@ -40626,6 +40730,19 @@ def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = N
 
 
 def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None, trainee: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    if vtc_individual_offers.is_vtc(session_obj or {}) and vtc_individual_offers.vehicle(trainee or {}):
+        safe_first = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+        subject = "Document à présenter aux examinateurs – prêt de véhicule VTC"
+        body = mail_layout(
+            f"<p>Bonjour {safe_first},</p>"
+            "<p>Vous trouverez en pièce jointe le document à présenter aux examinateurs "
+            "le jour de votre examen pratique VTC, relatif à la mise à disposition "
+            "du véhicule à doubles commandes.</p>"
+            "<p>Ce document accompagne votre convocation officielle de la CMA. "
+            "Aucune formation pratique ou théorique n'est incluse dans votre formule.</p>"
+            "<p>Nous restons à votre disposition au 04 22 47 07 68.</p>"
+        )
+        return subject, body
     if vtc_practice.supported(session_obj or {}):
         slot = _vtc_practice_appointment(session_obj, trainee or {}, for_convocation=True)
         return build_vtc_practice_convocation_email(first_name, slot["date"], slot["start"], slot["end"], slot["group"],
@@ -40846,8 +40963,13 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_status = "not_generated"
 
-    theory_succeeded = bool(trainee.get("vtc_theory_exam_sent_at"))
-    practice_date = _vtc_practice_appointment(session_obj, trainee, for_convocation=theory_succeeded)["date"] if is_vtc_automation else ""
+    is_vtc_reduced = is_vtc_automation and vtc_individual_offers.reduced(trainee)
+    theory_succeeded = bool(trainee.get("vtc_theory_exam_sent_at")) or is_vtc_reduced
+    practice_date = (
+        ("date connue par la CMA" if vtc_individual_offers.vehicle(trainee) else
+         _vtc_practice_appointment(session_obj, trainee, for_convocation=True)["date"])
+        if is_vtc_automation else ""
+    )
     if is_vtc_automation:
         convocation_block_reason = ("" if theory_succeeded else "En attente de réussite à l’examen théorique") if practice_date else "Renseignez la date de formation pratique."
     elif not has_generated_convention:
@@ -40981,7 +41103,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
             "error": convocation_error,
             "timeline_steps": [
-                {"label": "Examen théorique" if is_vtc_automation else "Convention validée", "value": ("Réussi" if theory_succeeded else "Résultat en attente") if is_vtc_automation else ("Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué"))), "state": "done" if (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) else "blocked"},
+                {"label": ("Formule spécifique VTC" if is_vtc_reduced else "Examen théorique") if is_vtc_automation else "Convention validée", "value": ("Sans théorie incluse" if is_vtc_reduced else "Réussi" if theory_succeeded else "Résultat en attente") if is_vtc_automation else ("Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué"))), "state": "done" if (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) else "blocked"},
                 {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
@@ -52235,7 +52357,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     if (request.get_json(silent=True) or {}).get("skip_if_already_sent") and t.get("convocation_aps_sent_at"):
         return jsonify(ok=True, skipped=True, status="already_sent")
     is_vtc = str(_automation_document_config(s).get("slug") or "") == "vtc"
-    if is_vtc and not _vtc_practice_appointment(s, t, for_convocation=bool(t.get("vtc_theory_exam_sent_at")))["date"]:
+    if is_vtc and not vtc_individual_offers.vehicle(t) and not _vtc_practice_appointment(s, t, for_convocation=bool(t.get("vtc_theory_exam_sent_at")))["date"]:
         return jsonify(ok=False, error="Renseignez d’abord la date de formation pratique dans la session."), 400
     can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
     if not is_vtc and not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
