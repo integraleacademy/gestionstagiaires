@@ -284,7 +284,7 @@ def _money_cents(amount):
         raise ReviewRequired("Le montant ou la devise du paiement Qonto est invalide.")
 
 
-def read_invoice_link_payments(host, link_id):
+def read_invoice_link_payments(host, link_id, *, closing=False):
     """Read captured EUR payments once per ID, separately from pending authorizations."""
     paid, processing = {}, False
     for page in range(1, 51):
@@ -309,7 +309,10 @@ def read_invoice_link_payments(host, link_id):
                 if payment["id"] in paid and paid[payment["id"]] != amount:
                     raise ReviewRequired("Le règlement Qonto contient des montants contradictoires.")
                 paid[payment["id"]] = amount
-            processing = processing or payment.get("status") in {"pending", "authorized"}
+            status = payment.get("status")
+            if closing and status not in {"failed", "canceled", "cancelled", "expired"}:
+                processing = True
+            processing = processing or status in {"pending", "authorized"}
         if not host._qonto_invoice_list_has_next_page(payload, page, len(payments), 100):
             break
     else:
@@ -390,7 +393,7 @@ def _assert_basket(state, total_cents, items, link):
             raise ReviewRequired("Les articles du lien de paiement ne correspondent pas à la commande.")
 
 
-def collect_basket(host, *, order_id, total_cents, items, state, save, idempotency_key, card_required=False):
+def collect_basket(host, *, order_id, total_cents, items, state, save, idempotency_key, card_required=False, retired_link_ids=()):
     """Collect one exact payment on a single-use basket, persisting each remote step."""
     _payment_merchant(host, state, save)
     link = None
@@ -403,6 +406,8 @@ def collect_basket(host, *, order_id, total_cents, items, state, save, idempoten
             response = host._qonto_request("GET", "/v2/payment_links", params={"page": page, "per_page": 100})
             links = response.get("payment_links", [])
             for candidate in links:
+                if candidate.get("id") in retired_link_ids:
+                    continue
                 if any(f"[{order_id}]" in str(item.get("description", "")) for item in candidate.get("items") or []):
                     matches.append(candidate)
             if not host._qonto_invoice_list_has_next_page(response, page, len(links), 100):
