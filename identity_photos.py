@@ -49,6 +49,21 @@ def decode_photo(content, max_size=None):
         raise ValueError('Photo illisible. Utilisez un JPG, PNG ou WebP de 40 mégapixels maximum.') from exc
 
 
+def printable_portrait(path, width=413, height=531):
+    """Return the JPEG crop used for the 35 × 45 mm diploma photo, without metadata."""
+    with Image.open(path) as source:
+        source.draft("RGB", (width * 2, height * 2))
+        picture = ImageOps.exif_transpose(source).convert("RGB")
+    with picture:
+        reduction = min(1, picture.width / width, picture.height / height)
+        size = max(1, round(width * reduction)), max(1, round(height * reduction))
+        with ImageOps.fit(picture, size, method=Image.Resampling.LANCZOS) as crop:
+            output = io.BytesIO()
+            crop.save(output, format="JPEG", quality=90, optimize=True)
+    output.seek(0)
+    return output
+
+
 def load_photo(services, token, max_size=None):
     if not token or not services._partner_can_access_upload_token(token):
         abort(404)
