@@ -1217,6 +1217,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
         {% if is_vtc %}
         <label style="grid-column:1/-1;">
+          <div class="label" style="font-weight:900;">Formule VTC</div>
+          <select id="tVtcOffer">
+            <option value="full">Parcours VTC complet — tarif habituel</option>
+            <option value="practice">Formation pratique + prêt du véhicule le jour de l'examen — 600 € TTC</option>
+            <option value="vehicle">Prêt du véhicule le jour de l'examen uniquement — 150 € TTC</option>
+          </select>
+          <div class="hint">Les deux formules spécifiques n'activent aucun e-learning dès l'inscription.</div>
+        </label>
+        <label style="grid-column:1/-1;" id="vtcRealTrainingDatesCreateField">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
           <input id="tVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
@@ -3946,6 +3955,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           zip_code,
           city,
           vtc_real_training_dates,
+          vtc_offer: document.getElementById("tVtcOffer")?.value || "full",
           carte_pro_ok,
           send_access,
           ...(edofPrefill ? {edof_folder:edofPrefill.folder_id} : {}),
