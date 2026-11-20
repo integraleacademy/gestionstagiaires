@@ -36,7 +36,7 @@ def idle_timeout_seconds(course_id: str) -> float:
     return APS_IDLE_TIMEOUT_SECONDS if course_id in APS_TRACKED_COURSES else IDLE_TIMEOUT_SECONDS
 
 _INITIALIZE_LOCK = threading.Lock()
-_INITIALIZED_DATABASES: set[str] = set()
+_INITIALIZED_DATABASES: set[str | tuple[str, int]] = set()
 
 
 class TrackingError(ValueError):
@@ -84,7 +84,9 @@ class NativeElearningStore:
         return connection
 
     def _ensure_schema(self) -> None:
-        key = (str(self.database_path), id(learning_db.pool()) if learning_db.enabled(self.database_path) else None)
+        key = str(self.database_path)
+        if learning_db.enabled(self.database_path):
+            key = (key, id(learning_db.pool()))
         with _INITIALIZE_LOCK:
             if key in _INITIALIZED_DATABASES and learning_db.exists(self.database_path):
                 return

@@ -76,6 +76,7 @@ class PgConnection:
         self.schema = SCHEMAS[Path(path).name]
         self.readonly = readonly
         self.closed = False
+        self._ddl_locked = False
         self._configure = True
 
     def _cursor(self):
@@ -111,6 +112,9 @@ class PgConnection:
             statement = statement.replace("sqlite_master", (
                 "(SELECT tablename AS name, 'table' AS type FROM pg_tables "
                 "WHERE schemaname=current_schema()) AS available_tables"))
+        if statement.upper().startswith(("CREATE ", "ALTER ")) and not self._ddl_locked:
+            cursor.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (self.schema,))
+            self._ddl_locked = True
         if statement.upper().startswith(("CREATE TABLE", "ALTER TABLE")):
             statement = statement.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "BIGSERIAL PRIMARY KEY")
             statement = re.sub(r"\bREAL\b", "DOUBLE PRECISION", statement, flags=re.I)
@@ -127,10 +131,12 @@ class PgConnection:
 
     def commit(self):
         self.raw.commit()
+        self._ddl_locked = False
         self._configure = True
 
     def rollback(self):
         self.raw.rollback()
+        self._ddl_locked = False
         self._configure = True
 
     def close(self):

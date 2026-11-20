@@ -10,6 +10,7 @@ from flask import (Blueprint, Flask, abort, g, redirect, render_template,
                    request, session, url_for)
 from campus import catalog, db, directory, migration
 from elearning_native.paths import assigned_modules
+from elearning_native.mac_aps import is_training as is_mac_aps
 from elearning_native.web import create_native_elearning_blueprint
 import uv_questionnaires
 
@@ -62,6 +63,12 @@ def create_app():
     def forbidden(*_args, **_kwargs):
         abort(403)
 
+    def learning_enabled(training):
+        label = str(training.get("training_type") or "").upper()
+        if label.startswith("APS") or "VTC" in label:
+            return bool(training.get("aps_elearning_enabled"))
+        return bool(("A3P" in label or is_mac_aps(training)) and assigned_modules(training))
+
     def start_date(training):
         try:
             return dt.date.fromisoformat(str(training.get("date_start") or training.get("date_debut") or "")[:10])
@@ -73,9 +80,7 @@ def create_app():
         save_data=forbidden, mutate_data=forbidden, find_session=forbidden,
         find_session_and_trainee_by_token=lambda _data, token: pair(token, native=True),
         session_trainees=lambda _s: [], public_is_authed=authed,
-        is_aps_elearning_session=lambda s: bool(s.get("aps_elearning_enabled") or
-            (any(label in str(s.get("training_type", "")).upper() for label in ("A3P", "MAC"))
-             and assigned_modules(s))), session_start_date=start_date,
+        is_aps_elearning_session=learning_enabled, session_start_date=start_date,
     ))
     host = SimpleNamespace(app=app, DATA_FILE=str(data_dir / "unused.json"), INTEGRALE_PARTNER_ID=directory.INTERNAL,
         load_data=forbidden, _public_is_authed=authed, _trainee_registration_is_cancelled=lambda _: False,

@@ -111,6 +111,7 @@ def synchronize(read_source, host, *, connection=None):
         if not isinstance(data.get("sessions"), list):
             raise ValueError("Annuaire administratif incomplet.")
         secret = conn.execute("SELECT value FROM campus_directory.settings WHERE name='identity_key'").fetchone()[0]
+        known = dict(conn.execute("SELECT owner,revision FROM campus_directory.enrolments"))
         owners, seen_tokens = set(), set()
         for owner, aliases, identities, link, training, learner, external in project(data, host, secret):
             if owner in owners or seen_tokens.intersection(aliases):
@@ -118,6 +119,8 @@ def synchronize(read_source, host, *, connection=None):
             seen_tokens.update(aliases)
             owners.add(owner)
             revision = digest(json.dumps([aliases, identities, link, training, learner, external], sort_keys=True))
+            if known.get(owner) == revision:
+                continue
             conn.execute("""INSERT INTO campus_directory.enrolments VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                 ON CONFLICT(owner) DO UPDATE SET aliases=EXCLUDED.aliases, identities=EXCLUDED.identities,
                 public_link=EXCLUDED.public_link, training=EXCLUDED.training, learner=EXCLUDED.learner,

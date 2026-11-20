@@ -5,6 +5,8 @@ The script creates and drops only its uniquely named database. All trainee data 
 """
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -26,7 +28,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.benchmark_uv_questionnaires import synthetic_data, TRAINING, block_external_network
 
-PEOPLE = 24
 PARTNER = "11111111-1111-4111-8111-111111111111"
 
 
@@ -45,7 +46,7 @@ def database():
             admin.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name)))
 
 
-def seed(disk):
+def seed(disk, people):
     from elearning_native import CourseCatalog
     from elearning_native.store import NativeElearningStore
     from uv_questionnaire_store import UVQuestionnaireStore
@@ -55,12 +56,20 @@ def seed(disk):
     root = disk / "native_elearning"
     _write_synthetic_course(disk / "training.zip")
     course = CourseCatalog(root).import_zip(disk / "training.zip", archive_source=False)
-    data = synthetic_data(PEOPLE)
+    data = synthetic_data(people)
     training = data["sessions"][0]
     training.update(partner_id=PARTNER, aps_elearning_enabled=True, aps_native_course_id=course["id"],
                     aps_native_course_version=course["version"])
     for person in training["trainees"]:
         person.update(birth_date="1990-03-12", partner_id=PARTNER)
+    token = "el_" + secrets.token_hex(32)
+    external = "3bbf3bc7-5365-43b3-874c-08cd01382b62"
+    data["partners"] = [{"id": external, "name": "Centre de test", "status": "active"}]
+    data["manual_orders"] = [{"id": "test-order", "order_type": "elearning", "partner_id": external,
+        "status": "confirmed", "free_snapshot": True, "total_cents": 0, "course_code": "aps",
+        "modules": [{"course_id": course["id"], "course_version": course["version"]}],
+        "learners": [{"id": "external-student", "first_name": "Démo", "last_name": "Partenaire",
+                      "activated_at": "2026-10-26T09:00:00Z", "token_hash": hashlib.sha256(token.encode()).hexdigest()}]}]
     (disk / "data.json").write_text(json.dumps(data))
     store = UVQuestionnaireStore(disk / "uv-questionnaires.sqlite3")
     first = training["trainees"][0]["id"]
@@ -73,7 +82,7 @@ def seed(disk):
     native = NativeElearningStore(root / "tracking.sqlite3")
     key = dict(session_id=TRAINING, trainee_id=first, course_id=course["id"], course_version=course["version"])
     native.record_question_attempt(key, "question-1", ["answer-a"], True, request_id="historical-case")
-    return course["id"], row["questions"][1]["id"]
+    return course["id"], row["questions"][1]["id"], token
 
 
 def port():
@@ -156,7 +165,7 @@ def logged_in(campus, index, barrier=None):
     return client, personal
 
 
-def native_smoke(campus, course, second_question):
+def native_smoke(campus, course, second_question, partner_token):
     learner, personal = logged_in(campus, 0)
     url = campus.base + personal
     original = verify(learner.get(url+"/questionnaires-uv/2")).text
@@ -179,13 +188,22 @@ def native_smoke(campus, course, second_question):
     assert verify(learner.post(prefix+"heartbeat", json=params, headers=headers)).json()["ok"]
     verify(learner.get(campus.base+"/admin/login"), 404)
     learner.close()
+    with requests.Session() as partner:
+        partner.trust_env = False
+        partner.verify = campus.cert
+        target = campus.base + "/apprendre/" + partner_token
+        page = verify(partner.get(target)).text
+        csrf = field(page, r'name="csrf" value="([^"]+)"')
+        verify(partner.post(target, data={"csrf": csrf}, allow_redirects=False), 303)
+        assert "Cours de test" in verify(partner.get(campus.base+"/espace/"+partner_token+"/elearning")).text
+        verify(partner.get(campus.base+"/espace/"+partner_token+"/elearning/unassigned"), 403)
 
 
-def exercise(temp, dsn):
+def exercise(temp, dsn, people):
     import uv_questionnaires as uv
     disk = temp / "gestion"
     disk.mkdir()
-    course, second = seed(disk)
+    course, second, partner_token = seed(disk, people)
     subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
                     "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1",
                     "-keyout", str(temp/"key.pem"), "-out", str(temp/"cert.pem")], check=True, capture_output=True)
@@ -205,9 +223,9 @@ def exercise(temp, dsn):
         manager.start()
         manager.wait()
         manager.stop()
-        native_smoke(campus, course, second)
+        native_smoke(campus, course, second, partner_token)
         questions = next(r["questions"] for r in uv.bank()["courses"]["aps"]["units"] if r["number"] == 4)
-        barrier = threading.Barrier(PEOPLE)
+        barrier = threading.Barrier(people)
         def learner(i):
             try:
                 client, personal = logged_in(campus,i,barrier)
@@ -234,8 +252,8 @@ def exercise(temp, dsn):
                 errors.append(exc)
                 barrier.abort()
                 raise
-        with ThreadPoolExecutor(PEOPLE) as group:
-            list(group.map(learner,range(PEOPLE)))
+        with ThreadPoolExecutor(people) as group:
+            list(group.map(learner,range(people)))
         manager.wait()
         staff = requests.Session()
         staff.trust_env = False
@@ -243,23 +261,23 @@ def exercise(temp, dsn):
         response = staff.post(manager.base+"/admin/login", data=dict(username=manager.env["ADMIN_USER"],
                     password=manager.env["ADMIN_PASSWORD"]),allow_redirects=False)
         verify(response,302)
-        for i in range(PEOPLE):
+        for i in range(people):
             url = manager.base+f"/admin/sessions/{TRAINING}/stagiaires/BENCH-{i:03}/questionnaires-uv/4"
             correction = verify(staff.get(url)).text
             assert '20<span>/20</span>' in correction and correction.count("Votre réponse") == 20
         with psycopg.connect(dsn) as conn:
             histories = conn.execute("SELECT state_json FROM campus_uv.uv_questionnaire_state").fetchall()
             expected = {q["id"]:q["answer"] for q in questions}
-            assert len(histories) == PEOPLE
+            assert len(histories) == people
             for (state,) in histories:
                 result = json.loads(state)["uv_questionnaires"]["aps"]["4"]
                 assert result["score"] == 20 and result["answers"] == expected
             assert conn.execute("SELECT count(*) FROM campus_tracking.learner_assessment_attempts").fetchone()[0] == 1
         staff.close()
-        print(json.dumps(dict(learners=PEOPLE, authenticated=PEOPLE, uv_posts=len(samples),
-            distinct_saved_answers=PEOPLE*len(questions), verified_admin_scores=PEOPLE,
+        print(json.dumps(dict(learners=people, authenticated=people, uv_posts=len(samples),
+            distinct_saved_answers=people*len(questions), verified_admin_scores=people,
             post_p95_seconds=round(sorted(samples)[int(.95*len(samples))],3),
-            native_player_asset_heartbeat=True, historic_resume_reset=True,
+            native_player_asset_heartbeat=True, partner_entitlement=True, historic_resume_reset=True,
             manager_offline_at_login=True, manager_restart_at_question=11),indent=2))
     except BaseException:
         for server in (campus,manager):
@@ -278,7 +296,10 @@ def exercise(temp, dsn):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--learners",type=int,default=24,choices=range(2,97),metavar="2..96")
+    args = parser.parse_args()
     block_external_network()
     os.environ.pop("CAMPUS_STORAGE", None)
     with database() as dsn, tempfile.TemporaryDirectory(prefix="campus-isolation-") as temp:
-        exercise(Path(temp), dsn)
+        exercise(Path(temp), dsn, args.learners)

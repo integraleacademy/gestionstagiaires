@@ -1,9 +1,14 @@
 """Management owns enrolments; only the learner service handles new public course visits."""
+import hashlib
+import os
+from pathlib import Path
 import threading
+
+from psycopg.conninfo import conninfo_to_dict
 
 from flask import g, redirect, request, session
 
-from campus import directory, migration
+from campus import db, directory, migration
 from campus.links import origin
 
 
@@ -23,18 +28,38 @@ def install(host):
     # Render stops the old disk-backed instance before this new worker starts.
     # At this point nobody can still write its SQLite databases. Enabling this
     # mode on an already-running legacy worker is intentionally unsupported.
-    report = migration.activate(host, lambda: read_source(host))
-    host.app.logger.warning("CAMPUS_MIGRATION verified=%s", report)
+    if not db.enabled():
+        raise RuntimeError("La gestion du Campus nécessite sa base PostgreSQL.")
+    # On a later administrative restart, the existing signed-off disk must not
+    # depend on a reachable Campus DB for unrelated functions such as billing.
+    dsn = conninfo_to_dict(os.environ["CAMPUS_DATABASE_URL"])
+    database_id = hashlib.sha256(repr(tuple(dsn.get(k) for k in ("host", "port", "dbname"))).encode()).hexdigest()
+    marker = Path(host.PERSIST_DIR) / ".campus-migration-complete"
+    if not marker.is_file() or marker.read_text().strip() != database_id:
+        report = migration.activate(host, lambda: read_source(host))
+        temporary = marker.with_suffix(f".{os.getpid()}.tmp")
+        temporary.write_text(database_id)
+        os.replace(temporary, marker)
+        host.app.logger.warning("CAMPUS_MIGRATION verified=%s", report)
     state = {"wake": threading.Event(), "stop": threading.Event()}
 
+    def source_revision():
+        stat = os.stat(host.DATA_FILE)
+        tenants = host._get_partner_postgres_store().bundle_revisions() if host._partner_postgres_active() else ()
+        return (stat.st_ino, stat.st_size, stat.st_mtime_ns, tenants)
+
     def refresh():
+        previous = None
         while not state["stop"].is_set():
             state["wake"].wait(45)
             state["wake"].clear()
             if state["stop"].is_set():
                 return
             try:
-                directory.synchronize(lambda: read_source(host), host)
+                revision = source_revision()
+                if revision != previous:
+                    directory.synchronize(lambda: read_source(host), host)
+                    previous = revision
             except Exception:
                 host.app.logger.exception("Campus: mise à jour de l’annuaire en attente")
             # Coalesce unrelated form autosaves and background notifications.
@@ -43,6 +68,7 @@ def install(host):
     thread = threading.Thread(target=refresh, daemon=True, name="campus-enrolments")
     state["thread"] = thread
     host.app.extensions["campus_directory"] = state
+    state["wake"].set()
     thread.start()
 
     @host.app.after_request
