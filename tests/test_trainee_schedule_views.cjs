@@ -12,7 +12,7 @@ function ui(){
     esc:String,fmtMoney:n=>Number(n).toFixed(2),scheduleDate:String,isCpfQontoLine:line=>line.financingType==='CPF',hasBankSchedule:()=>true,
     linePaid:line=>line.paid || 0,installmentIsRejected:row=>['refunded','rejected','failed','returned','declined'].includes(row.status),
     operationTable:rows=>rows.map(r=>r.date).join(' '),sameDayNotices:()=>'',scheduleTable:(heads,rows)=>heads.join(' ')+rows.join(' ')});
-  for(const name of ['paymentMethodTotals','nextBankOperations','initialTable','scheduleStats','scheduleBalances','initialScheduleSummary','updatedScheduleSummary','reviewSelection','dossierBalance','scheduleEventDate','scheduleEventsTable','transferEvents','cashScheduleEvents','debitActivity','scheduleAuditEvents','financialScheduleSummary','scheduleReadView']){
+  for(const name of ['canScheduleAdditionalQontoDebit','paymentMethodTotals','nextBankOperations','initialTable','scheduleStats','scheduleBalances','initialScheduleSummary','updatedScheduleSummary','reviewSelection','dossierBalance','scheduleEventDate','scheduleEventsTable','transferEvents','cashScheduleEvents','debitActivity','scheduleAuditEvents','financialScheduleSummary','scheduleReadView']){
     const start=source.indexOf('  function '+name+'(');assert.notEqual(start,-1);
     const end=source.indexOf('\n  function ',start+1);
     vm.runInContext(source.slice(start,end),ctx);
@@ -147,4 +147,31 @@ test('past, due today, upcoming and cancelled records remain distinct and matche
   assert.match(html,/2026-11-07/);assert.match(html,/2026-11-15/);assert.doesNotMatch(html,/collection-A|in-flight/);
   ctx.scheduleView='history';html=ctx.scheduleReadView(finance(ctx),true);
   assert.match(html,/Programmation annulée/);assert.match(html,/2026-12-12/);
+});
+
+
+test('add-Qonto-installment action is visible for a 539.50 € gap despite stale local status flags',()=>{
+  const ctx=ui();
+  ctx.scheduleView='next';
+  ctx.currentLines=[{
+    id:'PERSONAL',financingType:'PERSONNEL',invoiceStatus:'unpaid',
+    qonto_mandate_status:'pending_signature',financial_tracking_override:{enabled:true},
+    initialDebitSchedule:[{date:'2026-10-11',amount:539.5},{date:'2026-12-11',amount:539.5}]
+  }];
+  ctx.bankSnapshot={
+    checked_at:'2026-11-21T17:18:00Z',
+    history:[],upcoming:[{
+      id:'QONTO-MONTHLY',date:'2026-12-11',frequency:'monthly',
+      status:'scheduled',amount_cents:53950,remaining_count:1,remaining_cents:53950
+    }]
+  };
+  const html=ctx.scheduleReadView(finance(ctx),true);
+  assert.match(html,/539\.50<\/strong> à programmer/);
+  assert.match(html,/data-add-qonto-debit/);
+  assert.match(html,/Programmer une nouvelle échéance/);
+  ctx.readOnly=true;
+  assert.doesNotMatch(ctx.scheduleReadView(finance(ctx),false),/data-add-qonto-debit/);
+  ctx.readOnly=false;
+  ctx.bankError='Lecture Qonto indisponible';
+  assert.doesNotMatch(ctx.scheduleReadView(finance(ctx),true),/data-add-qonto-debit/);
 });
