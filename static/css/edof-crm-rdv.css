@@ -1,0 +1,14 @@
+.edof-crm-rdv-cell{min-width:180px;vertical-align:middle}
+.edof-crm-rdv{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:12px;line-height:1.4}
+.edof-crm-rdv-status{color:#40556f;font-size:12px;line-height:1.4;font-weight:700}
+.edof-crm-rdv[data-rdv-status="scheduled"] .edof-crm-rdv-status{display:inline-flex;align-items:center;gap:7px;color:#216245}
+.edof-crm-rdv[data-rdv-status="scheduled"] .edof-crm-rdv-status:before{content:"";width:7px;height:7px;display:inline-block;border-radius:50%;background:#259b61}
+.edof-crm-rdv[data-rdv-status="none"] .edof-crm-rdv-status{color:#69768b}
+.edof-crm-rdv[data-rdv-status="unmatched"] .edof-crm-rdv-status{color:#a26020}
+.edof-crm-rdv[data-rdv-status="unavailable"] .edof-crm-rdv-status{color:#a44236}
+.edof-crm-rdv-date{color:#1d3658;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.edof-crm-rdv small{font-size:11px;color:#69768b}
+.edof-crm-rdv a{font-size:11px;color:#2459af;text-decoration:underline;text-underline-offset:2px}
+.edof-crm-rdv-loading{color:#8190a6;font-size:12px}
+.edof-crm-rdv-summary .edof-crm-rdv{margin-top:6px;gap:6px}
+.edof-crm-rdv-summary .edof-crm-rdv-status{font-size:13px}
