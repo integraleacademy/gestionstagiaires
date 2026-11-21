@@ -50786,8 +50786,15 @@ def _additional_debit_check(line, operation_id=None):
     if not line.get('qonto_direct_debit_mandate_id') or _map_mandate_status(
             line.get('qonto_mandate_status') or line.get('mandateStatus')) not in {'active', 'signed'}:
         raise ValueError('Un mandat SEPA Qonto signé est nécessaire.')
-    if (line.get('financial_tracking_override') or {}).get('enabled'):
-        raise ValueError('Le suivi financier manuel doit d’abord être vérifié.')
+    # An administrator may deliberately request ONE supplementary debit after
+    # manually reviewing an existing schedule. Keep the override intact:
+    # automatic collection creation remains disabled in
+    # ensure_qonto_sepa_installments_for_line(). The bank preflight below
+    # independently verifies the signed mandate, invoice and existing debits.
+    override = line.get('financial_tracking_override') or {}
+    if override.get('enabled') and override.get('source') not in {
+            'inline_schedule', 'qonto_attachment', 'admin_reviewed_schedule'}:
+        raise ValueError('Ce suivi financier manuel doit être rapproché avec Qonto avant tout nouveau prélèvement.')
     if any(line.get(key) for key in ('cashPaymentEnabled', 'manualPaymentInvoiceId', 'amountPaid', 'amount_paid')):
         raise ValueError('Un autre règlement est enregistré. Rapprochez les paiements avant de programmer.')
     first = _existing_mandate_operation(line)
@@ -50811,7 +50818,19 @@ def _additional_debit_local_proof(line):
         'removed': bool(row.get('tracking_removed_at')),
         'excluded': bool(row.get('excluded_from_schedule_totals')),
     } for row in _sepa_installments(line)]
-    return hashlib.sha256(json.dumps(rows, sort_keys=True, default=str).encode('utf-8')).hexdigest()
+    override = line.get('financial_tracking_override') or {}
+    local_state = {
+        'installments': rows,
+        'manual_tracking': {
+            'enabled': bool(override.get('enabled')),
+            'source': override.get('source') or '',
+            'fingerprint': override.get('fingerprint') or '',
+            'updated_at': override.get('updated_at') or '',
+        },
+    }
+    # A change to the admin-reviewed schedule while the confirmation is open
+    # must invalidate the signed preview, even if the bank IDs are unchanged.
+    return hashlib.sha256(json.dumps(local_state, sort_keys=True, default=str).encode('utf-8')).hexdigest()
 
 
 def _additional_debit_bank_cover(line, remote):
@@ -50865,6 +50884,11 @@ def _additional_debit_preflight(data, line, operation_id=None):
         raise ValueError('Qonto n’est pas connecté.')
     remote = _existing_mandate_remote_check(data, line)
     cover = _additional_debit_bank_cover(line, remote)
+    override = line.get('financial_tracking_override') or {}
+    if override.get('enabled') and cover['scheduledCents'] <= 0:
+        raise ValueError(
+            'Le suivi manuel existe, mais aucun prélèvement actif correspondant '
+            'n’est confirmé dans Qonto. Vérifiez le rattachement avant de programmer.')
     if cover['availableCents'] <= 0:
         raise ValueError('Le solde de cette facture est déjà entièrement couvert par les prélèvements Qonto.')
     return remote, cover
