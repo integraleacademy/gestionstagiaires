@@ -232,12 +232,9 @@ def message_for(row, email):
     html = render_template(
         "emails/edof_cpf_received.html", first_name=first,
         training_title=title, booking_url=link,
-        email_heading="Nous avons reçu votre demande",
-        email_eyebrow="VOTRE DEMANDE CPF",
-        email_subtitle="Parlons de votre projet.",
+        email_header_title="Nous avons reçu votre demande",
+        email_header_subtitle="Parlons de votre projet de formation.",
         email_preheader="Votre demande est bien enregistrée. Choisissez un créneau pour en parler.",
-        email_signature="cassandre",
-        email_logo="https://gestionstagiaires-r5no.onrender.com/static/images/email/cpf-academy-wordmark.png",
     )
     plain = "\n".join([
         "Bonjour " + first + "," if first else "Bonjour,",

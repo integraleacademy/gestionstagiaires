@@ -40,6 +40,8 @@ COPY . .
 # Static, same-origin logo + Cassandre portrait for the CPF acknowledgement
 # preview AND the real transactional email. No external image hosting needed.
 RUN python scripts/build_edof_cpf_assets.py
+# Installer le véritable mémoji utilisé dans les modèles d’e-mails CRM.
+RUN python scripts/build_edof_crm_cassandre.py
 
 # Reject invalid Python sources before Render tries to start this image.
 RUN python -m compileall -q app.py crm_app.py
