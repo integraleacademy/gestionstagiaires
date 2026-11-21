@@ -27,6 +27,7 @@ import edof_proposal as proposal_form
 import edof_proposal_jobs as proposals
 import edof_enrolment_watch as enrolment_watch
 import edof_cpf_appointment_mail as cpf_mail
+import edof_crm_appointments_client as crm_rdv
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, on_production_service, provider_operation
 from cpf_entry_pilot import active_holds, blocks_pilot
 from cpf_provider_bridge import coordinated_switch, production_request
@@ -712,6 +713,28 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         # Le contrôleur de diffusion conserve une trace unique par dossier.
         message = cpf_mail.manual_send(legacy, store, owner, row, vault())
         return jsonify(ok=True, message=message)
+
+    @bp.get("/crm-rdv")
+    @admin_required
+    def crm_rdv_status():
+        owner = results_owner()
+        folders = request.args.getlist("folder")
+        if not folders or len(folders) > 30 or len(set(folders)) != len(folders):
+            return jsonify(message="Sélection de dossiers CPF invalide."), 400
+        if any(not ID_RE.fullmatch(folder) for folder in folders):
+            return jsonify(message="Numéro de dossier CPF invalide."), 400
+        known = (snapshot(owner) or {}).get("rows") or {}
+        if any(folder not in known for folder in folders):
+            return jsonify(message="Dossier absent de votre espace EDOF synchronisé."), 404
+        try:
+            appointments = crm_rdv.lookup(folders)
+        except crm_rdv.CRMAppointmentsUnavailable:
+            response = jsonify(message="Connexion au CRM momentanément indisponible.")
+            response.status_code = 503
+        else:
+            response = jsonify(ok=True, appointments=appointments)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
 
     @bp.get("")
     @admin_required
