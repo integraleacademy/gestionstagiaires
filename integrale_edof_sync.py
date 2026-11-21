@@ -4,6 +4,7 @@ from contextlib import closing
 from cpf_provider import ProviderStore
 import edof_automation_audit as audit
 import edof_dossier_dates as dates
+import edof_cpf_appointment_mail as cpf_mail
 
 
 def event_tables(db):
@@ -70,10 +71,26 @@ def dates_for_view(db, owner, rows, checked, category):
     return saved
 
 
+def _prefetch_new_contacts(store, owner, folders):
+    if not folders or not store.connector_key:
+        return
+    try:
+        from edof_gmail import Vault
+        import edof_crm_details
+        private = Vault(store.directory,store.connector_key)
+        for folder in folders:
+            edof_crm_details.request_read(private,owner,folder)
+    except Exception:
+        # Une lecture de contact indisponible ne doit pas invalider le snapshot EDOF.
+        pass
+
+
 def observe_pending(store, snapshot, owner):
     from integrale_edof_dashboard import category
     with closing(ProviderStore(store.directory).connect()) as db, db:
         save_dates(db, snapshot, owner, category)
+        queued = cpf_mail.observe_snapshot(db, owner, snapshot, category, complete=False)
+    _prefetch_new_contacts(store,owner,queued)
 
 
 def process_directory(store, snapshot, *, owner=""):
@@ -99,3 +116,5 @@ def process_directory(store, snapshot, *, owner=""):
             db.execute("INSERT INTO directory_states VALUES(?,?,?) ON CONFLICT(folder) DO UPDATE SET state=excluded.state, checked=excluded.checked",
                        (folder,kind,checked))
         db.execute("INSERT OR REPLACE INTO directory_cursor VALUES (1,?)", (checked,))
+        queued = cpf_mail.observe_snapshot(db,owner,snapshot,category,complete=True)
+    _prefetch_new_contacts(store,owner,queued)
