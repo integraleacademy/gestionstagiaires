@@ -245,7 +245,6 @@ def message_for(row, email):
         "", "Choisissez le créneau qui vous convient : " + link,
         "", "Nous pourrons ainsi échanger sur votre projet, les modalités de la formation "
         "et les prochaines étapes de votre inscription.",
-        "Votre demande est bien reçue, mais son acceptation n'est pas encore confirmée.",
         "", "Bien cordialement,",
         "Cassandre MENARD – Responsable commerciale",
         "Intégrale Academy – 04 22 47 07 68",
