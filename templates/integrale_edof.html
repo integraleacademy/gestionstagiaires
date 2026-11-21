@@ -248,7 +248,7 @@
             {% else %}
               <small class="edof-cpf-status">Aucun envoi enregistré</small>
             {% endif %}
-          {% endif %>
+          {% endif %}
           {% if r.kind in ['invoiced', 'paid'] or (invoice_records.get(r.folder_id) and invoice_records[r.folder_id].qonto_id) %}<a class="btn btn-outline" href="{{ url_for('integrale_edof.view_invoice', folder=r.folder_id) }}" target="_blank" rel="noopener">Voir la facture</a>{% endif %}
           {% if (tab == 'to_register' or r.registration_ignored) and session.get('admin_role') != 'viewer' %}
           <form method="post" action="{{ url_for('integrale_edof.registration_preference',folder=r.folder_id) }}" class="edof-association-preference" data-association-preference>
