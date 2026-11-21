@@ -12,7 +12,7 @@
 {% macro refusal_reason(value) %}{% if value.isdigit() %}Libellé non communiqué par EDOF (code {{ value }}){% else %}{{ value }}{% endif %}{% endmacro %}
 {% macro token() %}<input type="hidden" name="csrf" value="{{ csrf }}">{% endmacro %}
 {% macro btn(label) %}<button class="btn btn-outline" type="submit">{{ label }}</button>{% endmacro %}
-{% macro link(section, tab='all', page=1) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, group=group, course=course, period=period, simulation=(1 if testing else none), matching=(1 if previewing else none)) }}{% endmacro %}
+{% macro link(section, tab='all', page=1, folder=none, anchor=none) %}{{ url_for('integrale_edof.index', section=section, tab=tab, page=page, q=query, group=group, course=course, period=period, folder=folder, _anchor=anchor, simulation=(1 if testing else none), matching=(1 if previewing else none)) }}{% endmacro %}
 {% macro comment_editor(r) %}
   {% if session.get('admin_role') != 'viewer' %}
     <label class="edof-note"><textarea rows="1" maxlength="3000" placeholder="Ajouter un commentaire…" aria-label="Commentaire sur le dossier {{ r.folder_id }}" data-edof-comment data-version="{{ r.comment_version }}" data-url="{{ url_for('integrale_edof.annotate', folder=r.folder_id) }}" data-csrf="{{ csrf }}">{{ r.comment }}</textarea><small role="status"></small></label>
@@ -39,15 +39,16 @@
   </div>{% endif %}
 {% endmacro %}
 {% set active = aligned and selection.provider == 'integrale' %}
+{% set declaration_list = section == 'automations' and not billing_automation %}
 
 <div class="wedof-page native-cpf{% if detail %} edof-workspace{% endif %}" {% if detail %}id="dossier"{% endif %}>
   {% if flashes %}<div class="wedof-flash-stack" aria-live="polite">
     {% for type, msg in flashes %}<p role="status" class="wedof-flash is-{{ type }}">{{ msg }}</p>{% endfor %}
   </div>{% endif %}
-  <header class="{{ 'edof-file-toolbar' if detail else 'wedof-hero' }}" id="edof-live" data-detail="{{ '1' if detail else '0' }}" data-status-url="{{ url_for('integrale_edof.connection_badge', catchup=(1 if section == 'automations' and not detail else none)) }}" data-stamp="{{ live.stamp }}"
+  <header class="{{ 'edof-file-toolbar' if detail else 'wedof-hero' }}" id="edof-live" data-detail="{{ '1' if detail else '0' }}" data-status-url="{{ url_for('integrale_edof.connection_badge', catchup=(1 if declaration_list and not detail else none)) }}" data-stamp="{{ live.stamp }}"
           data-list="{{ '1' if section in ['state','requests'] and tab == 'request' and not detail and not query and page == 1 else '0' }}">
     <div class="wedof-hero-copy">
-      {% if detail %}<a class="edof-back" href="{{ link(section,tab,page) }}">← Retour aux dossiers</a>{% else %}
+      {% if detail %}<a class="edof-back" href="{{ link(section,tab,page) }}">← {{ 'Retour aux dossiers à facturer' if billing_automation else 'Retour aux dossiers' }}</a>{% else %}
       <span class="wedof-eyebrow">CPF · INTÉGRALE EDOF</span>
       <h1>Pilotage des dossiers CPF</h1>
       <p>Suivez les demandes, les entrées en formation, les services faits et la facturation des sessions commençant à partir du 1er janvier 2026.</p>{% endif %}
@@ -134,7 +135,7 @@
 {% if previewing %}<section class="wedof-panel edof-panel-body" id="matching"><span class="wedof-section-label">ASSOCIATIONS LOCALES</span><h2>Prévisualisation des correspondances</h2><p>{{ matches|length }} dossier(s) à associer · {{ match_counts['exact_match'] or 0 }} correspondance(s) fiable(s). Une association fiable requiert des dates concordantes et un contact vérifié.</p></section>{% endif %}
 {% if testing %}<section class="wedof-panel edof-panel-body" id="simulation"><span class="wedof-section-label">SIMULATION SUR LA LISTE SYNCHRONISÉE</span><h2>Résultat du test des automatisations</h2><p>Échéances en heure de Paris · entrée et sortie avec service fait à 18 h. Le test indique quelles échéances sont passées, préparées ou bloquées. Il ne transmet aucune déclaration.</p><div class="metrics">
 {% for key,label in simulation_labels.items() %}<div><strong>{{ simulation[key] or 0 }}</strong>{{ label }}</div>{% endfor %}</div></section>{% endif %}
-{% if section == 'automations' %}
+{% if declaration_list %}
 <section class="wedof-panel edof-catchup" id="rattrapage" data-phase="{{ catchup.phase if catchup else 'idle' }}">
   <div><span class="wedof-section-label">Rattrapage</span><h2>Déclarations en retard</h2>
     <p>Pour les dossiers acceptés, l’entrée est transmise automatiquement à partir de 18 h le jour du début indiqué dans EDOF (heure de Paris). En cas d’absence ou de report, cochez « Bloquer l’automatisation » sur le dossier avant 18 h. Conservez l’émargement papier. À 18 h le jour de fin du dossier CPF, la sortie et le service fait sont déclarés à 100 %. En cas de parcours partiel, bloquez l’automatisation avant l’échéance.</p>
@@ -158,7 +159,7 @@
 <section class="wedof-panel">
   <div class="wedof-panel-header"><div>
     <span class="wedof-section-label">{{ 'Actions et déclarations' if section == 'automations' else 'Parcours des dossiers' }}</span><h2>{{ sections[section] }}</h2>
-    <p>{{ 'Suivez les échéances, les blocages et les réceptions vérifiées. Les compteurs portent sur les actions.' if section == 'automations' else 'Chaque dossier est classé selon son étape actuelle. Choisissez une rubrique puis un statut.' }}</p>
+    <p>{{ 'Suivez les déclarations d’entrée et de sortie ainsi que les dossiers à facturer.' if section == 'automations' else 'Chaque dossier est classé selon son étape actuelle. Choisissez une rubrique puis un statut.' }}</p>
   </div></div>
   {% if section == 'state' %}
   <nav class="wedof-counters" aria-label="Associations CPF">
@@ -188,9 +189,10 @@
     <span class="wedof-section-label">{{ 'Suivi des opérations' if section=='automations' else groups[group] }}</span>
     <h2>{{ 'Échéances prévues' if tab == 'due' else tabs.get(tab, 'Dossiers CPF') }}</h2>
     {% if tab in ['to_register', 'accepted'] and checked %}<p>Dernière lecture des dossiers acceptés le {{ checked }}.</p>{% endif %}
-    {% if section == 'automations' %}<p>{{ 'Actions prévues ce jour, à l’heure de Paris, dont la réception reste à confirmer par EDOF.' if tab=='today' else 'Chaque ligne correspond à une action. Les échéances sont affichées à l’heure de Paris.' }}</p>
+    {% if billing_automation %}<p>Le service fait de ces dossiers a été validé. Vous pouvez suivre ici la préparation de la facture dans Qonto et sa transmission à EDOF.</p>
+    {% elif declaration_list %}<p>{{ 'Actions prévues ce jour, à l’heure de Paris, dont la réception reste à confirmer par EDOF.' if tab=='today' else 'Chaque ligne correspond à une action. Les échéances sont affichées à l’heure de Paris.' }}</p>
     {% else %}<p>Du dossier le plus récent au plus ancien, selon la date de la demande ou, à défaut, de création. Les dossiers sans ces dates figurent en dernier, par date de statut.</p>{% endif %}
-  </div>{% if checked %}<span class="wedof-result-summary">{{ total }} {{ 'action' if section=='automations' else 'dossier' }}{{ 's' if total != 1 }}</span>{% endif %}</div>
+  </div>{% if checked %}<span class="wedof-result-summary">{{ total }} {{ 'action' if declaration_list else 'dossier' }}{{ 's' if total != 1 }}</span>{% endif %}</div>
   <form class="edof-search" method="get">
     <input type="hidden" name="group" value="{{ group }}">
     <input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="tab" value="{{ tab }}">
@@ -207,11 +209,14 @@
     <div><strong>Déclarer plusieurs entrées</strong><p>Cochez les stagiaires qui ont commencé à la date indiquée sur leur ligne. Si la date est incorrecte, vérifiez le dossier EDOF avant de confirmer.</p></div>
     <button class="btn btn-blue" name="attested" value="yes" type="submit">Confirmer et transmettre <span data-entry-count>les entrées sélectionnées</span></button>
   </form>{% endif %}
-  {% if section == 'automations' and not active %}<div class="wedof-notice is-warning">L’envoi automatique des déclarations nécessite l’activation d’Intégrale EDOF.</div>{% endif %}
-  {% if section == 'state' and group == 'billing' and active %}<div class="wedof-notice is-info">Facturation automatique active : dès la validation du service fait, la facture Caisse des Dépôts est préparée dans Qonto, puis son numéro et son montant sont transmis à EDOF. Le suivi apparaît dans chaque dossier.</div>{% endif %}
+  {% if section == 'automations' and not active %}<div class="wedof-notice is-warning">{{ 'La facturation automatique nécessite l’activation d’Intégrale EDOF.' if billing_automation else 'L’envoi automatique des déclarations nécessite l’activation d’Intégrale EDOF.' }}</div>{% endif %}
+  {% if section == 'state' and group == 'billing' %}<div class="wedof-notice is-info">
+    {% if active %}Facturation automatique active : dès la validation du service fait, la facture Caisse des Dépôts est préparée dans Qonto, puis son numéro et son montant sont transmis à EDOF. Le suivi apparaît dans chaque dossier.{% endif %}
+    <a href="{{ url_for('integrale_edof.index', section='automations', tab='billable', q=query, course=course, period=period) }}">Voir les dossiers à facturer dans Automatisations</a>
+  </div>{% endif %}
   {% if not checked %}<div class="wedof-notice is-info">La liste EDOF de votre compte n’est pas disponible. <a href="{{ url_for('edof_server_test.index', _anchor='directory-status') }}">Ouvrir la synchronisation</a></div>{% endif %}
   {% if rows %}
-  {% if section == 'automations' %}{% include "_edof_operations.html" %}{% else %}
+  {% if billing_automation %}{% include "_edof_billable.html" %}{% elif declaration_list %}{% include "_edof_operations.html" %}{% else %}
   <div class="wedof-table-wrap wedof-preview-table-wrap" role="region" aria-label="Dossiers EDOF filtrés" tabindex="0">
     <table class="wedof-table">
       <thead><tr><th>Dossier</th><th>Candidat EDOF</th><th>Passage dans le statut</th><th>Période</th>{% if testing %}<th>Simulation</th>{% endif %}<th>Rattachement local</th><th>Actions</th></tr></thead>
@@ -251,7 +256,7 @@
 <button class="btn" name="change" value="{{ 'reopen' if r.handled else 'handled' }}">{{ 'Rouvrir' if r.handled else 'Marquer traitée' }}</button><button class="btn btn-outline" name="change" value="archived">Archiver</button></form>{% endif %}{% endif %}</div></td></tr>{% endfor %}</tbody></table></div>
 {% endif %}
 <nav class="edof-pagination" aria-label="Pagination">{% if page > 1 %}<a href="{{ link(section,tab,page-1) }}">← Précédent</a>{% endif %}<span>Page {{ page }} sur {{ pages }}</span>{% if page < pages %}<a href="{{ link(section,tab,page+1) }}">Suivant →</a>{% endif %}</nav>
-{% elif checked %}<p class="edof-empty">{{ 'Aucune action dans cette sélection.' if section=='automations' else 'Aucun dossier dans cette sélection.' }}</p>{% endif %}</section>
+{% elif checked %}<p class="edof-empty">{{ 'Aucun dossier à facturer dans cette sélection.' if billing_automation else 'Aucune action dans cette sélection.' if declaration_list else 'Aucun dossier dans cette sélection.' }}</p>{% endif %}</section>
 {% endif %}
 {% endif %}
 {% if detail %}{% set f=detail.record %}
@@ -267,7 +272,7 @@
 </header>
 <div class="edof-case-layout">
   {% set invoice = invoice_records.get(detail.record.folder_id) %}
-  {% if invoice %}<section class="wedof-panel edof-case-form"><div class="edof-panel-body">
+  {% if invoice %}<section class="wedof-panel edof-case-form" id="facturation-edof"><div class="edof-panel-body">
     <h2>Facturation Caisse des Dépôts</h2><p><strong>{{ invoice.label }}</strong></p>
     {% if invoice.terms.amount %}<p>Montant validé par EDOF : {{ invoice.terms.amount }} € · TVA 0 %</p>{% endif %}
     {% if invoice.invoice_number %}<p>Facture Qonto : <strong>{{ invoice.invoice_number }}</strong></p>{% endif %}

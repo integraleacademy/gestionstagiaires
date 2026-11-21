@@ -1,0 +1,29 @@
+<div class="wedof-table-wrap edof-operation-table" role="region" aria-label="Dossiers à facturer" tabindex="0">
+  <table class="wedof-table">
+    <thead><tr><th>Dossier CPF</th><th>Stagiaire et formation</th><th>Suivi de la facturation</th><th>Montant validé</th><th>Actions</th></tr></thead>
+    <tbody>{% for row in rows %}
+      {% set invoice = invoice_records.get(row.folder_id) %}
+      {% set href = link(section, tab, page, row.folder_id, 'facturation-edof' if invoice else 'dossier') %}
+      <tr data-edof-folder="{{ row.folder_id }}">
+        <td data-label="Dossier CPF"><div class="wedof-folder-ref">
+          <strong><a href="{{ href }}">{{ row.folder_id }}</a></strong>
+          {% if row.stage_exact_label %}<small>Service fait validé le {{ row.stage_exact_label }}</small>{% endif %}
+        </div></td>
+        <td data-label="Stagiaire et formation"><div class="wedof-person-cell">
+          <strong>{{ row.first_name }} {{ row.last_name }}</strong><span>{{ row.title or 'Formation non renseignée' }}</span>
+        </div></td>
+        <td data-label="Suivi de la facturation"><div class="wedof-badges">
+          {% if row.folder_id in held %}<span class="wedof-badge is-warning">Automatisation bloquée sur ce dossier</span>{% endif %}
+          <span>{{ invoice.label if invoice else 'En attente de prise en charge' }}</span>
+          {% if invoice and invoice.invoice_number %}<small>Facture {{ invoice.invoice_number }}</small>{% endif %}
+          {% if invoice and invoice.message %}<small>{{ invoice.message }}</small>{% endif %}
+        </div></td>
+        <td data-label="Montant validé">{{ (invoice.terms.amount | replace('.', ',')) ~ ' €' if invoice and invoice.terms.amount else '—' }}</td>
+        <td data-label="Actions"><div class="edof-row-actions">
+          <a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
+          {% if invoice and invoice.qonto_id %}<a class="btn btn-outline" href="{{ url_for('integrale_edof.view_invoice', folder=row.folder_id) }}" target="_blank" rel="noopener">Voir la facture</a>{% endif %}
+        </div></td>
+      </tr>
+    {% endfor %}</tbody>
+  </table>
+</div>
