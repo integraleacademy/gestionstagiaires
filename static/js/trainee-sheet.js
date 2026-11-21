@@ -2784,7 +2784,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     } else if (scheduleView==='past' && c.nombreRejetsTraites) {
       review=`<p class="schedule-review-done">${c.nombreRejetsTraites} rejet${c.nombreRejetsTraites>1?'s traités':' traité'}</p>`;
     }
-    const canAddDebit=scheduleView==='next'&&!readOnly&&!!bankSnapshot&&!bankLoading&&!bankError&&c.resteAPayer>0&&currentLines.some(canScheduleAdditionalQontoDebit);
+    const confirmedUpcoming=upcoming.filter(row=>['scheduled','in_progress','processing','pending','on_hold'].includes(String(row.status||'')));
+    const knownUpcoming=confirmedUpcoming.length===upcoming.length&&confirmedUpcoming.every(row=>Number.isSafeInteger(row.remaining_cents)&&row.remaining_cents>0);
+    const alreadyScheduled=confirmedUpcoming.reduce((sum,row)=>sum+Number(row.remaining_cents||0),0);
+    const canAddDebit=scheduleView==='next'&&!readOnly&&!!bankSnapshot&&!bankLoading&&!bankError&&knownUpcoming&&
+      Math.round(c.resteAPayer*100)>alreadyScheduled&&currentLines.some(canScheduleAdditionalQontoDebit);
     const actions=bankView || canAddDebit || (canEdit && scheduleView==='next')?`<div class="schedule-actions">
       ${bankView?`<small role="status">${esc(source)}</small><button type="button" data-bank-refresh aria-disabled="${bankLoading}">Actualiser Qonto</button>`:''}
       ${canAddDebit?'<button type="button" class="btn btn-primary" data-add-qonto-debit>+ Programmer une nouvelle échéance</button>':''}
@@ -2922,7 +2926,12 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const candidates=lines.filter(canScheduleAdditionalQontoDebit);
       const balance=computeFinance(lines);
       const hasDebits=hasBankSchedule()&&(bankSnapshot?.upcoming?.length>0 || lines.some(line=>line.directDebitInstallments?.length));
-      const canOffer=hasDebits&&balance.resteAPayer>0;
+      const ready=(bankSnapshot?.upcoming||[]).every(row=>
+        ['scheduled','in_progress','processing','pending','on_hold'].includes(String(row.status||''))&&
+        Number.isSafeInteger(row.remaining_cents)&&row.remaining_cents>0);
+      const reserved=(bankSnapshot?.upcoming||[]).reduce((sum,row)=>sum+Number(row.remaining_cents||0),0);
+      const canOffer=hasDebits&&!!bankSnapshot&&!bankLoading&&!bankError&&ready&&
+        Math.round(balance.resteAPayer*100)>reserved;
       addQontoDebitBtn.hidden=!(candidates.length&&canOffer);
       addQontoDebitBtn.style.display=candidates.length&&canOffer?'':'none';
       addQontoDebitBtn.disabled=readOnly;
@@ -3269,6 +3278,34 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       };
       form.elements.amount.focus({preventScroll:true});
     }
+  function renderCovered(){
+    overlay.querySelector('[data-add-step]').textContent='Étape 1 · Situation vérifiée dans Qonto';
+    const records=Array.isArray(availability.commitments)?availability.commitments:[];
+    const frequencyLabels={one_off:'Ponctuel',monthly:'Mensuel',weekly:'Hebdomadaire',quarterly:'Trimestriel',yearly:'Annuel',custom:'Personnalisé'};
+    const operations=records.length?records.map(row=>{
+      const count=Number.isSafeInteger(row.remainingCount)&&row.remainingCount>0
+        ? row.remainingCount+' prélèvement'+(row.remainingCount>1?'s':'')+' restant'+(row.remainingCount>1?'s':'')
+        : 'Nombre d’échéances à confirmer';
+      const frequency=frequencyLabels[row.frequency]||'Fréquence à confirmer';
+      const date=row.date?formatIsoDateFr(row.date):'Date à confirmer';
+      const last=row.endDate?' · Jusqu’au '+formatIsoDateFr(row.endDate):'';
+      return `<div class="kv" style="padding:12px 0;border-bottom:1px solid #e2e8f0"><strong>${esc(frequency)} · ${fmtMoney(row.amountCents/100)} € par prélèvement</strong><p class="muted">${esc(count)} · Prochaine date : ${esc(date)}${esc(last)}</p><p>Montant restant programmé chez Qonto : <strong>${fmtMoney(row.remainingCents/100)} €</strong></p></div>`;
+    }).join(''):'<p class="muted">Aucun détail d’échéance communiqué par Qonto.</p>';
+    content.removeAttribute('role');
+    content.removeAttribute('aria-live');
+    content.innerHTML=`<div class="billing-modal-summary">
+        <p><strong>Facture :</strong> ${esc(availability.invoiceNumber||'—')}</p>
+        <p><strong>Reste à payer :</strong> ${fmtMoney(availability.remainingCents/100)} €</p>
+        <p><strong>Prélèvements déjà programmés :</strong> ${fmtMoney(availability.scheduledCents/100)} €</p>
+        <p><strong>Solde disponible pour une nouvelle échéance :</strong> ${fmtMoney(availability.availableCents/100)} €</p>
+      </div>
+      <div class="billing-modal-error" role="status"><strong>Aucun nouveau prélèvement à créer.</strong> Selon les échéances actuellement confirmées par Qonto, le solde de cette facture est déjà entièrement couvert.</div>
+      <h3 style="font-size:1rem;margin-top:18px">Prélèvements existants dans Qonto</h3>
+      <div>${operations}</div>
+      <p class="hint">Un prélèvement mensuel peut comporter plusieurs échéances futures, même si le calendrier affiche une seule date. Aucune opération bancaire n’a été déclenchée.</p>
+      <div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-close>Fermer</button><button class="btn btn-primary" type="button" data-add-recheck>Actualiser et revérifier Qonto</button></div>`;
+    content.querySelector('[data-add-recheck]').onclick=loadAvailability;
+  }
     function renderConfirmation(preview){
       const summary=preview.summary,row=preview.schedule[0];
       overlay.querySelector('[data-add-step]').textContent='Étape 2 · Confirmer dans Qonto';
@@ -3306,7 +3343,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         const result=await parseJsonResponse(response,'Vérification Qonto indisponible.');
         if(!response.ok||!result.ok)throw new Error(result.error||'Vérification Qonto indisponible.');
         availability=result;
-        renderForm();
+        // Bank-side coverage is authoritative. Do not offer a second debit.
+        if(result.covered||result.canSchedule===false||result.availableCents<=0)renderCovered();
+        else renderForm();
+        bankChecked=0;
+        if(scheduleSection?.open)await readBankSchedule(true);
       }catch(error){
         content.innerHTML=`<div class="billing-modal-error" role="alert">${esc(error.message||'Programmation indisponible.')}</div><p>Vérifiez les opérations Qonto existantes avant de créer une nouvelle échéance.</p><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-add-close>Fermer</button></div>`;
       }finally{setBusy(false);}
