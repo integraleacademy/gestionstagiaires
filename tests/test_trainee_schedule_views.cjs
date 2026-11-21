@@ -194,7 +194,11 @@ test('a monthly Qonto subscription with two pending collections covers all 1079 
   const html=ctx.scheduleReadView(finance(ctx),true);
   assert.match(html,/Programmé chez Qonto<\/span><strong>1079.00<\/strong>/);
   assert.match(html,/Solde SEPA entièrement programmé/);
-  assert.match(html,/2 échéances restantes/);
+  // The compact test fixture replaces the HTML bank table with its dates.
+  // Check the recurring metadata on the underlying bank operations as well.
+  const upcoming=ctx.nextBankOperations(ctx.bankSnapshot.upcoming,'2026-11-21');
+  assert.equal(upcoming[0].remaining_count,2);
+  assert.equal(upcoming[0].remaining_cents,107900);
   assert.doesNotMatch(html,/à programmer|data-add-qonto-debit/);
 });
 
