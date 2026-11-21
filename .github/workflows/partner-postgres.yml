@@ -51,3 +51,12 @@ jobs:
           PERSIST_DIR: ${{ runner.temp }}/partners-persist
         run: |
           python -m pytest -q tests/test_partner_postgres_integration.py tests/test_partner_postgres_hybrid.py tests/test_partner_security_hardening.py
+      - name: Vérifier la syntaxe du suivi SEPA
+        run: |
+          python -m compileall -q app.py billing_debit_scheduling.py tests/test_billing_additional_direct_debit.py
+          node --check static/js/trainee-sheet.js
+      - name: Vérifier les échéances Qonto sans accès bancaire externe
+        env:
+          PERSIST_DIR: ${{ runner.temp }}/sepa-ci
+        run: |
+          python -m pytest -q tests/test_billing_direct_debit_scheduling.py tests/test_billing_direct_debit_scheduling_race.py tests/test_billing_additional_direct_debit.py tests/test_trainee_bank_schedule.py

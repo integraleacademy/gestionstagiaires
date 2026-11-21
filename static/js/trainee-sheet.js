@@ -1589,6 +1589,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   const box = document.getElementById("qontoInvoiceHistory");
   const syncBtn = document.getElementById("btnSyncQontoTrainee");
   const scheduleQontoDebitBtn = document.getElementById("btnScheduleQontoDebit");
+  const addQontoDebitBtn = document.getElementById("btnAddQontoDebit");
   const resetFinancialTrackingBtn = document.getElementById("btnResetFinancialTracking");
   const quickGenerateBtn = document.getElementById("btnQuickGenerateInvoice");
   const financeNotificationsBtn = document.getElementById("btnToggleFinanceNotifications");
@@ -1894,6 +1895,22 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       &&Boolean(line.qonto_direct_debit_mandate_id)&&['active','signed'].includes(mandateStatus)
       &&(Boolean(pendingQontoDebitScheduling(line))||(!line.paymentPlan?.qontoSchedulingOperation&&Math.round(lineRemaining(line)*100)>0
       &&!line.qonto_direct_debit_subscription_id&&!schedules.some(rows=>Array.isArray(rows)&&rows.length)));
+  }
+  function canScheduleAdditionalQontoDebit(line){
+    const mandateStatus=String(line.qonto_mandate_status||line.mandateStatus||'').toLowerCase();
+    const invoiceStatus=String(line.invoiceStatus||'').toLowerCase();
+    const extra=line.paymentPlan?.qontoAdditionalDebitOperation||{};
+    const rows=line.directDebitInstallments||line.sepa_payment_plan?.installments||[];
+    const hasBankDebit=Boolean(line.qonto_direct_debit_subscription_id)||
+      rows.some(item=>Boolean(item.qonto_direct_debit_subscription_id));
+    return !readOnly&&!isCpfQontoLine(line)&&['PERSONNEL','AUTRE'].includes(String(line.financingType||'').toUpperCase())&&
+      !line.registrationCancelled&&Boolean(line.qontoInvoiceId)&&Boolean(line.qontoInvoiceNumber)&&
+      !line.cashPaymentEnabled&&!line.manualPaymentInvoiceId&&!line.amountPaid&&!line.amount_paid&&
+      !line.financial_tracking_override?.enabled&&
+      ['finalized','sent','unpaid','partially_paid','overdue'].includes(invoiceStatus)&&
+      Boolean(line.qonto_direct_debit_mandate_id)&&['active','signed'].includes(mandateStatus)&&
+      !pendingQontoDebitScheduling(line)&&(!extra.id||extra.state==='completed')&&
+      hasBankDebit&&Math.round(lineRemaining(line)*100)>0;
   }
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l),amount=lineAmount(l),paid=linePaid(l),raw=String(e?.payment_status||'unpaid').toLowerCase();if(['canceled','cancelled','control'].includes(raw))return raw;if(amount>0&&paid>=amount)return 'paid';if(paid>0)return 'partially_paid';return raw;}
   // The payment plan is persisted while the mandate is awaiting signature so
@@ -2770,8 +2787,10 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     } else if (scheduleView==='past' && c.nombreRejetsTraites) {
       review=`<p class="schedule-review-done">${c.nombreRejetsTraites} rejet${c.nombreRejetsTraites>1?'s traités':' traité'}</p>`;
     }
-    const actions=bankView || (canEdit && scheduleView==='next')?`<div class="schedule-actions">
+    const canAddDebit=scheduleView==='next'&&!readOnly&&currentLines.some(canScheduleAdditionalQontoDebit);
+    const actions=bankView || canAddDebit || (canEdit && scheduleView==='next')?`<div class="schedule-actions">
       ${bankView?`<small role="status">${esc(source)}</small><button type="button" data-bank-refresh aria-disabled="${bankLoading}">Actualiser Qonto</button>`:''}
+      ${canAddDebit?'<button type="button" class="btn btn-primary" data-add-qonto-debit>+ Programmer une nouvelle échéance</button>':''}
       ${canEdit && scheduleView==='next'?'<button type="button" data-edit-schedule>Modifier le suivi local</button>':''}</div>`:'';
     return `<div class="schedule-nav" role="tablist" aria-label="Échéancier et prélèvements">${tabs}</div>
       <div class="schedule-content" id="schedule-panel" role="tabpanel" aria-labelledby="schedule-tab-${scheduleView}" tabindex="0">
@@ -2853,6 +2872,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         container.querySelector('[data-close-editor]')?.focus();
       });
       container.querySelector('[data-bank-refresh]')?.addEventListener('click',()=>readBankSchedule(true));
+      container.querySelector('[data-add-qonto-debit]')?.addEventListener('click',openAdditionalQontoDebitModal);
       return;
     }
     const rows=items.map((it,i)=>{
@@ -2901,6 +2921,12 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     };
   }
   function render(lines){
+    if(addQontoDebitBtn){
+      const candidates=lines.filter(canScheduleAdditionalQontoDebit);
+      addQontoDebitBtn.hidden=!candidates.length;
+      addQontoDebitBtn.style.display=candidates.length?'':'none';
+      addQontoDebitBtn.disabled=readOnly;
+    }
     if(scheduleQontoDebitBtn){
       const candidates=lines.filter(canScheduleFirstQontoDebit);
       scheduleQontoDebitBtn.hidden=!candidates.length;
@@ -3165,7 +3191,130 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       resetDraft();renderEditor();
     }catch(error){content.textContent=error.message||'Chargement impossible.';}
   }
+  async function openAdditionalQontoDebitModal(){
+    if(readOnly||document.getElementById('qontoAdditionalDebitModal'))return;
+    const candidates=currentLines.filter(canScheduleAdditionalQontoDebit);
+    if(!candidates.length){showQontoFeedback('Aucune échéance supplémentaire disponible sur cette fiche. Vérifiez le suivi Qonto.');return;}
+    const overlay=document.createElement('div');
+    overlay.id='qontoAdditionalDebitModal';
+    overlay.className='billing-modal-overlay no-print';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-labelledby','qontoAdditionalDebitTitle');
+    overlay.tabIndex=-1;
+    overlay.innerHTML='<div class="billing-modal"><div class="billing-modal-head"><div><h2 id="qontoAdditionalDebitTitle">Programmer une nouvelle échéance</h2><p>Ajoutez un prélèvement au mandat signé, sans modifier les précédents.</p><span class="billing-modal-step" data-add-step>Étape 1 · Préparer l’échéance</span></div><button class="billing-modal-close" type="button" data-add-close aria-label="Fermer">✕</button></div><div data-add-content role="status" aria-live="polite">Vérification du solde Qonto…</div></div>';
+    document.body.appendChild(overlay);
+    const content=overlay.querySelector('[data-add-content]');
+    let busy=false,selected=candidates[0],availability=null;
+    const opener=document.activeElement;
+    function close(){
+      if(busy)return;
+      overlay.remove();
+      (opener?.isConnected?opener:document.getElementById('btnAddQontoDebit'))?.focus({preventScroll:true});
+    }
+    function setBusy(value){
+      busy=value;
+      overlay.setAttribute('aria-busy',value?'true':'false');
+      overlay.querySelectorAll('button,input,select').forEach(control=>control.disabled=value);
+    }
+    overlay.addEventListener('click',event=>{if(event.target.closest('[data-add-close]'))close();});
+    overlay.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();close();}
+      if(event.key==='Tab'){
+        const controls=Array.from(overlay.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)'));
+        if(!controls.length){event.preventDefault();overlay.focus();return;}
+        const first=controls[0],last=controls[controls.length-1];
+        if(!controls.includes(document.activeElement)){event.preventDefault();(event.shiftKey?last:first).focus();}
+        else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+      }
+    });
+    overlay.querySelector('[data-add-close]').focus();
+    const tomorrow=()=>{
+      const date=new Date(isoToday()+'T12:00:00Z');
+      date.setUTCDate(date.getUTCDate()+1);
+      return date.toISOString().slice(0,10);
+    };
+    function renderForm(){
+      overlay.querySelector('[data-add-step]').textContent='Étape 1 · Préparer l’échéance';
+      const day=new Date(isoToday()+'T12:00:00Z');
+      day.setUTCDate(day.getUTCDate()+7);
+      const occupied=new Set(availability.occupiedDates||[]);
+      for(let i=0;i<90&&occupied.has(day.toISOString().slice(0,10));i++)day.setUTCDate(day.getUTCDate()+1);
+      const defaultDate=day.toISOString().slice(0,10);
+      const choice=candidates.length>1?`<label>Financement<select name="lineId">${candidates.map(item=>`<option value="${esc(item.id)}"${item.id===selected.id?' selected':''}>${esc(bankTransferLabel(item))} · ${esc(item.qontoInvoiceNumber||'Facture Qonto')}</option>`).join('')}</select></label>`:'';
+      content.removeAttribute('role');
+      content.removeAttribute('aria-live');
+      content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(availability.traineeName||'—')}</p><p><strong>Facture Qonto :</strong> ${esc(availability.invoiceNumber||'—')}</p><p><strong>Mandat signé :</strong> ${esc(availability.mandateRum||'—')}</p><p><strong>Reste à payer :</strong> ${fmtMoney(availability.remainingCents/100)}</p><p><strong>Déjà programmé dans Qonto :</strong> ${fmtMoney(availability.scheduledCents/100)}</p><p><strong>Disponible pour une nouvelle échéance :</strong> ${fmtMoney(availability.availableCents/100)}</p></div><form data-add-form><div class="billing-modal-grid">${choice}<label>Montant de la nouvelle échéance (€)<input name="amount" type="number" inputmode="decimal" min="0.01" max="${(availability.availableCents/100).toFixed(2)}" step="0.01" value="${(availability.availableCents/100).toFixed(2)}" required></label><label>Date de prélèvement<input name="date" type="date" min="${tomorrow()}" value="${defaultDate}" required></label></div><p class="hint">Cette action crée un prélèvement supplémentaire dans Qonto, après confirmation. Les échéances existantes ne seront pas modifiées.</p><p data-add-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-close>Annuler</button><button class="btn btn-primary" type="submit">Vérifier avant programmation</button></div></form>`;
+      const form=content.querySelector('[data-add-form]');
+      form.elements.lineId?.addEventListener('change',()=>{
+        selected=candidates.find(item=>item.id===form.elements.lineId.value)||selected;
+        loadAvailability();
+      });
+      form.onsubmit=async event=>{
+        event.preventDefault();
+        if(busy||!form.reportValidity())return;
+        const feedback=form.querySelector('[data-add-feedback]');
+        feedback.textContent='Vérification de la facture, du mandat et des prélèvements existants dans Qonto…';
+        setBusy(true);
+        try{
+          const response=await billingApi('/api/billing/direct-debit/additional/preview',{
+            lineId:selected.id,amount:form.elements.amount.value,date:form.elements.date.value,
+          });
+          renderConfirmation(response);
+        }catch(error){
+          feedback.className='qonto-error';
+          feedback.textContent=error.message||'Vérification impossible.';
+        }finally{setBusy(false);}
+      };
+      form.elements.amount.focus({preventScroll:true});
+    }
+    function renderConfirmation(preview){
+      const summary=preview.summary,row=preview.schedule[0];
+      overlay.querySelector('[data-add-step]').textContent='Étape 2 · Confirmer dans Qonto';
+      content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(summary.traineeName)}</p><p><strong>Facture :</strong> ${esc(summary.invoiceNumber)}</p><p><strong>Mandat signé :</strong> ${esc(summary.mandateRum)}</p><p><strong>Déjà programmé :</strong> ${fmtMoney(summary.scheduledCents/100)}</p><p><strong>Nouvelle échéance :</strong> ${fmtMoney(summary.totalCents/100)} le ${esc(formatIsoDateFr(row.date))}</p><p><strong>Montant restant non programmé après l’ajout :</strong> ${fmtMoney((summary.availableCents-summary.totalCents)/100)}</p></div><p class="hint">La confirmation déclenche la création d’un nouveau prélèvement SEPA dans Qonto et la notification du client.</p><p data-add-confirm-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-back>Modifier</button><button class="btn btn-primary" type="button" data-add-confirm>Confirmer et programmer dans Qonto</button></div>`;
+      content.querySelector('[data-add-back]').onclick=()=>{if(!busy)renderForm();};
+      content.querySelector('[data-add-confirm]').onclick=async()=>{
+        if(busy)return;
+        const feedback=content.querySelector('[data-add-confirm-feedback]');
+        feedback.textContent='Transmission à Qonto en cours…';
+        setBusy(true);
+        try{
+          const saved=await billingApi('/api/billing/direct-debit/additional/schedule',{selectionToken:preview.selectionToken});
+          bankChecked=0;
+          bankSnapshot=null;
+          let refreshFailed=false;
+          try{await load();if(scheduleSection?.open)await readBankSchedule(true);}catch(error){refreshFailed=true;}
+          setBusy(false);
+          close();
+          showQontoFeedback(`${saved.message||'Nouvelle échéance programmée chez Qonto.'}${refreshFailed?' Actualisez le dossier pour voir le nouveau suivi.':''}`);
+        }catch(error){
+          feedback.className='qonto-error';
+          feedback.textContent=`${error.message||'Programmation impossible.'}${error.details?.requiresVerification?' Vérifiez impérativement cette échéance dans Qonto avant toute autre tentative.':''}`;
+        }finally{setBusy(false);}
+      };
+      content.querySelector('[data-add-confirm]').focus();
+    }
+    async function loadAvailability(){
+      if(busy)return;
+      setBusy(true);
+      content.setAttribute('role','status');
+      content.setAttribute('aria-live','polite');
+      content.textContent='Vérification du solde Qonto et des échéances déjà programmées…';
+      try{
+        const response=await fetch(`/api/billing/direct-debit/additional/availability?lineId=${encodeURIComponent(selected.id)}`,{headers:{Accept:'application/json'},cache:'no-store'});
+        const result=await parseJsonResponse(response,'Vérification Qonto indisponible.');
+        if(!response.ok||!result.ok)throw new Error(result.error||'Vérification Qonto indisponible.');
+        availability=result;
+        renderForm();
+      }catch(error){
+        content.innerHTML=`<div class="billing-modal-error" role="alert">${esc(error.message||'Programmation indisponible.')}</div><p>Vérifiez les opérations Qonto existantes avant de créer une nouvelle échéance.</p><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-add-close>Fermer</button></div>`;
+      }finally{setBusy(false);}
+    }
+    await loadAvailability();
+  }
   scheduleQontoDebitBtn?.addEventListener('click',openFirstQontoDebitModal);
+  addQontoDebitBtn?.addEventListener('click',openAdditionalQontoDebitModal);
   document.getElementById('btnAttachQontoInvoice')?.addEventListener('click',async()=>{
     if(readOnly || document.getElementById('qontoInvoiceAttachmentModal'))return;
     const trigger=document.getElementById('btnAttachQontoInvoice');

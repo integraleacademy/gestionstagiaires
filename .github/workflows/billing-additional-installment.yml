@@ -1,0 +1,38 @@
+name: Vérification échéances SEPA supplémentaires
+
+on:
+  pull_request:
+    paths:
+      - "app.py"
+      - "static/js/trainee-sheet.js"
+      - "templates/admin_trainee.html"
+      - "billing_debit_scheduling.py"
+      - "tests/test_billing_additional_direct_debit.py"
+      - "tests/test_billing_direct_debit_scheduling.py"
+      - ".github/workflows/billing-additional-installment.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  billing-sepa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Installer les dépendances
+        run: python -m pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Vérifier la syntaxe Python et JavaScript
+        run: |
+          python -m compileall -q app.py billing_debit_scheduling.py tests/test_billing_additional_direct_debit.py
+          node --check static/js/trainee-sheet.js
+      - name: Tester la création Qonto et la prévention des doublons
+        env:
+          PERSIST_DIR: ${{ runner.temp }}/sepa-ci
+        run: |
+          python -m pytest -q tests/test_billing_direct_debit_scheduling.py tests/test_billing_direct_debit_scheduling_race.py tests/test_billing_additional_direct_debit.py tests/test_trainee_bank_schedule.py
