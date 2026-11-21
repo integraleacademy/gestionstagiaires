@@ -129,7 +129,13 @@ def test_rejects_excess_amount_duplicate_date_and_repeated_coverage(additional):
     assert checked.status_code == 200, checked.json
     assert confirm(additional, checked.json).status_code == 200
     filled = availability(additional)
-    assert filled.status_code == 409
+    assert filled.status_code == 200, filled.json
+    assert filled.json["ok"] is True
+    assert filled.json["covered"] is True
+    assert filled.json["canSchedule"] is False
+    assert filled.json["scheduledCents"] == 95000
+    assert filled.json["availableCents"] == 0
+    assert len(filled.json["commitments"]) == 2
     assert additional.create.call_count == before + 1
 
 
@@ -253,3 +259,65 @@ def test_manually_reviewed_schedule_edit_invalidates_prior_confirmation(addition
     assert result.status_code == 409, result.json
     assert result.json["ok"] is False
     assert additional.create.call_count == 1
+
+
+
+def test_recurring_qonto_debit_is_not_just_the_next_month_in_the_table(additional):
+    """One Qonto subscription may have two 475 € occurrences remaining.
+
+    The table shows one upcoming date, but the financial cover totals 950 €,
+    not 475 €. Never create a third debit for the same invoice.
+    """
+    sub = additional.subscriptions[0]
+    sub["schedule_type"] = "monthly"
+    sub["schedule_total_collection_count"] = 2
+    sub["schedule_next_collection_date"] = sub["initial_collection_date"]
+    sub["schedule_end_date"] = additional.schedule[1]["date"]
+    old_calls = additional.create.call_count
+    overview = additional.client.get(
+        f"/api/billing/trainee/T-SCHEDULING/session/S-SCHEDULING/bank-schedule"
+    )
+    assert overview.status_code == 200, overview.json
+    assert len(overview.json["upcoming"]) == 1
+    assert overview.json["upcoming"][0]["amount_cents"] == 47500
+    assert overview.json["upcoming"][0]["remaining_count"] == 2
+    assert overview.json["upcoming"][0]["remaining_cents"] == 95000
+
+    availability_result = availability(additional)
+    assert availability_result.status_code == 200, availability_result.json
+    assert availability_result.json["ok"]
+    assert availability_result.json["covered"] is True
+    assert availability_result.json["canSchedule"] is False
+    assert availability_result.json["remainingCents"] == 95000
+    assert availability_result.json["scheduledCents"] == 95000
+    assert availability_result.json["availableCents"] == 0
+    commitments = availability_result.json["commitments"]
+    assert len(commitments) == 1
+    assert commitments[0]["frequency"] == "monthly"
+    assert commitments[0]["remainingCount"] == 2
+    assert commitments[0]["amountCents"] == 47500
+    assert commitments[0]["remainingCents"] == 95000
+    assert availability_result.headers["Cache-Control"] == "private, no-store"
+
+    # Even if a user calls the preview endpoint directly (bypassing the UI),
+    # server-side bank checks refuse a third subscription.
+    refused = preview(additional)
+    assert refused.status_code == 409
+    assert "entièrement couvert" in refused.json["error"]
+    assert additional.create.call_count == old_calls
+
+
+def test_full_coverage_overview_does_not_mutate_local_financing(additional):
+    before = stored_line(additional)
+    extra = additional.record_subscription({
+        **copy.deepcopy(additional.subscriptions[0]),
+        "reference": f"{additional.line_id} - complément externe - échéance 1/1",
+        "initial_collection_date": additional.schedule[1]["date"],
+        "amount": {"value": "475.00", "currency": "EUR"},
+    })
+    assert extra["direct_debit_subscription"]["id"] != additional.subscriptions[0]["id"]
+    outcome = availability(additional)
+    assert outcome.status_code == 200, outcome.json
+    assert outcome.json["covered"] is True
+    assert len(outcome.json["commitments"]) == 2
+    assert stored_line(additional) == before
