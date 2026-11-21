@@ -37,6 +37,10 @@ RUN if [ "$RENDER_SERVICE_ID" = "srv-d5oss66id0rc73avvne0" ]; then \
 
 COPY . .
 
+# Static, same-origin logo + Cassandre portrait for the CPF acknowledgement
+# preview AND the real transactional email. No external image hosting needed.
+RUN python scripts/build_edof_cpf_assets.py
+
 # Reject invalid Python sources before Render tries to start this image.
 RUN python -m compileall -q app.py crm_app.py
 
