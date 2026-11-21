@@ -4,6 +4,7 @@ Aucun envoi n'est fait par la lecture de la page : seul le planificateur élu
 peut émettre les e-mails automatiques. La base SQLite persiste sur le disque EDOF.
 """
 from contextlib import closing
+import os
 import re
 import time
 from uuid import NAMESPACE_URL, uuid5
@@ -205,7 +206,7 @@ def recipient_for(store, private, owner, row):
         if directory.normalized(last or "") != directory.normalized(row.get("last_name") or ""):
             continue
         proof = row.get("email_proof")
-        if proof and proof != directory.email_proof(__import__("os").environ.get("EDOF_CONNECTOR_KEY"),folder,email):
+        if proof and proof != directory.email_proof(os.environ.get("EDOF_CONNECTOR_KEY"),folder,email):
             continue
         return email
     return ""
@@ -223,6 +224,7 @@ def message_for(row, email):
         email_subtitle="Parlons de votre projet.",
         email_preheader="Votre demande est bien enregistrée. Choisissez un créneau pour en parler.",
         email_signature="cassandre",
+        email_logo="https://assistance-alw9.onrender.com/static/logo.png",
     )
     plain = "\n".join([
         "Bonjour " + first + "," if first else "Bonjour,",
