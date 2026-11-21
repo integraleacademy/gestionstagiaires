@@ -1800,6 +1800,7 @@
           {% if not is_read_only and not financing_locked %}
             {% if not is_partner_space %}
             <button class="btn btn-primary" type="button" id="btnScheduleQontoDebit" hidden style="display:none;">Programmer un prélèvement</button>
+            <button class="btn btn-primary" type="button" id="btnAddQontoDebit" hidden style="display:none;">Programmer une nouvelle échéance</button>
             <button class="btn btn-outline" type="button" id="btnAttachQontoInvoice">Rattacher une facture Qonto</button>
             {% endif %}
             <button class="btn btn-outline" type="button" id="btnAssignBankTransfer">Affecter un virement</button>
@@ -2723,7 +2724,7 @@
 </script>
 <script src="{{ url_for('static', filename='js/convocation-jobs.js', v='20261117-1') }}"></script>
 <script src="{{ url_for('static', filename='js/mandate-amount.js', v='20261120') }}"></script>
-<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261120-mandat') }}"></script>
+<script src="{{ url_for('static', filename='js/trainee-sheet.js', v='20261121-echeance') }}"></script>
 {% if is_vtc %}<script src="{{ url_for('static', filename='js/vtc-individual-offers.js', v='20261120-2') }}"></script>{% endif %}
   
 
