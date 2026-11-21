@@ -788,3 +788,30 @@ def test_local_notes_survive_sync_and_review_only_hides_the_current_ft_refusal(s
     assert site.client.post(url, data=payload).status_code == 403
     viewer = page("all", "all").select_one(selector)
     assert not viewer.select_one("textarea") and payload["comment"] in viewer.get_text()
+
+
+def test_crm_rdv_read_only_route_is_scoped_to_visible_edof_snapshot(site, monkeypatch):
+    requested = []
+    def fake_lookup(ids):
+        requested.append(ids)
+        return {folder: {"status": "none"} for folder in ids}
+    monkeypatch.setattr(dashboard.crm_rdv, "lookup", fake_lookup)
+    response = site.client.get("/admin/edof-test/crm-rdv?folder=100002")
+    assert response.status_code == 200
+    assert response.json["appointments"] == {"100002": {"status": "none"}}
+    assert response.headers["Cache-Control"] == "private, no-store"
+    assert requested == [["100002"]]
+    assert site.client.get("/admin/edof-test/crm-rdv?folder=999999").status_code == 404
+    assert site.client.get("/admin/edof-test/crm-rdv?folder=abc").status_code == 400
+    assert site.client.get("/admin/edof-test/crm-rdv?folder=100002&folder=100002").status_code == 400
+    assert requested == [["100002"]]
+
+
+def test_crm_rdv_failure_is_not_presented_as_no_appointment(site, monkeypatch):
+    def unavailable(_):
+        raise dashboard.crm_rdv.CRMAppointmentsUnavailable("connexion refusée")
+    monkeypatch.setattr(dashboard.crm_rdv, "lookup", unavailable)
+    response = site.client.get("/admin/edof-test/crm-rdv?folder=100002")
+    assert response.status_code == 503
+    assert "momentanément indisponible" in response.json["message"]
+    assert "connexion refusée" not in response.text
