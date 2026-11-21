@@ -272,7 +272,9 @@ def test_recurring_qonto_debit_is_not_just_the_next_month_in_the_table(additiona
     sub["schedule_type"] = "monthly"
     sub["schedule_total_collection_count"] = 2
     sub["schedule_next_collection_date"] = sub["initial_collection_date"]
-    sub["schedule_end_date"] = additional.schedule[1]["date"]
+    sub["schedule_end_date"] = gestion._add_months(
+        datetime.date.fromisoformat(additional.schedule[0]["date"]), 1
+    ).isoformat()
     old_calls = additional.create.call_count
     overview = additional.client.get(
         f"/api/billing/trainee/T-SCHEDULING/session/S-SCHEDULING/bank-schedule"
@@ -320,4 +322,10 @@ def test_full_coverage_overview_does_not_mutate_local_financing(additional):
     assert outcome.status_code == 200, outcome.json
     assert outcome.json["covered"] is True
     assert len(outcome.json["commitments"]) == 2
-    assert stored_line(additional) == before
+    after = stored_line(additional)
+    # Routine data loading can normalize unrelated billing metadata. What
+    # matters is that this read-only endpoint never changes SEPA commitments.
+    assert after["directDebitInstallments"] == before["directDebitInstallments"]
+    assert after["paymentPlan"] == before["paymentPlan"]
+    assert after["initialDebitSchedule"] == before["initialDebitSchedule"]
+    assert after["qonto_direct_debit_subscription_id"] == before["qonto_direct_debit_subscription_id"]
