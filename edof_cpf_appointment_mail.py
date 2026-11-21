@@ -289,9 +289,7 @@ def _claim(store, owner, folder, email, *, automatic, now):
             raise ValueError("Un envoi est déjà en cours pour ce dossier.")
         if automatic and entry["status"] != "queued":
             return False
-        if not automatic and entry["status"] == "skipped":
-            raise ValueError("L'envoi automatique a été annulé après un changement de statut.")
-        if entry["status"] not in ({"queued"} if automatic else {"queued","failed"}):
+        if entry["status"] not in ({"queued"} if automatic else {"queued","failed","skipped"}):
             return False
         db.execute(
             """UPDATE cpf_mail_delivery SET status='sending',claimed_at=?,
