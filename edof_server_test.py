@@ -918,6 +918,13 @@ def register_edof_server_test(legacy):
                             store.process_catchups(active)
                             if active["pending"]:
                                 continue
+                            if daily and on_production_service() and store.connector_key:
+                                try:
+                                    from edof_cpf_appointment_mail import process_due
+                                    with legacy.app.app_context():
+                                        process_due(store, legacy, active)
+                                except Exception:
+                                    legacy.app.logger.exception("EDOF CPF : échec du traitement des e-mails différés")
                             if daily and now.timestamp() >= next_association_attempt:
                                 next_association_attempt = now.timestamp() + 300
                                 try:
