@@ -683,7 +683,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         mail_status = cpf_mail.statuses(store.directory, [folder]).get(folder) or {}
         recipient = cpf_mail.recipient_for(store, vault(), owner, row)
         message = cpf_mail.message_for(row, recipient)
-        blocked = mail_status.get("status") in {"sent", "sending", "unknown", "skipped"}
+        blocked = mail_status.get("status") in {"sent", "sending", "unknown"}
         provider = selection.state()
         allowed = (provider["provider"] == "integrale" and not provider.get("pending")
                    and session.get("admin_role") != "viewer" and bool(recipient) and not blocked)
