@@ -6,6 +6,7 @@
   {% if detail and detail.proposal_job and detail.proposal_job.status in ['queued','saving','validating','checking'] %}<noscript><meta http-equiv="refresh" content="10"></noscript>{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/integrale-edof.css', v='20261117-suivi') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/edof-cpf-mail.css', v='20261121') }}">
 {% endblock %}
 {% block content %}
 {% macro date_fr(value) %}{{ value[8:10] ~ '/' ~ value[5:7] ~ '/' ~ value[:4] if value else '—' }}{% endmacro %}
@@ -234,6 +235,20 @@
           {% if previewing %}<small>{{ 'Correspondance fiable' if matches[r.folder_id].status == 'exact_match' else 'À vérifier' }}</small>{% if matches[r.folder_id].status == 'exact_match' %}<small>{{ matches[r.folder_id].session }} · {{ matches[r.folder_id].trainee }}</small>{% endif %}{% endif %}
         </div></td>
         <td data-label="Actions"><div class="edof-row-actions">{% if batch_entries and r.entry_choice %}<label class="edof-entry-choice"><input form="edof-effective-entries" type="checkbox" name="entry" value="{{ r.entry_choice }}"> Entrée le {{ date_fr(r.session_start_date) }}</label>{% endif %}<a class="btn btn-outline" href="{{ href }}">Ouvrir le dossier</a>
+          {% if r.kind == 'request' %}
+            {% if session.get('admin_role') != 'viewer' %}
+              <button type="button" class="btn btn-blue edof-cpf-preview-trigger"
+                data-edof-cpf-mail
+                data-preview-url="{{ url_for('integrale_edof.preview_cpf_mail', folder=r.folder_id) }}"
+                data-send-url="{{ url_for('integrale_edof.send_cpf_mail', folder=r.folder_id) }}"
+                data-csrf="{{ csrf }}">Prévisualiser l’e-mail CPF</button>
+            {% endif %}
+            {% if r.cpf_mail %}
+              <small class="edof-cpf-status" data-cpf-status="{{ r.cpf_mail.status }}">{{ r.cpf_mail.label }}</small>
+            {% else %}
+              <small class="edof-cpf-status">Aucun envoi enregistré</small>
+            {% endif %}
+          {% endif %>
           {% if r.kind in ['invoiced', 'paid'] or (invoice_records.get(r.folder_id) and invoice_records[r.folder_id].qonto_id) %}<a class="btn btn-outline" href="{{ url_for('integrale_edof.view_invoice', folder=r.folder_id) }}" target="_blank" rel="noopener">Voir la facture</a>{% endif %}
           {% if (tab == 'to_register' or r.registration_ignored) and session.get('admin_role') != 'viewer' %}
           <form method="post" action="{{ url_for('integrale_edof.registration_preference',folder=r.folder_id) }}" class="edof-association-preference" data-association-preference>
@@ -353,9 +368,30 @@
 {% endif %}
 </div>
 {% include "_edof_association_modal.html" %}
+<dialog id="edof-cpf-mail-dialog" class="edof-cpf-mail-dialog" aria-labelledby="edof-cpf-mail-title">
+  <div class="edof-cpf-dialog-inner">
+    <header class="edof-cpf-dialog-header">
+      <div><small>INTÉGRALE ACADEMY · MESSAGERIE CPF</small><h2 id="edof-cpf-mail-title">Prévisualiser le courriel</h2><p>Vérifiez le destinataire et le contenu avant l’envoi.</p></div>
+      <button type="button" class="edof-cpf-dialog-close" data-cpf-close aria-label="Fermer la fenêtre">×</button>
+    </header>
+    <div class="edof-cpf-dialog-meta">
+      <p><span>À</span> <strong data-cpf-recipient>Vérification…</strong></p>
+      <p><span>Objet</span> <strong data-cpf-subject></strong></p>
+      <p class="edof-cpf-dialog-notice" data-cpf-info role="status"></p>
+    </div>
+    <div class="edof-cpf-mail-frame">
+      <iframe data-cpf-preview-frame title="Aperçu du mail que recevra le candidat" sandbox="" referrerpolicy="no-referrer"></iframe>
+    </div>
+    <footer class="edof-cpf-dialog-footer">
+      <button type="button" class="btn btn-outline" data-cpf-close>Fermer</button>
+      <button type="button" class="btn btn-blue" data-cpf-send disabled>Envoyer ce courriel</button>
+    </footer>
+  </div>
+</dialog>
 {% endblock %}
 {% block scripts %}
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/edof-annotations.js') }}" defer></script>
+  <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/edof-cpf-mail.js',v='20261121') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/edof-association-preferences.js') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-loading.js') }}" defer></script>
   <script nonce="{{ nonce }}" src="{{ url_for('static',filename='js/wedof-manual-links.js',v='20261106-association-feedback') }}" defer></script>
