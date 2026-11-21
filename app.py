@@ -50838,7 +50838,7 @@ def _additional_debit_bank_cover(line, remote):
     upcoming, history, _ = _trainee_bank_schedule([line])
     active = {'active', 'scheduled', 'pending', 'processing', 'in_progress', 'on_hold'}
     reserved = 0
-    bank_rows, dates = [], set()
+    bank_rows, dates, commitments = [], set(), []
     for row in upcoming:
         remaining = row.get('remaining_cents')
         if str(row.get('status') or '').lower() not in active or type(remaining) is not int or remaining <= 0:
@@ -50848,6 +50848,19 @@ def _additional_debit_bank_cover(line, remote):
             item.get('date') for item in row.get('open_collections') or [])] if value)
         bank_rows.append((str(row.get('id') or ''), str(row.get('status') or ''),
                           remaining, str(row.get('date') or '')))
+        # A recurring Qonto subscription can cover multiple future debits even
+        # while its calendar shows only the next date and a single debit amount.
+        commitments.append({
+            'subscriptionId': str(row.get('id') or ''),
+            'date': str(row.get('date') or '')[:10],
+            'startDate': str(row.get('start_date') or '')[:10],
+            'endDate': str(row.get('end_date') or '')[:10],
+            'frequency': str(row.get('frequency') or ''),
+            'status': str(row.get('status') or ''),
+            'amountCents': row.get('amount_cents') if type(row.get('amount_cents')) is int else None,
+            'remainingCents': remaining,
+            'remainingCount': row.get('remaining_count') if type(row.get('remaining_count')) is int else None,
+        })
     if reserved > remote['remaining_cents']:
         raise ValueError('Les prélèvements Qonto en cours dépassent le solde de la facture. Vérifiez le dossier.')
     paid_at_bank = sum(int(row.get('amount_cents') or 0) for row in history
@@ -50875,10 +50888,10 @@ def _additional_debit_bank_cover(line, remote):
          for row in history if str(row.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES)},
         sort_keys=True).encode('utf-8')).hexdigest()
     return {'availableCents': remote['remaining_cents'] - reserved, 'scheduledCents': reserved,
-            'bankProof': proof, 'occupiedDates': sorted(dates)}
+            'bankProof': proof, 'occupiedDates': sorted(dates), 'commitments': commitments}
 
 
-def _additional_debit_preflight(data, line, operation_id=None):
+def _additional_debit_preflight(data, line, operation_id=None, *, allow_covered=False):
     _additional_debit_check(line, operation_id)
     if not _qonto_is_configured():
         raise ValueError('Qonto n’est pas connecté.')
@@ -50889,7 +50902,7 @@ def _additional_debit_preflight(data, line, operation_id=None):
         raise ValueError(
             'Le suivi manuel existe, mais aucun prélèvement actif correspondant '
             'n’est confirmé dans Qonto. Vérifiez le rattachement avant de programmer.')
-    if cover['availableCents'] <= 0:
+    if cover['availableCents'] <= 0 and not allow_covered:
         raise ValueError('Le solde de cette facture est déjà entièrement couvert par les prélèvements Qonto.')
     return remote, cover
 
@@ -50903,16 +50916,24 @@ def api_billing_additional_debit_availability():
     data = load_data()
     line = _find_billing_line(data, str(request.args.get('lineId') or ''))
     try:
-        remote, cover = _additional_debit_preflight(data, line)
+        # Availability is read-only. A fully covered invoice is an informative
+        # result, not an exceptional failure; bank POSTs remain blocked in the
+        # preview and schedule endpoints.
+        remote, cover = _additional_debit_preflight(data, line, allow_covered=True)
     except ValueError as exc:
         return jsonify(ok=False, error=str(exc)), 409
     except Exception as exc:
         return jsonify(ok=False, error=format_qonto_error_for_front(exc)), 502
-    return jsonify(ok=True, remainingCents=remote['remaining_cents'],
+    result = jsonify(ok=True, canSchedule=cover['availableCents'] > 0,
+                   covered=cover['availableCents'] <= 0,
+                   remainingCents=remote['remaining_cents'],
                    scheduledCents=cover['scheduledCents'], availableCents=cover['availableCents'],
-                   occupiedDates=cover['occupiedDates'], invoiceNumber=line['qontoInvoiceNumber'],
+                   commitments=cover['commitments'], occupiedDates=cover['occupiedDates'],
+                   checkedAt=_now_iso(), invoiceNumber=line['qontoInvoiceNumber'],
                    traineeName=' '.join(str(line.get(k) or '') for k in ('traineeFirstName', 'traineeLastName')).strip(),
                    mandateRum=remote['mandate_rum'])
+    result.headers['Cache-Control'] = 'private, no-store'
+    return result
 
 
 @app.post('/api/billing/direct-debit/additional/preview')
