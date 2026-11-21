@@ -1415,6 +1415,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             abort(400)
         record_work(selection, folder, session.get("admin_username") or owner, **(
             {"handled": 0, "archived": 0} if change == "reopen" else {change: 1}))
+        if change in {"handled", "archived"}:
+            cpf_mail.cancel_local(store.directory, folder)
         flash("Suivi local de la demande mis à jour.", "success")
         return back("requests")
 
