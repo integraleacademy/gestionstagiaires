@@ -74,6 +74,23 @@ def test_disappearing_from_full_directory_cancels_delivery(setup):
     assert mail.statuses(directory, ["333333"])["333333"]["status"] == "skipped"
 
 
+def test_operator_can_send_once_after_request_reopens(setup):
+    directory, db = setup
+    observe(db, "owner", 1000, complete=True)
+    observe(db, "owner", 1001, row(), complete=False)
+    observe(db, "owner", 1002, row(state="accepted"), complete=False)
+    assert mail.statuses(directory, ["123456"])["123456"]["status"] == "skipped"
+    # Un nouvel état À traiter doit permettre une correction manuelle,
+    # sans rouvrir l'envoi automatique déjà annulé.
+    observe(db, "owner", 1003, row(), complete=False)
+    store = SimpleNamespace(directory=directory)
+    assert mail._claim(store, "owner", "123456", "cassie@example.test", automatic=False, now=1004)
+    assert mail._finish(store, "123456", {"ok": True}, 1005) == "sent"
+    with pytest.raises(ValueError):
+        mail._claim(store, "owner", "123456", "cassie@example.test",
+                    automatic=False, now=1006)
+
+
 def test_send_requires_fresh_edof_evidence_after_due(setup, monkeypatch):
     directory, db = setup
     observe(db, "owner", 1000, complete=True)
