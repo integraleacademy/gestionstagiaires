@@ -44,6 +44,16 @@ def test_cpf_email_image_sources_are_first_party_and_not_broken_external_urls():
     assert "Cassandre MENARD" in html
 
 
+def test_generated_images_are_served_publicly_as_png_without_login():
+    app = Flask(__name__, static_folder=str(ROOT / "static"))
+    client = app.test_client()
+    for name in ("cpf-academy-wordmark.png", "cpf-cassandre-avatar.png"):
+        res = client.get("/static/images/email/" + name)
+        assert res.status_code == 200
+        assert res.mimetype == "image/png"
+        assert len(res.data) > 2000
+
+
 def test_preview_is_sandboxed_without_scripts_but_can_read_same_origin_images():
     template = (ROOT / "templates" / "integrale_edof.html").read_text(encoding="utf-8")
     assert 'sandbox="allow-same-origin"' in template
