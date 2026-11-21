@@ -87,7 +87,7 @@ def tables(db):
         folder TEXT PRIMARY KEY, owner TEXT NOT NULL, first_seen REAL NOT NULL,
         due_at REAL NOT NULL, status TEXT NOT NULL, last_check REAL NOT NULL DEFAULT 0,
         claimed_at REAL NOT NULL DEFAULT 0, finished_at REAL NOT NULL DEFAULT 0,
-        recipient TEXT NOT NULL DEFAULT '', message_id TEXT NOT NULL DEFAULT '',
+        recipient_proof TEXT NOT NULL DEFAULT '', message_id TEXT NOT NULL DEFAULT '',
         error TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT 'automatic')""")
     db.execute("CREATE INDEX IF NOT EXISTS cpf_mail_due ON cpf_mail_delivery(status,due_at)")
 
@@ -170,13 +170,13 @@ def statuses(folder_directory, folders):
             batch = folders[start:start+500]
             marks = ",".join("?" for _ in batch)
             for row in db.execute(
-                "SELECT folder,status,due_at,finished_at,error,recipient FROM cpf_mail_delivery WHERE folder IN (" + marks + ")",
+                "SELECT folder,status,due_at,finished_at,error,recipient_proof FROM cpf_mail_delivery WHERE folder IN (" + marks + ")",
                 batch,
             ):
                 result[row["folder"]] = {
                     "status": row["status"], "label": LABELS.get(row["status"],row["status"]),
                     "due_at": row["due_at"], "finished_at": row["finished_at"],
-                    "recipient": row["recipient"], "error": row["error"],
+                    "recipient_verified": bool(row["recipient_proof"]), "error": row["error"],
                 }
         return result
 
@@ -295,8 +295,9 @@ def _claim(store, owner, folder, email, *, automatic, now):
             return False
         db.execute(
             """UPDATE cpf_mail_delivery SET status='sending',claimed_at=?,
-            recipient=?,source=?,error='' WHERE folder=?""",
-            (now,email,"automatic" if automatic else "manual",folder),
+            recipient_proof=?,source=?,error='' WHERE folder=?""",
+            (now,directory.email_proof(os.environ.get("EDOF_CONNECTOR_KEY"),folder,email),
+             "automatic" if automatic else "manual",folder),
         )
     return True
 
@@ -306,6 +307,18 @@ def deliver(legacy, store, owner, row, email, *, automatic, now=None):
     # Générer complètement le message avant de réserver un envoi.
     with legacy.app.app_context():
         mail = message_for(row,email)
+    blocked = getattr(legacy, "_is_blocked_email_recipient", None)
+    if callable(blocked) and blocked(email):
+        if automatic:
+            with closing(ProviderStore(store.directory).connect()) as db, db:
+                db.execute(
+                    """UPDATE cpf_mail_delivery SET status='skipped',finished_at=?,
+                    error='Adresse exclue des envois.'
+                    WHERE folder=? AND status='queued'""",
+                    (now, row["folder_id"]),
+                )
+            return "skipped"
+        raise ValueError("Le destinataire est exclu des envois d'e-mails.")
     if not _claim(store,owner,row["folder_id"],email,automatic=automatic,now=now):
         return "skipped"
     try:
