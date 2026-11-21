@@ -99,3 +99,19 @@ def test_table_and_detail_show_phone_appointment_before_contact_actions():
     assert "data-edof-crm-rdv" in js
     assert "Europe/Paris" in js
     assert "Rapprochement à vérifier" in js
+
+
+def test_cpf_email_no_longer_mentions_pending_acceptance():
+    from flask import Flask
+    from edof_cpf_appointment_mail import message_for
+    root = Path(__file__).resolve().parents[1]
+    app = Flask(__name__, template_folder=str(root / "templates"))
+    with app.app_context():
+        mail = message_for(
+            {"folder_id": "123456", "first_name": "Louise", "last_name": "Exemple", "title": "APS"},
+            "test@example.invalid",
+        )
+    for body in (mail["html"], mail["text"]):
+        assert "son acceptation n'est pas encore confirmée" not in body
+        assert "son acceptation n’est pas encore confirmée" not in body
+        assert "rendez-vous téléphonique" in body
