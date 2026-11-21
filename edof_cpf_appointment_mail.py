@@ -237,7 +237,7 @@ def message_for(row, email):
         email_subtitle="Parlons de votre projet.",
         email_preheader="Votre demande est bien enregistrée. Choisissez un créneau pour en parler.",
         email_signature="cassandre",
-        email_logo="https://assistance-alw9.onrender.com/static/logo.png",
+        email_logo="https://gestionstagiaires-r5no.onrender.com/static/images/email/cpf-academy-wordmark.png",
     )
     plain = "\n".join([
         "Bonjour " + first + "," if first else "Bonjour,",
