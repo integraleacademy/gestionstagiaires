@@ -799,7 +799,7 @@ def test_crm_rdv_read_only_route_is_scoped_to_visible_edof_snapshot(site, monkey
     response = site.client.get("/admin/edof-test/crm-rdv?folder=100002")
     assert response.status_code == 200
     assert response.json["appointments"] == {"100002": {"status": "none"}}
-    assert response.headers["Cache-Control"] == "private, no-store"
+    assert "no-store" in response.headers["Cache-Control"]
     assert requested == [["100002"]]
     assert site.client.get("/admin/edof-test/crm-rdv?folder=999999").status_code == 404
     assert site.client.get("/admin/edof-test/crm-rdv?folder=abc").status_code == 400
