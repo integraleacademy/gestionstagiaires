@@ -50825,7 +50825,7 @@ def _additional_debit_bank_cover(line, remote):
         if str(row.get('status') or '').lower() not in active or type(remaining) is not int or remaining <= 0:
             raise ValueError('Un prélèvement Qonto est incertain. Actualisez le suivi bancaire avant de programmer.')
         reserved += remaining
-        dates.update(str(value)[:10] for value in [row.get('date'), *(
+        dates.update(str(value)[:10] for value in [row.get('date'), row.get('start_date'), *(
             item.get('date') for item in row.get('open_collections') or [])] if value)
         bank_rows.append((str(row.get('id') or ''), str(row.get('status') or ''),
                           remaining, str(row.get('date') or '')))
