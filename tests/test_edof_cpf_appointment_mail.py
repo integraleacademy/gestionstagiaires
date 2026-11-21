@@ -66,6 +66,15 @@ def test_cancelled_before_due_never_sends_and_is_not_requeued(setup):
     assert mail.statuses(directory, ["222222"])["222222"]["status"] == "skipped"
 
 
+def test_local_handled_flag_cancels_queued_mail(setup):
+    directory, db = setup
+    observe(db, "owner", 1000, complete=True)
+    observe(db, "owner", 1010, row(), complete=False)
+    assert mail.cancel_local(directory, "123456", now=1015) == 1
+    assert mail.statuses(directory, ["123456"])["123456"]["status"] == "skipped"
+    assert mail.cancel_local(directory, "123456", now=1020) == 0
+
+
 def test_disappearing_from_full_directory_cancels_delivery(setup):
     directory, db = setup
     observe(db, "owner", 1000, complete=True)
