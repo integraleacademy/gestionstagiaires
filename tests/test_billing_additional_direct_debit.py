@@ -161,3 +161,95 @@ def test_restricted_roles_cannot_program_an_additional_installment(additional, m
     assert preview(additional).status_code == 403
     assert additional.client.post(SCHEDULE, json={"selectionToken": "anything"}).status_code == 403
     assert additional.create.call_count == 1
+
+
+
+def _mark_financial_tracking_manually_reviewed(case, source="admin_reviewed_schedule"):
+    data = gestion.load_data()
+    line = gestion._find_billing_line(data, case.line_id)
+    line["financial_tracking_override"] = {
+        "enabled": True,
+        "source": source,
+        "updated_at": "2026-11-21T16:00:00Z",
+        "fingerprint": "manually-reviewed-schedule",
+    }
+    gestion._save_billing_line(data, line)
+    gestion.save_data(data)
+
+
+@pytest.mark.parametrize("source", [
+    "admin_reviewed_schedule",
+    "inline_schedule",
+    "qonto_attachment",
+])
+def test_manually_reviewed_tracking_can_explicitly_append_verified_qonto_debit(additional, source):
+    """Previously the availability call failed before consulting Qonto.
+
+    Keep manually-reviewed tracking enabled so the background job never
+    recreates any bank subscriptions from local installments.
+    """
+    _mark_financial_tracking_manually_reviewed(additional, source)
+    previous = stored_line(additional)["directDebitInstallments"][0]
+    original_sid = previous["qonto_direct_debit_subscription_id"]
+    assert additional.create.call_count == 1
+
+    bank_checked = availability(additional)
+    assert bank_checked.status_code == 200, bank_checked.json
+    assert bank_checked.json["availableCents"] == 47500
+    assert bank_checked.json["scheduledCents"] == 47500
+
+    selection = preview(additional)
+    assert selection.status_code == 200, selection.json
+    result = confirm(additional, selection.json)
+    assert result.status_code == 200, result.json
+    assert additional.create.call_count == 2
+
+    after = stored_line(additional)
+    assert after["financial_tracking_override"]["enabled"] is True
+    assert after["financial_tracking_override"]["source"] == source
+    assert len(after["directDebitInstallments"]) == 2
+    assert after["directDebitInstallments"][0]["qonto_direct_debit_subscription_id"] == original_sid
+    assert after["directDebitInstallments"][0]["date"] == previous["date"]
+    assert after["directDebitInstallments"][0]["amount"] == previous["amount"]
+    assert after["directDebitInstallments"][1]["qonto_direct_debit_subscription_id"] != original_sid
+
+    # A manually corrected schedule must not trigger an unrequested
+    # automatic bank POST when the periodic synchronization runs.
+    auto = gestion.ensure_qonto_sepa_installments_for_line(after)
+    assert auto["skipped"] is True
+    assert auto["manual_tracking"] is True
+    assert additional.create.call_count == 2
+
+
+def test_unknown_manual_override_origin_remains_blocked(additional):
+    _mark_financial_tracking_manually_reviewed(additional, "unrecognized_admin_override")
+    result = availability(additional)
+    assert result.status_code == 409, result.json
+    assert "rapproché" in result.json["error"]
+    assert additional.create.call_count == 1
+
+
+def test_manual_tracking_requires_existing_bank_confirmed_debit(additional):
+    _mark_financial_tracking_manually_reviewed(additional)
+    additional.subscriptions.clear()
+    result = availability(additional)
+    assert result.status_code == 409, result.json
+    assert "aucun prélèvement actif" in result.json["error"]
+    assert additional.create.call_count == 1
+
+
+def test_manually_reviewed_schedule_edit_invalidates_prior_confirmation(additional):
+    _mark_financial_tracking_manually_reviewed(additional)
+    selected = preview(additional)
+    assert selected.status_code == 200, selected.json
+
+    data = gestion.load_data()
+    line = gestion._find_billing_line(data, additional.line_id)
+    line["financial_tracking_override"]["updated_at"] = "2026-11-21T16:01:00Z"
+    gestion._save_billing_line(data, line)
+    gestion.save_data(data)
+
+    result = confirm(additional, selected.json)
+    assert result.status_code == 409, result.json
+    assert result.json["ok"] is False
+    assert additional.create.call_count == 1
