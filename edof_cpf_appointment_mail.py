@@ -181,6 +181,19 @@ def statuses(folder_directory, folders):
         return result
 
 
+def cancel_local(folder_directory, folder, *, now=None):
+    """Le traitement ou l'archivage local annule un message encore en attente."""
+    now = time.time() if now is None else now
+    with closing(ProviderStore(folder_directory).connect()) as db, db:
+        tables(db)
+        return db.execute(
+            """UPDATE cpf_mail_delivery SET status='skipped', finished_at=?,
+            error='Demande traitée ou archivée localement.'
+            WHERE folder=? AND status='queued'""",
+            (now, str(folder)),
+        ).rowcount
+
+
 def recipient_for(store, private, owner, row):
     """Courriel uniquement issu d'une fiche authentifiée correspondant au dossier."""
     folder = str(row["folder_id"])
@@ -410,7 +423,11 @@ def process_due(store, legacy, selection, *, now=None):
     for item in work:
         folder,owner,due = item["folder"],item["owner"],item["due_at"]
         private = Vault(store.directory,store.connector_key)
-        from integrale_edof_dashboard import category
+        from integrale_edof_dashboard import category, local_operations
+        flags = local_operations(ProviderStore(store.directory)).get(folder, {})
+        if flags.get("handled") or flags.get("archived"):
+            cancel_local(store.directory, folder, now=now)
+            continue
         state, row = _current_evidence(private,owner,folder,due=due,now=now,classify=category)
         if state == "stale":
             _request_check(store,owner,folder,now)
