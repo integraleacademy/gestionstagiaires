@@ -24,9 +24,9 @@ GROUP_TABS = {
     "all": {"all": "Tous les dossiers", "unlinked": "À associer", "association_ignored": "Dossiers masqués", "anomaly": "À vérifier"},
 }
 AUTOMATION_TABS = {
-    "today": "Prévu aujourd’hui", "overdue": "En retard", "attention": "À compléter / À vérifier",
-    "blocked": "Bloquées / En erreur", "running": "En cours",
-    "planned": "À venir",
+    "today": "Prévu aujourd’hui", "overdue": "En retard", "billable": "À facturer",
+    "attention": "À compléter / À vérifier", "blocked": "Bloquées / En erreur",
+    "running": "En cours", "planned": "À venir",
 }
 KIND_GROUP = {"request": "requests", "waiting": "requests", "ft": "requests", "ft_refused": "requests",
               "accepted": "training", "training": "training", "entry": "training", "out": "training",
@@ -45,7 +45,7 @@ def navigation(args):
         section = "state"
         group = KIND_GROUP.get(tab, "requests")
         tab = tab or "request"
-    elif section == "automations" and tab in KIND_GROUP:
+    elif section == "automations" and tab in KIND_GROUP and tab not in AUTOMATION_TABS:
         section, group = "state", KIND_GROUP[tab]
     elif section == "automations" and tab == "history":
         section = "consumption"

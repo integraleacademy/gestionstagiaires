@@ -6,6 +6,7 @@ from html import unescape
 import re
 
 import edof_directory
+import edof_invoicing
 import integrale_edof_dashboard as dashboard
 import integrale_edof_views as views
 from test_integrale_edof_dashboard import site
@@ -103,6 +104,65 @@ def test_automations_show_actions_and_legacy_billing_links_find_dossiers(site):
         section, group, _, tab = views.navigation(args)
         assert (section, group, tab) == expected
         assert site.client.get("/admin/edof-test", query_string=args).status_code == 200
+
+
+def test_billable_automation_matches_billing_and_shows_invoice_progress(site):
+    key = edof_directory.record_key(site.owner)
+    snap = site.vault.get(key)
+    base = {**snap["rows"]["100000"], "state": "serviceDoneValidated"}
+    cases = {
+        "710001": {},
+        "710002": {"state": "serviceDoneDeclared", "service_done_validated": True},
+        "710003": {"billing_state": "billed"},
+        "710004": {"payment_state": "issued"},
+        "710005": {"state": "serviceDoneDeclared"},
+    }
+    rows = {folder: {**base, **fields, "folder_id": folder} for folder, fields in cases.items()}
+    site.vault.put(key, {**snap, "rows": rows})
+    site.gate.switch("integrale", 0, "admin")
+    edof_invoicing.discover(site.store, site.owner, {"rows": {"710002": rows["710002"]}})
+    invoice, = edof_invoicing.records(site.store.directory, site.owner)
+    edof_invoicing.update(site.store.directory, invoice["token"], status="review", terms={"amount": "96.50"},
+                          invoice_number="TEST-42", qonto_id="qonto-test", message="Réception à vérifier.")
+
+    state = site.client.get("/admin/edof-test?section=state&group=billing&tab=billable").text
+    billing_link = re.search(r'href="([^"]+)">Voir les dossiers à facturer dans Automatisations', state)
+    page = site.client.get(unescape(billing_link[1]))
+    assert page.status_code == 200 and table_ids(page.text) == table_ids(state) == ["710002", "710001"]
+    assert '<strong>2</strong><span>À facturer</span>' in fragment(page.text, "nav", 'aria-label="Filtres des actions"')
+    assert "2 dossiers" in page.text and "En attente de prise en charge" in page.text
+    assert all(s in page.text for s in ("Facturation à vérifier", "Réception à vérifier.", "TEST-42", "96,50 €", "Voir la facture"))
+    assert "Confirmer et transmettre" not in page.text
+    # Opening this list never starts billing for the dossier without an invoice record.
+    assert [r["folder"] for r in edof_invoicing.records(site.store.directory, site.owner)] == ["710002"]
+
+    rows["710001"]["billing_state"] = "billed"
+    site.vault.put(key, {**snap, "rows": rows})
+    assert table_ids(site.client.get(unescape(billing_link[1])).text) == ["710002"]
+
+
+def test_billable_counter_search_and_return_from_a_dossier_preserve_scope(site):
+    key = edof_directory.record_key(site.owner)
+    snap = site.vault.get(key)
+    base = {**snap["rows"]["100000"], "state": "serviceDoneValidated", "title": "APS"}
+    rows = {str(720000+i): {**base, "folder_id": str(720000+i)} for i in range(28)}
+    rows["720026"]["title"] = "A3P"
+    rows["720027"]["session_end_date"] = "2026-02-13"
+    site.vault.put(key, {**snap, "rows": rows})
+    params = {"section": "automations", "q": "Exemple", "course": "APS", "period": "2026-02-02/2026-02-06"}
+    first = site.client.get("/admin/edof-test", query_string={**params, "tab": "overdue"}).text
+    counter = re.search(r'<a [^>]*href="([^"]+)"[^>]*>\s*<strong>26</strong><span>À facturer</span>', first)
+    first = site.client.get(unescape(counter[1])).text
+    assert len(table_ids(first)) == 25
+    next_page = re.search(r'href="([^"]+)">Suivant', first)
+    second = site.client.get(unescape(next_page[1])).text
+    assert table_ids(second) == ["720000"] and "Page 2 sur 2" in second
+    detail_link = re.search(r'href="([^"]+)">Ouvrir le dossier', second)
+    detail = site.client.get(unescape(detail_link[1])).text
+    back = re.search(r'class="edof-back" href="([^"]+)"', detail)
+    assert table_ids(site.client.get(unescape(back[1])).text) == ["720000"]
+    empty = site.client.get("/admin/edof-test", query_string={**params, "tab": "billable", "q": "aucun"}).text
+    assert not table_ids(empty) and "Aucun dossier à facturer" in empty
 
 
 def test_today_counter_lists_only_current_actions_due_on_the_paris_day(site, monkeypatch):

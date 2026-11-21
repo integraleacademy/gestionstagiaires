@@ -681,6 +681,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         section, group, tabs, tab = views.navigation(request.args)
         if section not in SECTIONS:
             abort(404)
+        billing_automation = section == "automations" and tab == "billable"
         snap = snapshot(owner)
         if snap:
             store.use_directory(owner)
@@ -698,7 +699,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         ignored_count = counts["association_ignored"]
         all_rows = rows
         folder = request.args.get("folder", "")
-        if rows and (section == "state" or folder):
+        if rows and (section == "state" or billing_automation or folder):
             with closing(selection.connect()) as db:
                 saved_dates = dates_for_view(db, owner, rows, snap.get("checked", 0), category)
             dossier_dates.annotate(rows, saved_dates, snap.get("checked", 0), category)
@@ -806,10 +807,15 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                                      if r["operation_bucket"] in {"overdue", "attention", "blocked"})
         if section == "automations" and not detail:
             catchup = store.catchup_status(owner, include_outcomes=True)
+            billable_rows = [r for r in rows if r["kind"] == "billable"]
             rows = views.operation_rows(rows, dispatches, now, selected["revision"], (catchup or {}).get("outcomes"))
             counts = Counter(r["operation_bucket"] for r in rows)
             counts["today"] = sum(r["scheduled_today"] for r in rows)
-            if tab == "today":
+            counts["billable"] = len(billable_rows)
+            if billing_automation:
+                rows = billable_rows
+                dossier_dates.newest_first(rows)
+            elif tab == "today":
                 rows = sorted((r for r in rows if r["scheduled_today"]), key=lambda r: (r["scheduled"], r["folder_id"]))
             elif tab == "due":
                 rows = [r for r in rows if "due" in r["tags"] and r["operation_bucket"] != "history"]
@@ -818,8 +824,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
                 rows = [r for r in rows if r["operation_bucket"] == tab]
                 views.sort_operations(rows)
             for row in rows:
-                if (row["kind"] == "accepted" and row["action"] == "entry_training"
-                        and row["operation_bucket"] == "overdue" and not row["dispatch_status"]
+                if (row.get("operation_bucket") == "overdue" and row["action"] == "entry_training"
+                        and row["kind"] == "accepted" and not row["dispatch_status"]
                         and row["evaluation"] == "ready" and row["catchup_outcome"] not in {"blocked", "review"}):
                     row["entry_choice"] = entry_choice(row)
         elif section == "state":
@@ -855,7 +861,7 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         return render_template("integrale_edof.html", proposal_fields=proposal_form, proposal_status=proposals.LABELS, title="Intégrale EDOF · Pilotage CPF",
             selection=selected, production=production, bridge_error=bridge_error, aligned=aligned, providers=PROVIDERS, sections=SECTIONS, section=section, tabs=tabs, tab=tab,
             to_register_count=to_register_count, unlinked_count=unlinked_count, ignored_count=ignored_count, has_snapshot=bool(snap), groups=views.GROUPS, group=group, group_counts=groups_count, course=course, courses=courses,
-            period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS,
+            period=period, periods=periods, operation_tabs=views.AUTOMATION_TABS, billing_automation=billing_automation,
             invoice_records={r["folder"]:r for r in invoicing.records(store.directory, owner)},
             dispatch_labels=declarations.LABELS, dispatch_reasons=MESSAGES, motifs=declarations.MOTIFS,
             inspection=check, dispatches=dispatches, csrf=csrf, flashes=get_flashed_messages(with_categories=True), previewing=previewing, matches=matches,
