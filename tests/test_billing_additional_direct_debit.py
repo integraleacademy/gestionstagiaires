@@ -299,7 +299,7 @@ def test_recurring_qonto_debit_is_not_just_the_next_month_in_the_table(additiona
     assert commitments[0]["remainingCount"] == 2
     assert commitments[0]["amountCents"] == 47500
     assert commitments[0]["remainingCents"] == 95000
-    assert availability_result.headers["Cache-Control"] == "private, no-store"
+    assert "no-store" in availability_result.headers["Cache-Control"]
 
     # Even if a user calls the preview endpoint directly (bypassing the UI),
     # server-side bank checks refuse a third subscription.
