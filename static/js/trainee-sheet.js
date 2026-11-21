@@ -1896,21 +1896,14 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       &&(Boolean(pendingQontoDebitScheduling(line))||(!line.paymentPlan?.qontoSchedulingOperation&&Math.round(lineRemaining(line)*100)>0
       &&!line.qonto_direct_debit_subscription_id&&!schedules.some(rows=>Array.isArray(rows)&&rows.length)));
   }
+  // The offer is based on the *visible* financing line. Qonto remains the
+  // authority on eligibility, signed mandates and already-reserved amounts.
+  // Do not hide an actionable unpaid gap because a local status is stale.
   function canScheduleAdditionalQontoDebit(line){
-    const mandateStatus=String(line.qonto_mandate_status||line.mandateStatus||'').toLowerCase();
-    const invoiceStatus=String(line.invoiceStatus||'').toLowerCase();
-    const extra=line.paymentPlan?.qontoAdditionalDebitOperation||{};
-    const rows=line.directDebitInstallments||line.sepa_payment_plan?.installments||[];
-    const hasBankDebit=Boolean(line.qonto_direct_debit_subscription_id)||
-      rows.some(item=>Boolean(item.qonto_direct_debit_subscription_id));
-    return !readOnly&&!isCpfQontoLine(line)&&['PERSONNEL','AUTRE'].includes(String(line.financingType||'').toUpperCase())&&
-      !line.registrationCancelled&&Boolean(line.qontoInvoiceId)&&Boolean(line.qontoInvoiceNumber)&&
-      !line.cashPaymentEnabled&&!line.manualPaymentInvoiceId&&!line.amountPaid&&!line.amount_paid&&
-      !line.financial_tracking_override?.enabled&&
-      ['finalized','sent','unpaid','partially_paid','overdue'].includes(invoiceStatus)&&
-      Boolean(line.qonto_direct_debit_mandate_id)&&['active','signed'].includes(mandateStatus)&&
-      !pendingQontoDebitScheduling(line)&&(!extra.id||extra.state==='completed')&&
-      hasBankDebit&&Math.round(lineRemaining(line)*100)>0;
+    return !readOnly&&!isCpfQontoLine(line)&&
+      ['PERSONNEL','AUTRE'].includes(String(line.financingType||line.typeFinanceur||'').toUpperCase())&&
+      !line.registrationCancelled&&
+      !['cancelled','canceled','deleted'].includes(String(line.invoiceStatus||'').toLowerCase());
   }
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l),amount=lineAmount(l),paid=linePaid(l),raw=String(e?.payment_status||'unpaid').toLowerCase();if(['canceled','cancelled','control'].includes(raw))return raw;if(amount>0&&paid>=amount)return 'paid';if(paid>0)return 'partially_paid';return raw;}
   // The payment plan is persisted while the mandate is awaiting signature so
@@ -2419,8 +2412,12 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     }
     const label=confirmed.some(row=>['processing','pending','on_hold'].includes(row.status))?'Programmé ou en cours chez Qonto':'Programmé chez Qonto';
     const program=confirmed.length || !upcoming.length?`<strong>${exact?'':'Au moins '}${fmtMoney(scheduled/100)}</strong>`:'Aucun montant confirmé';
+    // Show the action where the missing amount is actually displayed.
+    const addAction=tone==='is-due'&&gap>0&&!paidNeedsSync&&exact&&
+      confirmed.length===upcoming.length&&currentLines.some(canScheduleAdditionalQontoDebit)
+      ?'<button class="btn btn-primary" type="button" data-add-qonto-debit>+ Programmer une nouvelle échéance</button>':'';
     return `<section class="schedule-sepa">${header}<div class="schedule-sepa-body"><div><span class="schedule-sepa-label">${label}</span>${program}${firstDate}</div>
-      <p class="schedule-sepa-result ${tone}">${result}</p></div></section>`;
+      <div class="schedule-sepa-result ${tone}" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap"><span>${result}</span>${addAction}</div></div></section>`;
   }
 
   function reviewSelection(lines) {
@@ -2787,7 +2784,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     } else if (scheduleView==='past' && c.nombreRejetsTraites) {
       review=`<p class="schedule-review-done">${c.nombreRejetsTraites} rejet${c.nombreRejetsTraites>1?'s traités':' traité'}</p>`;
     }
-    const canAddDebit=scheduleView==='next'&&!readOnly&&currentLines.some(canScheduleAdditionalQontoDebit);
+    const canAddDebit=scheduleView==='next'&&!readOnly&&!!bankSnapshot&&!bankLoading&&!bankError&&c.resteAPayer>0&&currentLines.some(canScheduleAdditionalQontoDebit);
     const actions=bankView || canAddDebit || (canEdit && scheduleView==='next')?`<div class="schedule-actions">
       ${bankView?`<small role="status">${esc(source)}</small><button type="button" data-bank-refresh aria-disabled="${bankLoading}">Actualiser Qonto</button>`:''}
       ${canAddDebit?'<button type="button" class="btn btn-primary" data-add-qonto-debit>+ Programmer une nouvelle échéance</button>':''}
@@ -2872,7 +2869,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         container.querySelector('[data-close-editor]')?.focus();
       });
       container.querySelector('[data-bank-refresh]')?.addEventListener('click',()=>readBankSchedule(true));
-      container.querySelector('[data-add-qonto-debit]')?.addEventListener('click',openAdditionalQontoDebitModal);
+      container.querySelectorAll('[data-add-qonto-debit]').forEach(button=>button.addEventListener('click',openAdditionalQontoDebitModal));
       return;
     }
     const rows=items.map((it,i)=>{
@@ -2923,8 +2920,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function render(lines){
     if(addQontoDebitBtn){
       const candidates=lines.filter(canScheduleAdditionalQontoDebit);
-      addQontoDebitBtn.hidden=!candidates.length;
-      addQontoDebitBtn.style.display=candidates.length?'':'none';
+      const balance=computeFinance(lines);
+      const hasDebits=hasBankSchedule()&&(bankSnapshot?.upcoming?.length>0 || lines.some(line=>line.directDebitInstallments?.length));
+      const canOffer=hasDebits&&balance.resteAPayer>0;
+      addQontoDebitBtn.hidden=!(candidates.length&&canOffer);
+      addQontoDebitBtn.style.display=candidates.length&&canOffer?'':'none';
       addQontoDebitBtn.disabled=readOnly;
     }
     if(scheduleQontoDebitBtn){
