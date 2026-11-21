@@ -175,3 +175,33 @@ test('add-Qonto-installment action is visible for a 539.50 € gap despite stale
   ctx.bankError='Lecture Qonto indisponible';
   assert.doesNotMatch(ctx.scheduleReadView(finance(ctx),true),/data-add-qonto-debit/);
 });
+
+
+test('a monthly Qonto subscription with two pending collections covers all 1079 euros',()=>{
+  const ctx=ui();
+  ctx.scheduleView='next';
+  ctx.currentLines=[{
+    id:'PERSONAL',financingType:'PERSONNEL',invoiceStatus:'unpaid',
+    initialDebitSchedule:[
+      {date:'2026-11-11',amount:539.5},
+      {date:'2026-12-11',amount:539.5}
+    ]
+  }];
+  ctx.bankSnapshot={checked_at:'2026-11-21T18:38:00Z',history:[],upcoming:[{
+    id:'QONTO-RECURRENT',date:'2026-12-11',frequency:'monthly',
+    status:'scheduled',amount_cents:53950,remaining_count:2,remaining_cents:107900
+  }]};
+  const html=ctx.scheduleReadView(finance(ctx),true);
+  assert.match(html,/Programmé chez Qonto<\/span><strong>1079.00<\/strong>/);
+  assert.match(html,/Solde SEPA entièrement programmé/);
+  assert.match(html,/2 échéances restantes/);
+  assert.doesNotMatch(html,/à programmer|data-add-qonto-debit/);
+});
+
+test('read-only coverage modal never offers a confirmation when Qonto already covers the invoice',()=>{
+  assert.match(source,/function renderCovered\(\)/);
+  assert.match(source,/result\.covered\|\|result\.canSchedule===false/);
+  assert.match(source,/Aucun nouveau prélèvement à créer\./);
+  assert.match(source,/Actualiser et revérifier Qonto/);
+  assert.match(source,/bankChecked=0/);
+});
