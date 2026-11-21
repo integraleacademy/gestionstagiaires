@@ -1,0 +1,22 @@
+{% extends 'emails/_base.html' %}
+{% block email_content %}
+<p style="margin:0 0 22px;font-size:17px;color:#172033">Bonjour{% if first_name %} <strong>{{ first_name }}</strong>{% endif %},</p>
+
+<p>Nous avons bien reçu votre demande d’inscription en formation <strong>« {{ training_title }} »</strong> depuis votre <strong>Compte Personnel de Formation (CPF)</strong>.</p>
+
+<p>Afin que nous puissions traiter votre demande et vous accompagner dans votre projet de formation, nous vous invitons à prendre un <strong>rendez-vous téléphonique</strong> avec Cassandre, notre responsable commerciale.</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:28px 0">
+  <tr><td align="center" style="padding:27px 18px;background:#f1f5fc;border:1px solid #dae5f8;border-radius:16px">
+    <p style="margin:0 0 9px;font-size:12px;font-weight:700;letter-spacing:1px;color:#3269da;text-transform:uppercase">PROCHAINE ÉTAPE</p>
+    <p style="margin:0 0 19px;font-size:21px;line-height:1.4;color:#102c5c;font-weight:700">Échangeons sur votre projet</p>
+    <a class="academy-action" href="{{ booking_url }}" target="_blank" style="display:inline-block;padding:16px 25px;border-radius:10px;background:#1b4b9c;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;line-height:1.4">Prendre mon rendez-vous téléphonique</a>
+    <p style="margin:17px 0 0;font-size:13px;line-height:1.65;color:#516078">Choisissez le créneau qui vous convient. Nous vous appellerons au numéro indiqué lors de la réservation.</p>
+  </td></tr>
+</table>
+
+<p>Lors de cet échange, nous pourrons faire le point sur votre projet, vous expliquer les modalités de la formation et vous indiquer les prochaines étapes de votre inscription.</p>
+<p style="font-size:14px;color:#516078">Votre demande CPF est bien reçue, mais son acceptation n’est pas encore confirmée. Aucune démarche supplémentaire n’est nécessaire avant notre échange.</p>
+<p style="margin:20px 0 0">Au plaisir d’échanger avec vous,<br><strong>L’équipe Intégrale Academy</strong></p>
+{% endblock %}
+{% block email_footer %}{% include 'emails/_edof_cpf_footer.html' %}{% endblock %}

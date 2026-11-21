@@ -26,6 +26,7 @@ import edof_invoicing as invoicing
 import edof_proposal as proposal_form
 import edof_proposal_jobs as proposals
 import edof_enrolment_watch as enrolment_watch
+import edof_cpf_appointment_mail as cpf_mail
 from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_service, on_production_service, provider_operation
 from cpf_entry_pilot import active_holds, blocks_pilot
 from cpf_provider_bridge import coordinated_switch, production_request
@@ -672,6 +673,46 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             state["catchup"] = store.catchup_status(owner)
         return jsonify(state)
 
+    @bp.get("/dossiers/<folder>/cpf-mail/preview")
+    @admin_required
+    def preview_cpf_mail(folder):
+        owner = results_owner()
+        row = folder_record(owner, folder)
+        if category(row) != "request":
+            return jsonify(message="Ce dossier n'est plus à traiter sur EDOF : l'e-mail n'est pas disponible."), 409
+        mail_status = cpf_mail.statuses(store.directory, [folder]).get(folder) or {}
+        recipient = cpf_mail.recipient_for(store, vault(), owner, row)
+        message = cpf_mail.message_for(row, recipient)
+        blocked = mail_status.get("status") in {"sent", "sending", "unknown"}
+        provider = selection.state()
+        allowed = (provider["provider"] == "integrale" and not provider.get("pending")
+                   and session.get("admin_role") != "viewer" and bool(recipient) and not blocked)
+        response = jsonify(
+            ok=True, subject=message["subject"], recipient=recipient,
+            html=message["html"], booking_url=message["booking_url"],
+            status=mail_status, can_send=allowed,
+            explanation=(
+                "Cet e-mail a déjà été expédié ou son envoi doit être vérifié."
+                if blocked else
+                "L'adresse du titulaire n'a pas été vérifiée dans EDOF. Actualisez sa fiche avant d'envoyer."
+                if not recipient else
+                "Le système Intégrale EDOF n'est pas actif." if provider["provider"] != "integrale"
+                else ""
+            ),
+        )
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @bp.post("/dossiers/<folder>/cpf-mail/send")
+    @native_action
+    def send_cpf_mail(owner, folder):
+        row = folder_record(owner, folder)
+        if category(row) != "request":
+            raise ValueError("Le dossier a quitté le statut À traiter : aucun e-mail envoyé.")
+        # Le contrôleur de diffusion conserve une trace unique par dossier.
+        message = cpf_mail.manual_send(legacy, store, owner, row, vault())
+        return jsonify(ok=True, message=message)
+
     @bp.get("")
     @admin_required
     def index():
@@ -694,6 +735,9 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             data["wedof_automation_blocks"] = [*data.get("wedof_automation_blocks", []),
                 *({"external_id":f,"action":"both","active":True,"reason_code":"administrative_issue"} for f in held)]
         rows, counts = dashboard_rows(snap, data, local_operations(selection), now)
+        mail_statuses = cpf_mail.statuses(store.directory, [r["folder_id"] for r in rows if r["kind"] == "request"])
+        for item in rows:
+            item["cpf_mail"] = mail_statuses.get(item["folder_id"])
         to_register_count = counts["to_register"]
         unlinked_count = counts["unlinked"]
         ignored_count = counts["association_ignored"]
@@ -1371,6 +1415,8 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             abort(400)
         record_work(selection, folder, session.get("admin_username") or owner, **(
             {"handled": 0, "archived": 0} if change == "reopen" else {change: 1}))
+        if change in {"handled", "archived"}:
+            cpf_mail.cancel_local(store.directory, folder)
         flash("Suivi local de la demande mis à jour.", "success")
         return back("requests")
 
