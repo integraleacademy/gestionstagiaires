@@ -11,7 +11,6 @@
     year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
   let running = false;
-  let checked = false;
 
   function addLink(node, url, label) {
     let resolved;
@@ -83,9 +82,8 @@
       if (payload.ok !== true || !payload.appointments) throw new Error('Incomplete CRM response');
       nodes.forEach(node => paint(node, payload.appointments[node.dataset.edofCrmRdv]));
     } catch (_) {
-      if (!checked) nodes.forEach(node => paint(node, {status: 'unavailable'}));
+      nodes.forEach(node => paint(node, {status: 'unavailable'}));
     } finally {
-      checked = true;
       running = false;
     }
   }
