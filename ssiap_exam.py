@@ -197,14 +197,21 @@ def jury_directory(data, internal_partner_id):
     return sorted(unique.values(), key=lambda m: (m.get("last_name", "").casefold(), m.get("first_name", "").casefold()))
 
 
-def remember_jury(data, members, now, previous=()):
+def remember_jury(data, members, now, previous=(), *, names_only=False):
     directory = data.setdefault("ssiap_jury_directory", {})
     previous = {m['id']: m for m in previous}
     fields = ('first_name', 'last_name', 'email', 'phone', 'company', 'role')
     for member in members:
         # Stable directory identity; session copies remain snapshots of each exam.
-        match = next((key for key, item in directory.items() if key == member["id"] or
-                      (member["email"] and item.get("email", "").casefold() == member["email"].casefold())), member["id"])
+        match = member['id']
+        if match not in directory and member.get('email'):
+            address_matches = [key for key, item in directory.items()
+                               if (item.get('email') or '').casefold() == member['email'].casefold()]
+            if len(address_matches) == 1:
+                match = address_matches[0]
+        if names_only and match in directory:
+            directory[match].update(first_name=member['first_name'], last_name=member['last_name'], updated_at=now)
+            continue
         old = previous.get(member['id'], {})
         if match not in directory or any(member.get(k) != old.get(k) for k in fields):
             directory[match] = {**copy.deepcopy(member), "id": match, "updated_at": now}
@@ -323,7 +330,7 @@ def build_mail(training, config, member, kind, count, logo_url, *, today=None, p
 
 
 def register(app, services):
-    from platform_jury import register as register_platform_jury
+    from platform_jury import queue_name_edits, register as register_platform_jury, send_name_edits
     from jury_planning import mail_context, register as register_planning
     register_platform_jury(app, services)
     register_planning(app, services)
@@ -438,6 +445,7 @@ def register(app, services):
         def update(data):
             training = jury_training(data, session_id)
             current = copy.deepcopy(state(training))
+            name_edits = []
             if payload.get("revision") != current.get("revision", 0):
                 return {"ok": False, "error": "Ces informations ont changé. Fermez puis rouvrez la modale avant de réessayer.", "status": 409}
             if (security_exam_jury.level(training) and payload.get("action") == "config"
@@ -446,7 +454,10 @@ def register(app, services):
             try:
                 if payload.get("action") == "config":
                     current["config"] = validate_config(payload.get("config"), level=security_exam_jury.level(training) or None)
-                    remember_jury(data, current["config"]["jury"], services._now_iso(), settings(training)["jury"])
+                    previous = settings(training)["jury"]
+                    members = current["config"]["jury"]
+                    name_edits = queue_name_edits(training, current, previous, members)
+                    remember_jury(data, members, services._now_iso(), previous)
                     if security_exam_jury.level(training):
                         security_exam_jury.sync_date(training, current["config"]["date"])
                     elif afc_schedule.enabled(training):
@@ -467,8 +478,11 @@ def register(app, services):
             training[state_key(training)] = current
             if payload.get("action") == "candidate" and not security_exam_jury.level(training):
                 services._reconcile_ssiap_diploma_numbers(data, training)
-            return {"ok": True, "revision": current["revision"]}
+            return {"ok": True, "revision": current["revision"], "name_edits": name_edits}
         result = services._atomic_update_data(update)
+        edits = result.pop("name_edits", [])
+        if edits:
+            result['jury_names_pending'] = not send_name_edits(services, edits)
         return jsonify(result), result.pop("status", 200)
 
     @app.get('/admin/sessions/<session_id>/ssiap-exam/candidates/<trainee_id>/dossier.pdf')

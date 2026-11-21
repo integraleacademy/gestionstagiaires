@@ -118,6 +118,9 @@ def run(services, *, now=None, dry_run=False, limit=10):
         report['status'] = 'outside_sending_hours'
         return report
     data = services.load_data(run_background_tasks=False)
+    if not dry_run:
+        from platform_jury import retry_name_edits
+        retry_name_edits(services, data, limit)
     candidates, seen = [], set()
     for training in all_exams(data.get('sessions', [])):
         if not eligible(services, training):

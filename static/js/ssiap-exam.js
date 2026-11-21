@@ -143,9 +143,10 @@
   }
   async function saveConfig() {
     if (!configForm.reportValidity()) throw new Error('Vérifiez les champs du jury et de l’organisation.');
-    await post(base, {action:'config', revision:data.revision, expected_date:data.config.date, config:collectConfig()});
+    const saved = await post(base, {action:'config', revision:data.revision, expected_date:data.config.date, config:collectConfig()});
     await load({keepDrafts:true});
     if (dialog.dataset.juryUrl) dialog.dispatchEvent(new Event('exam-jury-saved'));
+    return saved.jury_names_pending;
   }
   async function action(work) {
     if (busy) return;
@@ -217,7 +218,11 @@
     const form = event.target;
     if (form !== configForm && !form.dataset.candidateForm) return;
     event.preventDefault();
-    if (form === configForm) action(async () => { await saveConfig(); message('Organisation enregistrée. Les membres du jury sont disponibles dans votre répertoire.'); });
+    if (form === configForm) action(async () => {
+      const pending = await saveConfig();
+      message(pending ? 'Organisation enregistrée. La mise à jour du nom sur la Plateforme de gestion est en attente.'
+                      : 'Organisation enregistrée. Les membres du jury sont disponibles dans votre répertoire.');
+    });
     if (form.dataset.candidateForm) action(async () => {
       if (configDirty) throw new Error('Enregistrez d’abord l’organisation et le jury. Vos modifications du candidat seront conservées.');
       const raw = Object.fromEntries(new FormData(form));
