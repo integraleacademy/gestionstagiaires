@@ -10,6 +10,7 @@ on:
       - "tests/test_billing_additional_direct_debit.py"
       - "tests/test_trainee_schedule_views.cjs"
       - "tests/test_billing_direct_debit_scheduling.py"
+      - "tests/test_trainee_qonto_auto_refresh.py"
       - ".github/workflows/billing-additional-installment.yml"
   workflow_dispatch:
 
@@ -38,4 +39,4 @@ jobs:
         env:
           PERSIST_DIR: ${{ runner.temp }}/sepa-ci
         run: |
-          python -m pytest -q tests/test_billing_direct_debit_scheduling.py tests/test_billing_direct_debit_scheduling_race.py tests/test_billing_additional_direct_debit.py tests/test_trainee_bank_schedule.py
+          python -m pytest -q tests/test_billing_direct_debit_scheduling.py tests/test_billing_direct_debit_scheduling_race.py tests/test_billing_additional_direct_debit.py tests/test_trainee_bank_schedule.py tests/test_trainee_qonto_auto_refresh.py

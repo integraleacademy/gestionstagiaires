@@ -259,3 +259,77 @@ def test_refresh_still_requires_authentication(finance, monkeypatch):
     response = gestion_app.app.test_client().get(URL)
     assert response.status_code == 401
     get_invoice.assert_not_called()
+
+
+@pytest.mark.parametrize('refresh', ['fiche', 'bouton', 'arriere_plan'])
+def test_legacy_cash_mode_recovers_four_bank_receipts(finance, monkeypatch, refresh):
+    client, data = finance
+    trainee = data['sessions'][0]['trainees'][0]
+    trainee['personal_amount'] = 3800
+    rows = []
+    bank = []
+    for i, month in enumerate(('07', '08', '09', '10'), 1):
+        day = f'2020-{month}-11'
+        row = {'index': i, 'date': day, 'amount': 950,
+               'qonto_direct_debit_subscription_id': 'monthly',
+               'status': 'completed' if i <= 2 else 'scheduled'}
+        if i < 4:
+            row['qonto_direct_debit_collection_id'] = f'op-{i}'
+        rows.append(row)
+        bank.append({'id': f'op-{i}', 'direct_debit_subscription_id': 'monthly',
+                     'status': 'completed', 'collection_date': day, 'amount': {'value': '950.00', 'currency': 'EUR'}})
+    data['billing_lines'][0].update(paymentMode='cash', paymentPlan={'mode': 'cash'},
+                                    qonto_direct_debit_mandate_id='known-mandate', mandateStatus='active',
+                                    qonto_amount_paid_cents=190000, qonto_total_amount_cents=380000,
+                                    directDebitInstallments=rows, sepa_payment_plan={'installments': deepcopy(rows)})
+    monkeypatch.setattr(gestion_app, 'get_qonto_invoice', Mock(return_value={'client_invoice': {
+        'id': 'inv-auto', 'status': 'finalized', 'total_amount': {'value': '3800.00'},
+        'amount_paid': {'value': '1900.00'}}}))
+    pages = Mock(side_effect=[{'items': bank[:3], 'meta': {'total_pages': 2}},
+                              {'items': [bank[2], bank[3]], 'meta': {'total_pages': 2}}])
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', pages)
+    ensure = Mock(side_effect=AssertionError('No new debits on a read'))
+    monkeypatch.setattr(gestion_app, 'ensure_qonto_sepa_installments_for_line', ensure)
+    if refresh == 'bouton':
+        response = client.post('/api/billing/sync-qonto', json={'sessionId': 'S-AUTO', 'traineeId': 'T-AUTO'})
+    elif refresh == 'arriere_plan':
+        monkeypatch.setattr(gestion_app, 'load_data', lambda **_: data)
+        monkeypatch.setattr(gestion_app, '_atomic_update_data', lambda change: change(data))
+        monkeypatch.setenv('QONTO_SYNC_CRON_SECRET', 'test-cron')
+        response = client.post('/internal/cron/qonto-sync', headers={'X-Cron-Secret': 'test-cron'})
+    else:
+        response = client.get(URL)
+    assert response.status_code == 200
+    result = client.get(URL + '?local=1').get_json()
+    line = result['lines'][0]
+    assert result['financial_summary']['paid_total_cents'] == 380000
+    assert result['financial_summary']['remaining_total_cents'] == 0
+    assert line['sepa_payment_plan']['paid_installments'] == 4
+    assert line['paymentMode'] == line['paymentPlan']['mode'] == 'sepa_direct_debit'
+    assert [r['qonto_direct_debit_collection_id'] for r in line['directDebitInstallments']] == [r['id'] for r in bank]
+    assert pages.call_count == 2
+    ensure.assert_not_called()
+    gestion_app.create_qonto_direct_debit_subscription.assert_not_called()
+
+
+def test_cash_mandate_alone_and_ambiguous_bank_occurrences_do_not_credit_an_invoice(monkeypatch):
+    line = {'paymentMode': 'cash', 'qonto_direct_debit_mandate_id': 'shared', 'amountTTC': 950}
+    assert not gestion_app._has_qonto_debit_tracking(line)
+    row = {'index': 1, 'date': '2020-10-11', 'amount': 950, 'status': 'scheduled',
+           'qonto_direct_debit_subscription_id': 'monthly'}
+    line['directDebitInstallments'] = [row]
+    bank = {'id': 'first', 'direct_debit_subscription_id': 'monthly', 'collection_date': row['date'],
+            'status': 'completed', 'amount': {'value': '950.00', 'currency': 'EUR'}}
+    listed = Mock(return_value={'items': [dict(bank, direct_debit_subscription_id='another'),
+                                          dict(bank, id='usd', amount={'value': '950', 'currency': 'USD'}),
+                                          bank, dict(bank, id='second')]})
+    monkeypatch.setattr(gestion_app, 'list_qonto_direct_debit_collections', listed)
+    gestion_app._sync_qonto_direct_debit_line(line)
+    assert row['status'] == 'scheduled'
+    assert line['sepa_payment_plan']['total_paid'] == 0
+    assert line['paymentMode'] == 'cash'
+    row['qonto_direct_debit_collection_id'] = 'first'
+    listed.return_value = {'items': [dict(bank, status='returned'), dict(bank, id='second')]}
+    gestion_app._sync_qonto_direct_debit_line(line)
+    assert row['status'] == 'returned'
+    assert line['sepa_payment_plan']['total_paid'] == 0
