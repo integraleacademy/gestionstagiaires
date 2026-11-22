@@ -329,3 +329,154 @@ def test_full_coverage_overview_does_not_mutate_local_financing(additional):
     assert after["paymentPlan"] == before["paymentPlan"]
     assert after["initialDebitSchedule"] == before["initialDebitSchedule"]
     assert after["qonto_direct_debit_subscription_id"] == before["qonto_direct_debit_subscription_id"]
+
+
+@pytest.fixture
+def returned_plan(scheduling, monkeypatch):
+    """1,079 EUR, an archived SEPA return and one remaining monthly debit."""
+    case = scheduling
+    today = datetime.date.today()
+    past = (today - datetime.timedelta(days=20)).isoformat()
+    due = case.schedule[0]["date"]
+    amount = {"value": "539.50", "currency": "EUR"}
+    case.invoice.update(total_amount=dict(amount, value="1079.00"), amount_paid=amount, remaining_amount=amount)
+    sub = case.record_subscription({
+        "direct_debit_mandate_id": case.mandate["id"], "reference": case.invoice["number"],
+        "initial_collection_date": past, "schedule_next_collection_date": due,
+        "schedule_end_date": due, "schedule_type": "monthly", "amount": amount,
+    })["direct_debit_subscription"]
+    archived = {"qonto_direct_debit_subscription_id": "old-series", "qonto_direct_debit_collection_id": "old-debit",
+                "status": "returned", "date": past, "amount": 539.5}
+    data = gestion.load_data()
+    data["sessions"][0]["trainees"][0]["personal_amount"] = 1079
+    line = gestion._find_billing_line(data, case.line_id)
+    line.update(amount=1079, amountTTC=1079, qontoRemoteAmountPaidCents=53950,
+                qonto_total_amount_cents=107900, qonto_amount_paid_cents=0,
+                paymentMode="sepa_direct_debit", qonto_direct_debit_subscription_id=sub["id"],
+                directDebitInstallments=[{"qonto_direct_debit_subscription_id": sub["id"],
+                                          "date": due, "amount": 539.5, "status": "scheduled"}],
+                financial_tracking_override={"enabled": True, "source": "inline_schedule",
+                                             "edit_history": [{"before": [archived], "after": [archived]}]})
+    gestion._save_billing_line(data, line)
+    gestion.save_data(data)
+    case.collections = [{"id": "old-debit", "direct_debit_subscription_id": "old-series",
+                         "collection_date": past, "status": "returned", "amount": amount}]
+
+    def collections(subscription_id="", **_):
+        return {"items": [row for row in case.collections
+                          if not subscription_id or row["direct_debit_subscription_id"] == subscription_id]}
+
+    monkeypatch.setattr(gestion, "list_qonto_direct_debit_collections", collections)
+    monkeypatch.setattr(gestion, "_read_debit_statement_dates", lambda _: None)
+    return case
+
+
+def test_archived_return_reopens_exactly_one_installment_through_confirmation(returned_plan):
+    case = returned_plan
+    original = copy.deepcopy(case.subscriptions[0])
+    overview = case.client.get("/api/billing/trainee/T-SCHEDULING/session/S-SCHEDULING?local=1")
+    assert overview.json["financial_summary"]["remaining_total_cents"] == 107900
+    result = availability(case)
+    assert result.status_code == 200, result.json
+    assert result.json["remainingCents"] == 107900
+    assert result.json["scheduledCents"] == result.json["availableCents"] == 53950
+    assert result.json["canSchedule"] and result.json["returnAdjustmentCents"] == 53950
+    assert preview(case, amount="539.51").status_code == 409
+    assert preview(case, amount="539.50", due=case.schedule[0]["date"]).status_code == 409
+    checked = preview(case, amount="539.50")
+    assert checked.status_code == 200, checked.json
+    assert checked.json["summary"]["reviewReturnCents"] == 53950
+    assert confirm(case, checked.json).status_code == 409
+    case.create.assert_not_called()
+    payload = {"selectionToken": checked.json["selectionToken"], "confirmedReturnCents": 53950}
+    saved = case.client.post(SCHEDULE, json=payload)
+    assert saved.status_code == 200, saved.json
+    assert case.subscriptions[0] == original
+    assert case.subscriptions[1]["amount"] == {"value": "539.50", "currency": "EUR"}
+    assert case.subscriptions[1]["initial_collection_date"] == case.schedule[1]["date"]
+    operation = stored_line(case)["paymentPlan"]["qontoAdditionalDebitOperation"]
+    assert operation["confirmedReturnCents"] == 53950
+    assert availability(case).json["availableCents"] == 0
+    assert case.client.post(SCHEDULE, json=payload).status_code == 409
+    case.create.assert_called_once()
+
+
+@pytest.mark.parametrize("bank_status", [None, "declined", "failed", "completed"])
+def test_unconfirmed_return_never_releases_invoice_credit(returned_plan, bank_status):
+    case = returned_plan
+    if bank_status is None:
+        case.collections.clear()
+    else:
+        case.collections[0]["status"] = bank_status
+    # An unrelated return under the old shared subscription does not belong here.
+    case.collections.append({"id": "unrelated", "direct_debit_subscription_id": "old-series",
+                             "collection_date": "2020-01-10", "status": "returned",
+                             "amount": {"value": "539.50", "currency": "EUR"}})
+    result = availability(case)
+    assert result.status_code == 200, result.json
+    assert result.json["availableCents"] == result.json["returnAdjustmentCents"] == 0
+    assert preview(case, amount="539.50").status_code == 409
+    case.create.assert_not_called()
+
+
+def test_verified_transfer_is_retained_despite_a_return_for_the_same_amount(returned_plan):
+    case = returned_plan
+    data = gestion.load_data()
+    line = gestion._find_billing_line(data, case.line_id)
+    line["qontoBankTransfers"] = [{"id": "wire", "status": "completed", "amount_cents": 53950,
+                                  "paid_at": "2020-01-10", "operation_type": "transfer",
+                                  "currency": "EUR", "side": "credit"}]
+    gestion._save_billing_line(data, line)
+    gestion.save_data(data)
+    result = availability(case)
+    assert result.status_code == 200, result.json
+    assert result.json["availableCents"] == result.json["returnAdjustmentCents"] == 0
+    case.create.assert_not_called()
+
+
+def test_other_invoice_credit_survives_duplicate_returns_and_final_bank_check(returned_plan, monkeypatch):
+    case = returned_plan
+    case.invoice.update(amount_paid={"value": "639.50", "currency": "EUR"},
+                        remaining_amount={"value": "439.50", "currency": "EUR"})
+    case.collections.append(dict(case.collections[0]))
+    result = availability(case)
+    assert result.status_code == 200, result.json
+    assert result.json["remainingCents"] == 97900
+    assert result.json["availableCents"] == 43950
+    checked = preview(case, amount="439.50")
+    assert checked.status_code == 200, checked.json
+    ensure = gestion.ensure_sepa_subscription
+    original_collections = list(case.collections)
+
+    def bank_changes_before_create(*args):
+        case.collections.clear()
+        return ensure(*args)
+
+    monkeypatch.setattr(gestion, "ensure_sepa_subscription", bank_changes_before_create)
+    response = case.client.post(SCHEDULE, json={"selectionToken": checked.json["selectionToken"],
+                                                "confirmedReturnCents": 53950})
+    assert response.status_code == 409, response.json
+    assert response.json["requiresVerification"] is False
+    case.create.assert_not_called()
+    monkeypatch.setattr(gestion, "ensure_sepa_subscription", ensure)
+    case.collections.extend(original_collections)
+    new_preview = preview(case, amount="439.50")
+    assert new_preview.status_code == 200, new_preview.json
+    retry = case.client.post(SCHEDULE, json={"selectionToken": new_preview.json["selectionToken"],
+                                             "confirmedReturnCents": 53950})
+    assert retry.status_code == 200, retry.json
+    case.create.assert_called_once()
+
+
+@pytest.mark.parametrize("status", ["returned", "refunded"])
+def test_multiple_returns_cannot_release_more_than_gross_invoice_credit(returned_plan, status):
+    case = returned_plan
+    extra = dict(case.collections[0], id="another-return", status=status,
+                 direct_debit_subscription_id=case.subscriptions[0]["id"])
+    case.collections.append(extra)
+    result = availability(case)
+    assert result.status_code == 200, result.json
+    assert result.json["remainingCents"] == 107900
+    assert result.json["availableCents"] == 53950
+    assert result.json["returnAdjustmentCents"] == 53950
+    case.create.assert_not_called()

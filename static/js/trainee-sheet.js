@@ -3244,6 +3244,9 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       date.setUTCDate(date.getUTCDate()+1);
       return date.toISOString().slice(0,10);
     };
+    function returnNote(cents){
+      return cents>0?`<p>Le calcul tient compte de ${fmtMoney(cents/100)} de prélèvements retournés par la banque.</p>`:'';
+    }
     function renderForm(){
       overlay.querySelector('[data-add-step]').textContent='Étape 1 · Préparer l’échéance';
       const day=new Date(isoToday()+'T12:00:00Z');
@@ -3254,7 +3257,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const choice=candidates.length>1?`<label>Financement<select name="lineId">${candidates.map(item=>`<option value="${esc(item.id)}"${item.id===selected.id?' selected':''}>${esc(bankTransferLabel(item))} · ${esc(item.qontoInvoiceNumber||'Facture Qonto')}</option>`).join('')}</select></label>`:'';
       content.removeAttribute('role');
       content.removeAttribute('aria-live');
-      content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(availability.traineeName||'—')}</p><p><strong>Facture Qonto :</strong> ${esc(availability.invoiceNumber||'—')}</p><p><strong>Mandat signé :</strong> ${esc(availability.mandateRum||'—')}</p><p><strong>Reste à payer :</strong> ${fmtMoney(availability.remainingCents/100)}</p><p><strong>Déjà programmé dans Qonto :</strong> ${fmtMoney(availability.scheduledCents/100)}</p><p><strong>Disponible pour une nouvelle échéance :</strong> ${fmtMoney(availability.availableCents/100)}</p></div><form data-add-form><div class="billing-modal-grid">${choice}<label>Montant de la nouvelle échéance (€)<input name="amount" type="number" inputmode="decimal" min="0.01" max="${(availability.availableCents/100).toFixed(2)}" step="0.01" value="${(availability.availableCents/100).toFixed(2)}" required></label><label>Date de prélèvement<input name="date" type="date" min="${tomorrow()}" value="${defaultDate}" required></label></div><p class="hint">Cette action crée un prélèvement supplémentaire dans Qonto, après confirmation. Les échéances existantes ne seront pas modifiées.</p><p data-add-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-close>Annuler</button><button class="btn btn-primary" type="submit">Vérifier avant programmation</button></div></form>`;
+      content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(availability.traineeName||'—')}</p><p><strong>Facture Qonto :</strong> ${esc(availability.invoiceNumber||'—')}</p><p><strong>Mandat signé :</strong> ${esc(availability.mandateRum||'—')}</p><p><strong>Reste à payer :</strong> ${fmtMoney(availability.remainingCents/100)}</p><p><strong>Déjà programmé dans Qonto :</strong> ${fmtMoney(availability.scheduledCents/100)}</p><p><strong>Disponible pour une nouvelle échéance :</strong> ${fmtMoney(availability.availableCents/100)}</p>${returnNote(availability.returnAdjustmentCents)}</div><form data-add-form><div class="billing-modal-grid">${choice}<label>Montant de la nouvelle échéance (€)<input name="amount" type="number" inputmode="decimal" min="0.01" max="${(availability.availableCents/100).toFixed(2)}" step="0.01" value="${(availability.availableCents/100).toFixed(2)}" required></label><label>Date de prélèvement<input name="date" type="date" min="${tomorrow()}" value="${defaultDate}" required></label></div><p class="hint">Cette action crée un prélèvement supplémentaire dans Qonto, après confirmation. Les échéances existantes ne seront pas modifiées.</p><p data-add-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-close>Annuler</button><button class="btn btn-primary" type="submit">Vérifier avant programmation</button></div></form>`;
       const form=content.querySelector('[data-add-form]');
       form.elements.lineId?.addEventListener('change',()=>{
         selected=candidates.find(item=>item.id===form.elements.lineId.value)||selected;
@@ -3289,15 +3292,16 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const frequency=frequencyLabels[row.frequency]||'Fréquence à confirmer';
       const date=row.date?formatIsoDateFr(row.date):'Date à confirmer';
       const last=row.endDate?' · Jusqu’au '+formatIsoDateFr(row.endDate):'';
-      return `<div class="kv" style="padding:12px 0;border-bottom:1px solid #e2e8f0"><strong>${esc(frequency)} · ${fmtMoney(row.amountCents/100)} € par prélèvement</strong><p class="muted">${esc(count)} · Prochaine date : ${esc(date)}${esc(last)}</p><p>Montant restant programmé chez Qonto : <strong>${fmtMoney(row.remainingCents/100)} €</strong></p></div>`;
+      return `<div class="kv" style="padding:12px 0;border-bottom:1px solid #e2e8f0"><strong>${esc(frequency)} · ${fmtMoney(row.amountCents/100)} par prélèvement</strong><p class="muted">${esc(count)} · Prochaine date : ${esc(date)}${esc(last)}</p><p>Montant restant programmé chez Qonto : <strong>${fmtMoney(row.remainingCents/100)}</strong></p></div>`;
     }).join(''):'<p class="muted">Aucun détail d’échéance communiqué par Qonto.</p>';
     content.removeAttribute('role');
     content.removeAttribute('aria-live');
     content.innerHTML=`<div class="billing-modal-summary">
         <p><strong>Facture :</strong> ${esc(availability.invoiceNumber||'—')}</p>
-        <p><strong>Reste à payer :</strong> ${fmtMoney(availability.remainingCents/100)} €</p>
-        <p><strong>Prélèvements déjà programmés :</strong> ${fmtMoney(availability.scheduledCents/100)} €</p>
-        <p><strong>Solde disponible pour une nouvelle échéance :</strong> ${fmtMoney(availability.availableCents/100)} €</p>
+        <p><strong>Reste à payer :</strong> ${fmtMoney(availability.remainingCents/100)}</p>
+        <p><strong>Prélèvements déjà programmés :</strong> ${fmtMoney(availability.scheduledCents/100)}</p>
+        <p><strong>Solde disponible pour une nouvelle échéance :</strong> ${fmtMoney(availability.availableCents/100)}</p>
+        ${returnNote(availability.returnAdjustmentCents)}
       </div>
       <div class="billing-modal-error" role="status"><strong>Aucun nouveau prélèvement à créer.</strong> Selon les échéances actuellement confirmées par Qonto, le solde de cette facture est déjà entièrement couvert.</div>
       <h3 style="font-size:1rem;margin-top:18px">Prélèvements existants dans Qonto</h3>
@@ -3308,8 +3312,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   }
     function renderConfirmation(preview){
       const summary=preview.summary,row=preview.schedule[0];
+      const reviewCents=summary.reviewReturnCents||0;
+      const review=reviewCents?`<p><strong>Retour SEPA à vérifier sur la facture</strong></p><p>En confirmant, vous indiquez que les ${fmtMoney(reviewCents/100)} inscrits comme payés correspondent aux prélèvements retournés et restent dus par le client.</p>`:'';
+      const confirmLabel=reviewCents?'Confirmer le retour et programmer':'Confirmer et programmer dans Qonto';
       overlay.querySelector('[data-add-step]').textContent='Étape 2 · Confirmer dans Qonto';
-      content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(summary.traineeName)}</p><p><strong>Facture :</strong> ${esc(summary.invoiceNumber)}</p><p><strong>Mandat signé :</strong> ${esc(summary.mandateRum)}</p><p><strong>Déjà programmé :</strong> ${fmtMoney(summary.scheduledCents/100)}</p><p><strong>Nouvelle échéance :</strong> ${fmtMoney(summary.totalCents/100)} le ${esc(formatIsoDateFr(row.date))}</p><p><strong>Montant restant non programmé après l’ajout :</strong> ${fmtMoney((summary.availableCents-summary.totalCents)/100)}</p></div><p class="hint">La confirmation déclenche la création d’un nouveau prélèvement SEPA dans Qonto et la notification du client.</p><p data-add-confirm-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-back>Modifier</button><button class="btn btn-primary" type="button" data-add-confirm>Confirmer et programmer dans Qonto</button></div>`;
+      content.innerHTML=`<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(summary.traineeName)}</p><p><strong>Facture :</strong> ${esc(summary.invoiceNumber)}</p><p><strong>Mandat signé :</strong> ${esc(summary.mandateRum)}</p><p><strong>Déjà programmé :</strong> ${fmtMoney(summary.scheduledCents/100)}</p><p><strong>Nouvelle échéance :</strong> ${fmtMoney(summary.totalCents/100)} le ${esc(formatIsoDateFr(row.date))}</p><p><strong>Montant restant non programmé après l’ajout :</strong> ${fmtMoney((summary.availableCents-summary.totalCents)/100)}</p>${review}</div><p class="hint">La confirmation déclenche la création d’un nouveau prélèvement SEPA dans Qonto et la notification du client.</p><p data-add-confirm-feedback role="status" aria-live="polite"></p><div class="billing-modal-actions"><button class="btn btn-outline" type="button" data-add-back>Modifier</button><button class="btn btn-primary" type="button" data-add-confirm>${confirmLabel}</button></div>`;
       content.querySelector('[data-add-back]').onclick=()=>{if(!busy)renderForm();};
       content.querySelector('[data-add-confirm]').onclick=async()=>{
         if(busy)return;
@@ -3317,7 +3324,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
         feedback.textContent='Transmission à Qonto en cours…';
         setBusy(true);
         try{
-          const saved=await billingApi('/api/billing/direct-debit/additional/schedule',{selectionToken:preview.selectionToken});
+          const saved=await billingApi('/api/billing/direct-debit/additional/schedule',{selectionToken:preview.selectionToken,confirmedReturnCents:reviewCents});
           bankChecked=0;
           bankSnapshot=null;
           let refreshFailed=false;
