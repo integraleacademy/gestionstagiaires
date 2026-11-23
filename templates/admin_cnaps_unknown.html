@@ -6,7 +6,7 @@
     <h1 style="margin:0">CNAPS inconnu</h1>
     <div class="muted" style="margin-top:6px;">
       Liste des stagiaires des sessions actives dont le statut CNAPS est encore inconnu.
-      Dès qu’un statut CNAPS est renseigné, le stagiaire disparaît automatiquement de cette page.
+      Les statuts sont vérifiés auprès de CNAPSV3 à l’ouverture de la page. Seules les correspondances d’identité fiables sont actualisées.
     </div>
   </div>
 
@@ -24,6 +24,19 @@
     <span class="cnaps cnaps-inconnu">INCONNU</span>
   </div>
 </div>
+
+{% if g.cnaps_unknown_sync is defined and g.cnaps_unknown_sync.errors %}
+  <div class="card" role="status" style="margin-top:12px;">
+    <strong>Synchronisation CNAPSV3 partiellement indisponible.</strong>
+    <div class="muted">Certains dossiers n’ont pas pu être vérifiés. Aucun statut n’a été modifié sans confirmation ; rechargez cette page pour réessayer.</div>
+  </div>
+{% endif %}
+{% if g.cnaps_unknown_sync is defined and g.cnaps_unknown_sync.remaining %}
+  <div class="card" role="status" style="margin-top:12px;">
+    <strong>Vérification progressive en cours.</strong>
+    <div class="muted">{{ g.cnaps_unknown_sync.remaining }} dossier(s) restant(s) seront vérifiés lors du prochain chargement de la page.</div>
+  </div>
+{% endif %}
 
 {% if trainees|length == 0 %}
   <div class="card" style="margin-top:12px;color:var(--muted)">
