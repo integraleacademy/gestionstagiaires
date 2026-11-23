@@ -7,6 +7,7 @@ from maintenance_recovery import register_maintenance_recovery
 from bts_workspace import register_bts_workspace
 from bts_cnaps_tracking_api import register_bts_cnaps_tracking_api
 from cnaps_notification_recovery import register_cnaps_notification_recovery
+from cnaps_unknown_sync import register_cnaps_unknown_sync
 from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
 from elearning_native.integration import register_native_elearning
 from wedof_invoice_reconciliation import register_wedof_invoice_reconciliation
@@ -32,6 +33,7 @@ register_crm_cnaps_tracking_api(
 register_production_control(legacy_app)
 register_wedof_guards(app)
 register_maintenance_jobs(legacy_app)
+register_cnaps_unknown_sync(legacy_app)
 
 from cpf_provider import on_production_service, production_edof_ready
 if on_production_service():

@@ -1,0 +1,29 @@
+name: Synchronisation statuts CNAPSV3
+
+on:
+  pull_request:
+    paths:
+      - "cnaps_unknown_sync.py"
+      - "crm_app.py"
+      - "templates/admin_cnaps_unknown.html"
+      - "tests/test_cnaps_unknown_sync.py"
+      - ".github/workflows/cnaps-unknown-sync.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconciliation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Vérifier le code et les rapprochements d'identité
+        run: |
+          python -m pip install --disable-pip-version-check pytest
+          python -m py_compile cnaps_unknown_sync.py crm_app.py
+          python -m pytest -q tests/test_cnaps_unknown_sync.py
