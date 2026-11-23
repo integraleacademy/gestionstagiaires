@@ -30,6 +30,18 @@ class FakeLegacy:
         self.state = copy.deepcopy(data)
         self.saves += 1
 
+    def _registered_trainees(self, session):
+        return session["trainees"]
+
+    def record_cnaps_status_change(self, trainee, new_status):
+        trainee.setdefault("cnaps_history", []).append({"status": new_status})
+
+    def update_data(self, mutator):
+        current = self.load_data()
+        updated = mutator(current)
+        self.save_data(current)
+        return updated
+
     def _collect_cnaps_unknown_trainees(self, data):
         trainee = data["sessions"][0]["trainees"][0]
         if trainee["cnaps"] != "INCONNU":
@@ -46,7 +58,7 @@ def test_transmitted_status_updates_only_cnaps_field():
     result = sync.sync_unknown_statuses(legacy, fetcher=lambda person: [REMOTE])
     assert result["updated"] == 1 and result["errors"] == 0
     after = legacy.state["sessions"][0]["trainees"][0]
-    assert after == {**before, "cnaps": "TRANSMIS"}
+    assert after == {**before, "cnaps": "TRANSMIS", "cnaps_history": [{"status": "TRANSMIS"}]}
     assert legacy.saves == 1
 
 
@@ -104,7 +116,7 @@ def test_manually_updated_local_status_is_preserved():
     result = sync.sync_unknown_statuses(legacy, fetcher=update_during_request)
     assert result["updated"] == 0
     assert legacy.state["sessions"][0]["trainees"][0]["cnaps"] == "ACCEPTÉ"
-    assert legacy.saves == 0
+    assert legacy.saves == 1
 
 
 def test_already_known_status_requires_no_network_call():
