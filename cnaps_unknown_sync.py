@@ -161,22 +161,23 @@ def sync_unknown_statuses(legacy, fetcher=None):
     if not proposed:
         return result
 
-    # Relire après les appels réseau pour ne pas écraser un statut renseigné
-    # manuellement pendant les vérifications CNAPSV3.
-    current = legacy.load_data()
-    for session in current.get("sessions", []):
-        if not isinstance(session, dict):
-            continue
-        sid = str(session.get("id") or "")
-        for trainee in session.get("trainees", []):
-            if not isinstance(trainee, dict):
+    # Mutation atomique : update_data recharge les données canoniques sous le
+    # verrou partagé. Une modification concurrente ne peut pas être écrasée.
+    def apply(data):
+        changed = 0
+        for session in data.get("sessions", []):
+            if not isinstance(session, dict) or session.get("archived"):
                 continue
-            key = (sid, str(trainee.get("id") or ""))
-            if key in proposed and _unknown(trainee.get("cnaps")):
-                trainee["cnaps"] = proposed[key]
-                result["updated"] += 1
-    if result["updated"]:
-        legacy.save_data(current)
+            sid = str(session.get("id") or "")
+            for trainee in legacy._registered_trainees(session):
+                key = (sid, str(trainee.get("id") or ""))
+                if key in proposed and _unknown(trainee.get("cnaps")):
+                    trainee["cnaps"] = proposed[key]
+                    legacy.record_cnaps_status_change(trainee, proposed[key])
+                    changed += 1
+        return changed
+
+    result["updated"] = legacy.update_data(apply)
     return result
 
 
