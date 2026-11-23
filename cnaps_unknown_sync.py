@@ -201,7 +201,7 @@ def register_cnaps_unknown_sync(legacy):
         try:
             partner_resolver = getattr(legacy, "_current_partner_id", None)
             integrale_id = getattr(legacy, "INTEGRALE_PARTNER_ID", None)
-            if callable(partner_resolver) and integrale_id and partner_resolver() != integrale_id:
+            if callable(partner_resolver) and integrale_id and partner_resolver() not in ("", integrale_id):
                 return first_response
         except Exception:
             app.logger.warning("Synchronisation CNAPS ignorée : partenaire indéterminé")
