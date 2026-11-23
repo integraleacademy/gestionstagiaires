@@ -196,6 +196,15 @@ def register_cnaps_unknown_sync(legacy):
         first_response = app.make_response(original_view(*args, **kwargs))
         if request.path != PAGE_PATH or first_response.status_code != 200 or first_response.mimetype != "text/html":
             return first_response
+        # CNAPSV3 suit les dossiers Intégrale : jamais ceux d'un partenaire tiers.
+        try:
+            partner_resolver = getattr(legacy, "_current_partner_id", None)
+            integrale_id = getattr(legacy, "INTEGRALE_PARTNER_ID", None)
+            if callable(partner_resolver) and integrale_id and partner_resolver() != integrale_id:
+                return first_response
+        except Exception:
+            app.logger.warning("Synchronisation CNAPS ignorée : partenaire indéterminé")
+            return first_response
         try:
             result = sync_unknown_statuses(legacy)
         except Exception:
