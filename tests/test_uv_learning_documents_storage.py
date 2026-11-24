@@ -137,7 +137,8 @@ def submitted(course, number, version, selections=None):
 
 
 def test_unit_report_available_on_first_submission_with_portraits_and_pending_learners(documents_case):
-    from PIL import Image
+    from pathlib import Path
+    from PIL import Image, ImageChops
 
     case, training, person, other, database = documents_case
     report_url = f"/admin/sessions/{training['id']}/questionnaires-uv/2/rapport.pdf"
@@ -165,9 +166,19 @@ def test_unit_report_available_on_first_submission_with_portraits_and_pending_le
     assert 'no-store' in response.headers['Cache-Control']
     pdf = PdfReader(BytesIO(response.data))
     assert 2 <= len(pdf.pages) <= 5
+    assert pdf.metadata.title.startswith('Rapport détaillé')
+    with Image.open(Path(host.app.static_folder) / 'logo-integrale.png') as source:
+        reference = source.convert('RGB').resize((16, 16), Image.Resampling.LANCZOS)
+    for page in pdf.pages:
+        text = page.extract_text().casefold()
+        assert 'rapport formateur' not in text and 'copie remise' not in text and 'copies remises' not in text
+        thumbnails = [image.image.convert('RGB').resize(reference.size, Image.Resampling.LANCZOS)
+                      for image in page.images]
+        assert any(max(peak for _, peak in ImageChops.difference(reference, thumb).getextrema()) <= 5
+                   for thumb in thumbnails)
     assert any(image.image.size == (88, 88) for image in pdf.pages[0].images)
     cover = pdf.pages[0].extract_text()
-    for label in ('Alice', 'Bob', 'En cours', '18/20', '18,0/20'):
+    for label in ('Rapport détaillé', 'Alice', 'Bob', 'En cours', '18/20', '18,0/20'):
         assert label in cover
     assert 'Annulation' not in cover
     assert case.client.get(report_url.replace('/2/', '/1/')).status_code == 404

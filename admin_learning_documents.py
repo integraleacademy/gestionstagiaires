@@ -15,6 +15,12 @@ from trainee_elearning_reporting import source_for
 def register(host):
     app = host.app
 
+    def centre_logo(partner):
+        if partner['id'] == host.INTEGRALE_PARTNER_ID:
+            return Path(app.static_folder) / 'logo-integrale.png'
+        from organisme_profile import logo_path
+        return logo_path(host, partner)
+
     def context(sid):
         data = host.load_data(run_background_tasks=False, persist_normalization=False)
         training = host.find_session(data, sid)
@@ -73,7 +79,7 @@ def register(host):
             abort(409, description=str(exc))
         internal = partner['id'] == host.INTEGRALE_PARTNER_ID
         brand = 'Intégrale Academy' if internal else partner.get('name') or 'Organisme de formation'
-        output = build(report, training, course, unit, brand=brand, host=host)
+        output = build(report, training, course, unit, brand=brand, host=host, logo_path=centre_logo(partner))
         response = send_file(output, mimetype='application/pdf', as_attachment=True,
                              download_name=f'Rapport_{course.upper()}_UV{number:02}_{session_id}.pdf')
         response.headers['Cache-Control'] = 'private, no-store'
@@ -94,11 +100,7 @@ def register(host):
             if not is_native_aps_session(training):
                 abort(404)
             reader = ProgressReader(host)
-            if partner['id'] == host.INTEGRALE_PARTNER_ID:
-                logo = Path(app.static_folder) / 'logo-integrale.png'
-            else:
-                from organisme_profile import logo_path
-                logo = logo_path(host, partner)
+            logo = centre_logo(partner)
             for person in people:
                 source, effective = source_for(training, person)
                 report = reader.report(source, person, session_obj=effective)

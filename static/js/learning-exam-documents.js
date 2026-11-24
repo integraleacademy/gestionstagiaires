@@ -35,7 +35,7 @@
       }
       reportLink.href = option.value;
       const count = Number(option.dataset.completed);
-      reportStatus.textContent = count === 1 ? '1 copie remise pour cette UV.' : `${count} copies remises pour cette UV.`;
+      reportStatus.textContent = count === 1 ? '1 stagiaire a terminé cette UV.' : `${count} stagiaires ont terminé cette UV.`;
     }
 
     function showReports(allUnits) {
@@ -45,7 +45,7 @@
         option.dataset.completed = unit.completed;
         return option;
       });
-      reportUnit.replaceChildren(...(options.length ? options : [new Option('Aucune copie remise', '')]));
+      reportUnit.replaceChildren(...(options.length ? options : [new Option('Aucun questionnaire terminé', '')]));
       reportUnit.disabled = !options.length;
       if (options.some(option => option.value === previous)) reportUnit.value = previous;
       updateReportLink();
