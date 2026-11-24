@@ -465,15 +465,23 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
 
     def registration_fields(owner, row):
         saved = vault().get(enrolment_watch.key(owner, row["folder_id"])) if store.connector_key else None
-        # A recently read full fiche is preferred to the directory's limited fields.
-        fields = saved["fields"] if saved and saved["checked"] > time.time()-600 else None
-        if not fields:
-            job = store.successful_read(owner, spec={"folder_id":row["folder_id"], "first_name":"", "last_name":""})
-            fields = job["fields"] if job else None
-        if (fields and fields.get("folder_id") == row["folder_id"] and "birth_date" in fields
-                and category(fields) == "accepted" and declarations.same_enrolment(row, fields)):
-            return fields
-        return None
+
+        def matches(fields):
+            return (fields and fields.get("folder_id") == row["folder_id"] and "birth_date" in fields
+                    and category(fields) == "accepted" and declarations.same_enrolment(row, fields))
+
+        # The encrypted full fiche already expires after 24 h. Check it against
+        # the current directory on every use, including the final save.
+        if saved and matches(saved["fields"]):
+            fields = saved["fields"]
+            if saved["checked"] > time.time() - 600:
+                return fields
+            same_title = directory.normalized(fields.get("title") or "") == directory.normalized(row.get("title") or "")
+            proof = row.get("email_proof")
+            if same_title and (not proof or proof == directory.email_proof(store.connector_key, row["folder_id"], fields.get("email"))):
+                return fields
+        job = store.successful_read(owner, spec={"folder_id":row["folder_id"], "first_name":"", "last_name":""})
+        return job["fields"] if job and matches(job["fields"]) else None
 
     def registration_link(folder, data):
         links = [r for r in data.get("wedof_links", []) if r.get("active") and str(r.get("external_id")) == folder]
@@ -491,9 +499,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             abort(403)
         owner = results_owner()
         row = folder_record(owner, folder)
-        if registration_link(folder, local_data()):
+        data = local_data()
+        if registration_link(folder, data):
             raise ValueError("Ce dossier est déjà inscrit. Ouvrez sa fiche stagiaire depuis EDOF.")
-        if category(row) != "accepted" or not any(str(s["id"]) == session_id for s in matching_sessions(local_data(), partner_id, row)):
+        if category(row) != "accepted" or not any(str(s["id"]) == session_id for s in matching_sessions(data, partner_id, row)):
             raise ValueError("Choisissez une session disponible pour ce dossier accepté.")
         fields = registration_fields(owner, row)
         if not fields:
@@ -532,9 +541,10 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             raise ValueError("La connexion EDOF est indisponible.")
         if category(row) in {"waiting", "ft", "ft_refused", "accepted"}:
             manual = request.form.get("refresh") == "1"
-            if manual and throttle.status(vault()):
+            registration = request.form.get("refresh") == "registration" and category(row) == "accepted"
+            if (manual or registration) and throttle.status(vault()):
                 raise ValueError(throttle.message(vault()))
-            enqueue = enrolment_watch.watch(vault(), owner, row, manual=manual)
+            enqueue = enrolment_watch.watch(vault(), owner, row, manual=manual, registration=registration)
             if enqueue:
                 from edof_dispatch import wake
                 store.queue_sync(owner, "new")
@@ -554,10 +564,12 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         if not progress["can_register"]:
             return jsonify(**progress, message="Le dossier doit être accepté et disponible pour une inscription."), 409
         fields = registration_fields(owner, row)
-        options = matching_sessions(local_data(), partner_id, row)
-        response = jsonify(**progress, ready=bool(fields), html=render_template("_edof_registration.html",
-            folder=folder, record=row, fields=fields, options=options, family=training_family(row.get("title")),
-            csrf=session.get("edof_server_csrf")))
+        response_data = {**progress, "ready": bool(fields)}
+        if fields or request.args.get("wait") != "1":
+            response_data["html"] = render_template("_edof_registration.html", folder=folder, record=row,
+                fields=fields, options=matching_sessions(local_data(), partner_id, row),
+                family=training_family(row.get("title")), csrf=session.get("edof_server_csrf"))
+        response = jsonify(response_data)
         response.headers["Cache-Control"] = "no-store"
         return response
 

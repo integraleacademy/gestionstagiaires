@@ -6,14 +6,14 @@
       <p>{{ record.title }}</p></div>
   </div>
   {% if fields %}
-  <dl class="edof-enrolment-contact">
+  <dl class="edof-enrolment-contact" data-registration-contact>
     {% for key,label in [('email','E-mail'),('phone','Téléphone'),('birth_date','Date de naissance'),('address','Adresse')] %}
     <div><dt>{{ label }}</dt><dd>{{ date_fr(fields[key]) if key == 'birth_date' and fields.get(key) else fields.get(key) or 'Non renseigné dans EDOF' }}</dd></div>
     {% endfor %}
   </dl>
-  {% else %}<p class="edof-enrolment-loading" role="status">Récupération de la fiche complète EDOF… Vous pourrez confirmer l’inscription dès que les informations seront disponibles.</p>{% endif %}
+  {% else %}<p class="edof-enrolment-loading" role="status" data-registration-contact>Vous pouvez déjà choisir la session. Les coordonnées du stagiaire se chargent depuis EDOF.</p>{% endif %}
   {% if options %}
-  <form method="post" action="{{ url_for('integrale_edof.create_trainee',folder=folder) }}" data-registration-form>
+  <form method="post" action="{{ url_for('integrale_edof.create_trainee',folder=folder) }}" data-registration-form data-ready="{{ '1' if fields else '0' }}">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <div class="edof-enrolment-heading"><h3>Choisir une session</h3><span>{{ family or 'Formation correspondante' }} · {{ options|length }} session{{ 's' if options|length > 1 }}</span></div>
     <label class="edof-session-search">Rechercher une session<input type="search" data-session-search placeholder="Nom, ville ou date…" autocomplete="off"></label>

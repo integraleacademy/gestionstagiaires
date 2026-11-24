@@ -231,8 +231,8 @@ def test_failed_initial_read_shows_that_nothing_was_sent(screen):
     assert screen.posts == [BASE+'submit']
 
 
-@pytest.mark.parametrize('width',[1440,390])
-def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(screen,width):
+@pytest.mark.parametrize('width,cold_list', [(1440,False), (390,False), (1440,True)])
+def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(screen,width,cold_list):
     import json
     import time
     import edof_directory as directory
@@ -244,23 +244,41 @@ def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(scre
     row = {'folder_id':FOLDER,'first_name':'Anne','last_name':'Exemple','state':'accepted',
            'title':'Formation VTC tout inclus','session_start_date':'2027-01-04','session_end_date':'2027-02-04'}
     site.vault.put(directory.record_key(site.owner), {'checked':time.time()-1,'rows':{FOLDER:row}})
-    watch.watch(site.vault,site.owner,row)
-    site.vault.put(watch.key(site.owner,FOLDER), {'checked':time.time(),'row':row,'fields':{
-        **row,'birth_date':'1988-02-12','email':'anne@example.invalid','phone':'0600000000','total_incl':'1500.00'}})
+    def receive_details():
+        site.vault.put(watch.key(site.owner,FOLDER), {'checked':time.time(),'row':row,'fields':{
+            **row,'birth_date':'1988-02-12','email':'anne@example.invalid','phone':'0600000000','total_incl':'1500.00'}})
+    if not cold_list:
+        watch.watch(site.vault,site.owner,row)
+        receive_details()
     site.legacy.INTEGRALE_PARTNER_ID='integrale'
     site.legacy._session_trainees_list=lambda group:group['trainees']
     site.legacy._new_session_trainee=lambda group,fields:{**fields,'id':'new-trainee'}
     site.legacy._apply_pending_cnaps_imports_for_trainee=Mock()
     site.legacy.increment_partner_trainee_usage=Mock()
     page.set_viewport_size({'width':width,'height':950})
-    page.goto('http://fixture.local'+DETAIL)
-    page.get_by_role('button',name='Créer le stagiaire',exact=True).click()
+    page.goto('http://fixture.local'+('/admin/edof-test?section=state&group=all&tab=unlinked' if cold_list else DETAIL))
+    page.get_by_role('link' if cold_list else 'button',name='Créer le stagiaire',exact=True).click()
     dialog=page.locator('#edof-action-dialog')
     page.locator('#edof-action-dialog[data-journey="choosing"]').wait_for()
+    submit=dialog.get_by_role('button',name='Vérifier les informations du stagiaire',exact=True)
+    watch_url=f'/admin/edof-test/dossiers/{FOLDER}/journey/watch'
+    if cold_list:
+        assert 'tab=unlinked' in page.url and submit.is_disabled()
+        second=dialog.locator('[name="session_id"][value="v2"]')
+        second.check()
+        assert screen.posts == [watch_url]
+        with site.vault.connect() as db:
+            attempted, expires = db.execute("SELECT attempted, expires FROM edof_enrolment_watch WHERE folder=?", (FOLDER,)).fetchone()
+        assert attempted == -1 and 0 < expires-time.time() <= 300
+        with site.store.connect() as db:
+            assert db.execute("SELECT COUNT(*) FROM directory_sync_requests WHERE scope='new'").fetchone()[0] == 1
+        receive_details()
+        dialog.get_by_text('anne@example.invalid',exact=True).wait_for(timeout=12000)
+        assert second.is_checked() and submit.is_enabled()
+        dialog.locator('[name="session_id"][value="v1"]').check()
     assert dialog.get_by_text('anne@example.invalid',exact=True).is_visible()
     assert dialog.locator('[data-session-option]').count()==2
     assert 'APS janvier' not in dialog.inner_text()
-    submit=dialog.get_by_role('button',name='Vérifier les informations du stagiaire',exact=True)
     assert submit.is_enabled() and dialog.locator('[name="session_id"][value="v1"]').is_checked()
     dialog.locator('[data-session-search]').fill('février')
     assert not submit.is_enabled()
@@ -278,7 +296,7 @@ def test_accepted_dossier_prefills_filters_and_registers_in_the_same_dialog(scre
     page.wait_for_url('**/navigation/admin_trainees')
     saved=json.loads(site.local.read_text())
     assert saved['sessions'][0]['trainees']==[] and not saved.get('wedof_links')
-    assert screen.posts==[f'/admin/edof-test/dossiers/{FOLDER}/create-trainee']
+    assert screen.posts == ([watch_url] if cold_list else []) + [f'/admin/edof-test/dossiers/{FOLDER}/create-trainee']
 
 
 def test_comment_autosaves_below_dossier_name_and_survives_reload(screen):

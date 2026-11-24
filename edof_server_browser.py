@@ -1527,6 +1527,12 @@ def _run_browser(spec, *, live=None, traffic=None):
                     live["pending_witness"] = witness
                 clock_event("verified", fresh=not reused)
                 progress("pending_verified")
+                # Serve an open enrolment before the optional catalogue and billing reads.
+                from edof_enrolment_watch import fill as follow_enrolments
+                try:
+                    follow_enrolments(context, witness, vault, spec["owner"], EDOF_HOST, API_PREFIX)
+                except (ValueError, TypeError, OSError, sqlite3.Error, BrowserError):
+                    pass  # A follow-up failure must not invalidate a verified directory.
                 if on_production_service() and not spec.get("full_sync"):
                     from edof_funding_watch import refresh as refresh_funding, refresh_accepted
                     for refresh_list in (refresh_accepted, refresh_funding):
@@ -1552,11 +1558,6 @@ def _run_browser(spec, *, live=None, traffic=None):
                 except (ValueError,TypeError,OSError,BrowserError):
                     pass
                 coverage = []
-                from edof_enrolment_watch import fill as follow_enrolments
-                try:
-                    follow_enrolments(context, witness, vault, spec["owner"], EDOF_HOST, API_PREFIX)
-                except (ValueError, TypeError, OSError, sqlite3.Error, BrowserError):
-                    pass  # A follow-up failure must not invalidate a verified directory.
                 if on_production_service() and not spec.get("full_sync"):
                     from edof_crm_details import fill
                     try:

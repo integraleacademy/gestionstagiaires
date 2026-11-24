@@ -1,13 +1,13 @@
 (() => {
   const feedback = window.edofFeedback;
   const section = () => document.getElementById('proposition-edof');
-  if (!feedback || !section()) return;
+  if (!feedback || (!section() && !document.querySelector('[data-registration-open]'))) return;
   const pending = new Set(['queued', 'saving', 'validating', 'checking']);
   let following = false, submitting = false, invalidTimer, currentId, lastWatch = 0, registering = false;
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   function begin(button) {
-    const box = section();
+    const box = button?.dataset.registrationUrl ? button : section();
     return currentId = feedback.begin('proposal', 'Vérification de votre demande avant transmission.', button,
       `${box.dataset.holder} · Dossier CPF ${box.dataset.folder}`);
   }
@@ -118,15 +118,12 @@
       journey = null;
     }
   }
-  function attachChooser(id) {
-    const content = feedback.content(id);
-    const form = content?.querySelector('[data-registration-form]');
-    if (!form) return;
+  function attachChooser(id, form, journeyUrl) {
     const submit = form.querySelector('button[type="submit"]');
     const choose = () => {
       const selected = form.querySelector('[name="session_id"]:checked');
       form.querySelector('[data-session-dates]').hidden = !selected || selected.dataset.datesMatch === '1';
-      submit.disabled = !selected;
+      submit.disabled = !selected || form.dataset.ready !== '1';
     };
     form.addEventListener('change', choose);
     choose();
@@ -147,7 +144,7 @@
     });
     form.addEventListener('submit', async event => {
       event.preventDefault();
-      if (registering || !form.reportValidity()) return;
+      if (registering || form.dataset.ready !== '1' || !form.reportValidity()) return;
       registering = true;
       submit.disabled = true;
       const errorBox = form.querySelector('[data-registration-error]'); errorBox.hidden = true;
@@ -158,12 +155,14 @@
         if (result.prefill_url) { window.location.assign(result.prefill_url); return; }
         if (!result.registered) throw Error('L’inscription n’a pas été confirmée.');
         registered(id, result.link);
-        const updated = await read(section().dataset.journeyUrl);
-        await refreshDetail(updated.detail_url);
+        if (section()) {
+          const updated = await read(journeyUrl);
+          await refreshDetail(updated.detail_url);
+        }
       } catch (error) {
         // A lost response can hide a successful atomic registration. Read the link before retrying.
         let saved;
-        try { saved = await read(section().dataset.journeyUrl); } catch { /* Keep the explicit error below. */ }
+        try { saved = await read(journeyUrl); } catch { /* Keep the explicit error below. */ }
         if (saved?.link) { registered(id, saved.link); return; }
         feedback.journey(id, 'choosing', {title:'Choisir la session de formation', phase:'Inscription non confirmée',
           message:'Vérifiez le message ci-dessous avant de reprendre.'});
@@ -172,38 +171,57 @@
         submit.disabled = false;
       } finally { registering = false; }
     });
+    return choose;
   }
   async function chooseSession(id, url) {
     if (registering) return;
-    registering = true;
     const content = feedback.content(id);
-    if (!content) { registering = false; return; }
-    feedback.journey(id, 'loading', {title:'Préparation de l’inscription', phase:'Récupération des informations EDOF',
-      message:'Nous préparons la fiche du candidat et les sessions correspondant à sa formation.'});
+    if (!content) return;
+    feedback.journey(id, 'loading', {title:'Préparation de l’inscription', phase:'Recherche des sessions',
+      message:'Les sessions compatibles avec ce dossier vont s’afficher.'});
     content.hidden = true; content.replaceChildren();
     try {
-      const deadline = Date.now()+5*60*1000;
-      while (feedback.isCurrent(id)) {
-        const result = await read(url);
+      const result = await read(url);
+      if (!feedback.isCurrent(id)) return;
+      if (result.link) { registered(id, result.link); return; }
+      const parse = html => new DOMParser().parseFromString(html, 'text/html').body;
+      content.replaceChildren(...parse(result.html).childNodes);
+      content.hidden = false;
+      feedback.journey(id, 'choosing', {title:'Choisir la session de formation', phase:'Sessions compatibles',
+        message:'Les sessions aux mêmes dates que le dossier EDOF apparaissent en premier.'});
+      const form = content.querySelector('[data-registration-form]');
+      if (!form) return;
+      const updateSubmit = attachChooser(id, form, result.poll_url);
+      if (result.ready) return;
+      if (!result.can_watch) throw Error('La connexion Intégrale EDOF doit être active pour récupérer les coordonnées du stagiaire.');
+
+      const body = new FormData();
+      body.set('csrf', form.elements.csrf.value);
+      body.set('refresh', 'registration');
+      await read(result.watch_url, {method:'POST', body});
+      const statusUrl = new URL(url, location.href);
+      statusUrl.searchParams.set('wait', '1');
+      const deadline = Date.now() + 5*60*1000;
+      while (feedback.isCurrent(id) && Date.now() < deadline) {
+        await pause(5000);
         if (!feedback.isCurrent(id)) return;
-        if (result.link) { registered(id, result.link); return; }
-        if (result.ready) {
-          content.replaceChildren(...new DOMParser().parseFromString(result.html,'text/html').body.childNodes);
-          content.hidden = false;
-          feedback.journey(id, 'choosing', {title:'Choisir la session de formation', phase:'Informations du candidat récupérées',
-            message:'Seules les sessions compatibles sont proposées. Les dates identiques au dossier EDOF apparaissent en premier.'});
-          attachChooser(id);
+        const fresh = await read(statusUrl);
+        if (!feedback.isCurrent(id)) return;
+        if (fresh.link) { registered(id, fresh.link); return; }
+        if (fresh.ready) {
+          content.querySelector('[data-registration-contact]').replaceWith(parse(fresh.html).querySelector('[data-registration-contact]'));
+          form.dataset.ready = '1';
+          updateSubmit();
           return;
         }
-        await watch();
-        if (Date.now() > deadline) throw Error('La fiche complète n’a pas encore été récupérée. Vérifiez la connexion EDOF puis reprenez l’inscription.');
-        await pause(5000);
       }
+      throw Error('La fiche complète n’a pas encore été récupérée. Vérifiez la connexion EDOF puis reprenez l’inscription.');
     } catch (error) {
+      if (!feedback.isCurrent(id)) return;
       if (error.body?.link) { registered(id, error.body.link); return; }
       feedback.journey(id, 'error', {title:'Informations EDOF à vérifier', message:error.message,
         actionLabel:'Reprendre l’inscription', action:() => chooseSession(id, url)});
-    } finally { registering = false; }
+    }
   }
   async function follow(url, id, first) {
     following = true;
@@ -295,8 +313,12 @@
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-proposal-follow], [data-journey-follow], [data-registration-open]');
     if (!button) return;
+    if (button.matches('a')) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+      event.preventDefault();
+    }
     if ((following || submitting || registering) && feedback.isCurrent(currentId)) { feedback.show(currentId); return; }
-    if (button.matches('[data-registration-open]')) { chooseSession(begin(button), section().dataset.registrationUrl); return; }
+    if (button.matches('[data-registration-open]')) { chooseSession(begin(button), button.dataset.registrationUrl || section().dataset.registrationUrl); return; }
     if (button.matches('[data-journey-follow]') || section().dataset.transmissionState === 'confirmed') {
       following = true;
       followJourney(section().dataset.journeyUrl, begin(button)).finally(() => { following = false; });
@@ -306,6 +328,7 @@
     if (url) follow(url, begin(button));
   });
   const box = section();
+  if (!box) return;
   if (pending.has(box.dataset.transmissionState) && box.dataset.transmissionUrl) {
     follow(box.dataset.transmissionUrl, begin());
   } else if (new URL(location.href).searchParams.get('enroll') === '1' && box.dataset.followable === '1') {

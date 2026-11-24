@@ -240,6 +240,7 @@ def test_manual_sync_stays_busy_and_retains_original_request_between_batches(rec
 
 def test_warm_batches_yield_to_manual_proposal_and_keep_two_minute_poll(conn,monkeypatch):
     from playwright.sync_api import sync_playwright,Page,APIRequestContext
+    import edof_enrolment_watch as enrolments
     spec=prepare(conn)
     key=connector_key('synthetic-private-connector'*2)
     monkeypatch.setenv('EDOF_CONNECTOR_KEY',key)
@@ -265,6 +266,14 @@ def test_warm_batches_yield_to_manual_proposal_and_keep_two_minute_poll(conn,mon
         monkeypatch.setattr(runner,'open_workspace_or_login',Mock(side_effect=AssertionError('No new login')))
         calls=[]
         def get(_context,url,**kw):
+            if url == 'https://' + runner.EDOF_HOST + runner.WORKSPACE_API_PREFIX + 'organisms/current/factures':
+                calls.append('invoices')
+                return conn.portal.response(url, 200, {'numberOfItems':0, 'items':[]})
+            if url == 'https://' + runner.EDOF_HOST + runner.API_PREFIX + '200004':
+                calls.append('registration')
+                return conn.portal.response(url, 200, {'id':'200004','currentState':'accepted',
+                    'attendee':{'firstName':'Anne','lastName':'Exemple','birthDate':'1990-04-01'},
+                    'trainingActionInfo':{'title':'SSIAP 1','sessionStartDate':'2027-02-15','sessionEndDate':'2027-02-17'}})
             if url!=URL:
                 calls.append('manual')
                 return conn.portal.get(url,**kw)
@@ -287,8 +296,10 @@ def test_warm_batches_yield_to_manual_proposal_and_keep_two_minute_poll(conn,mon
         assert vault.get(directory.record_key('owner')) is None
         vault.put(directory.pending_key('owner'),{'checked':time.time()-121,'rows':{}})
         vault.put('pending-attempt:owner',time.time()-121)
+        enrolments.watch(vault, 'owner', {'folder_id':'200004','first_name':'Anne','last_name':'Exemple'}, registration=True)
         assert runner.run_browser(full,live=live)['code']=='directory_ready'
-        assert calls[-2:]==[('notProcessed',0),('all',4)]
+        assert calls[-4:]==[('notProcessed',0),'registration',('all',4),'invoices']
+        assert vault.get(enrolments.key('owner','200004'))['fields']['birth_date'] == '1990-04-01'
         assert len(vault.get(directory.record_key('owner'))['rows'])==5
         assert not any(isinstance(c,tuple) and c[0]=='accepted' for c in calls)
         assert 'efp_auth' not in json.dumps(calls)

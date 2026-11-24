@@ -131,6 +131,31 @@ def test_edof_matching_uses_the_registered_path_dates(group):
     assert before==training
 
 
+@pytest.mark.parametrize("choice,override,expected", [
+    ("remise_a_niveau", "", "350"), ("remise_a_niveau", "325", "325"), ("recyclage", "", "250"),
+])
+def test_edof_course_price_and_reviewed_convention_split(group, monkeypatch, choice, override, expected):
+    training, client = group
+    days = training["ssiap_pathways"][choice + "_dates"]
+    fields = {"folder_id":"100000", "state":"accepted", "first_name":"Camille", "last_name":"Exemple",
+              "title":paths.CHOICES[choice], "session_start_date":days[0], "session_end_date":days[-1],
+              "total_incl":"220.00"}
+    monkeypatch.setitem(gestion.app.extensions, "edof_registration_prefill", lambda folder, sid: fields)
+    response = client.post("/api/sessions/S1/trainees/create", json={"first_name":"Camille", "last_name":"Exemple",
+        "edof_folder":"100000", "training_price":override, "send_access":False})
+    assert response.status_code == 200, response.json
+    trainee = training["trainees"][0]
+    assert response.json["training_price"] == trainee["training_price"] == expected
+    assert trainee["ssiap_pathway"] == choice and trainee["edof_registration"]["total_incl"] == "220.00"
+    assert not trainee["cpf_amount"] and not trainee["personal_amount"]
+    personal = str(int(expected) - 220)
+    result = client.post(response.json["convention_financing_url"], json={
+        "training_price":expected, "cpf_amount":"220", "personal_amount":personal, "other_amount":""})
+    assert result.status_code == 200, result.json
+    assert (trainee["training_price"], trainee["cpf_amount"], trainee["personal_amount"]) == (expected, "220", personal)
+    assert gestion._aps_convention_replacements(training, trainee)["montant_formation"] == expected
+
+
 def test_unbilled_personal_share_follows_price_and_an_issued_invoice_keeps_its_amount(group):
     training, client = group
     t = enrol(group, "ssiap", personal_amount="980")
