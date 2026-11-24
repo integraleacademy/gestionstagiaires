@@ -16,6 +16,7 @@
   const reviewSession = document.querySelector('#wedof-review-session');
   const reviewRemoteDates = document.querySelector('#wedof-review-remote-dates');
   const reviewLocalDates = document.querySelector('#wedof-review-local-dates');
+  const pathwaySelect = form.querySelector('[name=ssiap_pathway]');
   const reviewConfirm = document.querySelector('#wedof-review-confirm');
   const feedback = document.querySelector('#wedof-manual-feedback');
   const successModal = document.querySelector('#edof-association-success');
@@ -153,7 +154,7 @@
       });
       results.append(card);
     });
-    if (automatic && autoAssociate && total === 1 && items.length === 1 && items[0].exact_identity_match) {
+    if (automatic && autoAssociate && total === 1 && items.length === 1 && items[0].exact_identity_match && !items[0].ssiap_options?.length) {
       resultsStatus.textContent = 'Correspondance exacte unique trouvée. Association automatique en cours…';
       const button = results.querySelector('.wedof-associate-button');
       submitAssociation(items[0], button, hasDateMismatch(items[0]));
@@ -198,21 +199,37 @@
     results.querySelectorAll('.wedof-enrolment-card').forEach(card => card.classList.remove('is-selected'));
     button.closest('.wedof-enrolment-card')?.classList.add('is-selected');
 
-    const mismatch = hasDateMismatch(item);
-    if (!mismatch && !item.session_archived) {
+    const options = item.ssiap_options || [];
+    if (pathwaySelect) {
+      pathwaySelect.replaceChildren();
+      pathwaySelect.disabled = !options.length;
+      pathwaySelect.closest('label').hidden = !options.length;
+      for (const option of options) {
+        const entry = new Option(option.label + (option.days ? ' · ' + option.price + ' € TTC' : ''), option.key);
+        entry.disabled = !option.available;
+        entry.selected = option.selected;
+        pathwaySelect.add(entry);
+      }
+    }
+    if (!options.length && !hasDateMismatch(item) && !item.session_archived) {
       submitAssociation(item, button, false);
       return;
     }
-
+    function showSelection() {
+      const option = options.find(o => o.key === pathwaySelect?.value);
+      selectedEnrolment = option ? {...item, session_date_start:option.start, session_date_end:option.end} : item;
+      const mismatch = hasDateMismatch(selectedEnrolment);
+      reviewTitle.textContent = item.session_archived ? 'Vérifier la session archivée' : 'Confirmer le rattachement';
+      reviewLocalDates.textContent = option?.dates?.length ? option.dates.map(fr).join(', ') :
+        `Du ${fr(selectedEnrolment.session_date_start)} au ${fr(selectedEnrolment.session_date_end)}`;
+      reviewConfirm.textContent = mismatch ? 'Associer malgré les dates différentes' : 'Confirmer l’association';
+    }
+    if (pathwaySelect) pathwaySelect.onchange = showSelection;
     review.hidden = false;
-    reviewTitle.textContent = item.session_archived
-      ? 'Vérification nécessaire : cette session est archivée'
-      : 'Vérification nécessaire : les dates sont différentes';
     reviewTrainee.textContent = identity(item);
     reviewSession.textContent = item.session_name;
     reviewRemoteDates.textContent = `Du ${fr(folder.dateStart)} au ${fr(folder.dateEnd)}`;
-    reviewLocalDates.textContent = `Du ${fr(item.session_date_start)} au ${fr(item.session_date_end)}`;
-    reviewConfirm.textContent = mismatch ? 'Associer malgré les dates différentes' : 'Associer à cette session archivée';
+    showSelection();
     review.scrollIntoView({behavior: 'smooth', block: 'nearest'});
   }
 
@@ -270,6 +287,7 @@
 
   async function openManualModal(button) {
     form.reset();
+    if (pathwaySelect) pathwaySelect.disabled = true;
     selectedEnrolment = null;
     currentRow = button.closest('tr');
     searchWasEdited = false;

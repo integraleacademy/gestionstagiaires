@@ -729,6 +729,7 @@
       <div id="wedof-modal-alert" class="wedof-modal-alert is-info" role="alert" hidden></div>
       <section id="wedof-association-review" class="wedof-association-review" hidden>
         <h3 id="wedof-association-review-title">Vérification nécessaire</h3>
+        <label hidden>Parcours SSIAP de cette inscription <select name="ssiap_pathway" disabled></select></label>
         <div class="wedof-review-grid">
           <div><span>Stagiaire sélectionné</span><strong id="wedof-review-trainee">—</strong></div>
           <div><span>Session sélectionnée</span><strong id="wedof-review-session">—</strong></div>
@@ -746,7 +747,7 @@
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20261027-manual-anomaly') }}" defer></script>
-<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20261027-manual-anomaly') }}" defer></script>
+<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20261124-maintien') }}" defer></script>
 
 <script>
   (() => {

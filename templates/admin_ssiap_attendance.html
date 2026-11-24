@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "_ssiap_pathway_style.html" %}
+<style>
+@media print {
+  body * {visibility:hidden}
+  #ssiapAttendance, #ssiapAttendance * {visibility:visible}
+  #ssiapAttendance {position:absolute;inset:0;margin:0;padding:12mm;color:#132238;background:white}
+  #ssiapAttendance .screen-only {display:none}
+  #ssiapAttendance th,#ssiapAttendance td {padding:13px 7px;border:1px solid #aaa}
+}
+@media screen { #ssiapAttendance .print-only {display:none}}
+</style>
+<main id="ssiapAttendance" data-day="{{ day }}" class="ssiap-workspace">
+<a class="screen-only" href="{{ url_for('admin_trainees',session_id=session.id) }}">← Retour aux stagiaires</a>
+<h1>Présences SSIAP 1</h1><p>{{ session.name }} · {{ day|frdate }} · {{ rows|length }} personne(s) attendue(s)</p>
+<form method="get" class="ssiap-actions screen-only">
+<label>Journée <select name="jour">{% for d in days %}<option value="{{ d }}" {% if d==day %}selected{% endif %}>{{ d|frdate }}</option>{% endfor %}</select></label>
+<button class="btn btn-outline">Afficher</button><button type="button" class="btn btn-outline" id="ssiapPrint">Imprimer la feuille d’émargement</button>
+</form>
+<section class="ssiap-panel"><table class="ssiap-table"><thead><tr><th>Stagiaire</th><th>Parcours</th><th class="screen-only">Présence vérifiée</th><th class="print-only">Signature matin</th><th class="print-only">Signature après-midi</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ row.trainee.last_name }} {{ row.trainee.first_name }}</td><td>{{ row.label }}</td><td class="screen-only">
+<select aria-label="Présence de {{ row.trainee.first_name }} {{ row.trainee.last_name }}" data-presence-url="{{ url_for('api_ssiap_attendance',session_id=session.id,trainee_id=row.trainee.id) }}" {% if is_read_only or day > today %}disabled{% endif %}>
+<option value="" disabled {% if not row.status %}selected{% endif %}>À vérifier</option>{% for key,label in [('present','Journée complète'),('partial','Présence partielle'),('absent','Absent')] %}<option value="{{ key }}" {% if row.status==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td><td class="print-only"></td><td class="print-only"></td></tr>
+{% else %}<tr><td colspan="4">Aucun stagiaire attendu pour cette journée.</td></tr>{% endfor %}</tbody></table></section><p class="print-only">Formateur et signature ____________________________________</p>
+<p class="ssiap-feedback screen-only" id="ssiapFeedback" role="status" aria-live="polite"></p>
+</main><script src="{{ url_for('static',filename='js/ssiap-pathways.js',v='20261124-maintien') }}"></script>
+{% endblock %}

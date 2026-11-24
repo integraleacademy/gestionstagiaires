@@ -12,7 +12,7 @@ BASE_TEMPLATE = ROOT / "templates" / "base.html"
 
 def _open_convention_transmission_source() -> str:
     source = BASE_TEMPLATE.read_text(encoding="utf-8")
-    start = source.index("  function openConventionTransmission(")
+    start = source.index("  async function openConventionTransmission(")
     end = source.index("\n  function openConventionPreview(", start)
     return source[start:end]
 
@@ -22,6 +22,7 @@ def _run_ssiap_price_case(
     combined: bool,
     existing_price: str = "",
     training_type: str = "SSIAP 1",
+    pathway: str = "",
     modern_modal: bool = True,
 ) -> dict:
     node = shutil.which("node")
@@ -81,6 +82,7 @@ eval(functionSource);
     trainingType,
     defaults: {{
       training_price: existingPrice,
+      ssiap_pathway: {json.dumps(pathway)},
       cpf_amount: "",
       personal_amount: "",
       other_amount: "",
@@ -142,3 +144,10 @@ def test_non_ssiap_training_is_not_prompted_or_changed():
     assert result["payload"]["training_price"] == ""
     assert result["promptOptions"] is None
     assert result["nativePrompt"] is None
+
+
+@pytest.mark.parametrize(("pathway", "price"), [("recyclage", "250"), ("remise_a_niveau", "350")])
+def test_continuing_education_uses_its_own_price(pathway, price):
+    result = _run_ssiap_price_case(combined=False, existing_price=price, pathway=pathway)
+    assert result["payload"]["training_price"] == price
+    assert result["promptOptions"] is None and result["nativePrompt"] is None

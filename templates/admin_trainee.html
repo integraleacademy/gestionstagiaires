@@ -64,7 +64,7 @@
       {% elif session.afc_enabled %}
         <span>Examen APS : <strong>{{ session.exam_date|frdate or 'À renseigner' }}</strong></span>
         <span>Examen SSIAP 1 : <strong>{{ session.ssiap_exam_date|frdate or 'À renseigner' }}</strong></span>
-      {% else %}
+      {% elif not ssiap_pathway or not ssiap_pathway.short %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
 

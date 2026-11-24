@@ -80,6 +80,8 @@ def digest(value):
 
 
 def candidate_settings(training, trainee):
+    if ssiap_pathways.short_course(trainee):
+        return {"included": False}
     stored = state(training).get("candidates", {}).get(str(trainee["id"]), {})
     return {"included": stored.get("included", True) is not False}
 
@@ -290,6 +292,7 @@ def active_candidates(services, training, *, data=None, writable=False):
                 if not afc_schedule.has_withdrawn(t, config["date"])]
     candidates = [t for t in services._session_trainees_list(training)
                   if not services._trainee_registration_is_cancelled(t)
+                  and not ssiap_pathways.short_course(t)
                   and not afc_schedule.has_withdrawn(t, config["date"])]
     candidates.extend(exam_retakes.participants(services, training, data=data, kind=config["level"],
                                                 exam_day=config["date"], writable=writable))

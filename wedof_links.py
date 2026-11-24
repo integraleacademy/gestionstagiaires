@@ -5,6 +5,7 @@ import secrets
 from typing import Any, Dict, Iterable, Optional
 
 from wedof_matching import normalize_date
+import ssiap_pathways
 
 
 ALLOWED_STATES = {
@@ -16,6 +17,10 @@ def evaluate_wedof_link_date_consistency(
     link: Dict[str, Any], local_session: Dict[str, Any], current_wedof_folder: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """Compare les dates pour l'affichage uniquement, sans décision métier."""
+    trainee = next((t for t in (local_session.get("trainees") or local_session.get("stagiaires") or [])
+                    if t.get("id") == link.get("trainee_id")), {})
+    if ssiap_pathways.short_course(trainee):
+        local_session = ssiap_pathways.effective_session(local_session, trainee)
     local_start = normalize_date(local_session.get("date_start") or local_session.get("date_debut"))
     local_end = normalize_date(local_session.get("date_end") or local_session.get("date_fin"))
     folder = current_wedof_folder if isinstance(current_wedof_folder, dict) else None

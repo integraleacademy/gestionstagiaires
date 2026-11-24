@@ -8,6 +8,7 @@ from edof_gmail import Vault
 from edof_matching import registration_dates
 from wedof_links import save_manual_wedof_link
 from wedof_matching import match_folder
+from ssiap_pathways import group_period
 
 
 def observed_rows(store, owner, snapshot):
@@ -65,7 +66,8 @@ def match_unlinked(data, rows, partner_id, is_cancelled, as_folder, key):
             periods[registration_dates(group, trainee)].append(trainee)
         for dates, trainees in periods.items():
             if all(dates):
-                by_dates[dates].append({**group, "date_start":dates[0], "date_end":dates[1], "trainees":trainees})
+                by_dates[dates].append({**group, "_ssiap_group_period": group_period(group),
+                                        "date_start":dates[0], "date_end":dates[1], "trainees":trainees})
     results = {}
     exact = defaultdict(list)
     for folder, row in rows.items():

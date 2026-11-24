@@ -32,6 +32,8 @@ from cpf_provider import PROVIDERS, ProviderStore, ProviderUnavailable, on_test_
 from cpf_entry_pilot import active_holds, blocks_pilot
 from cpf_provider_bridge import coordinated_switch, production_request
 from edof_matching import build_comparison, manual_options
+import ssiap_pathways
+from ssiap_routes import set_enrolment
 from edof_readonly_test import ID_RE
 from edof_server_browser import DETAIL_PREFIX
 from integrale_edof_registration import create_registration, matching_sessions, training_family
@@ -396,10 +398,12 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
             data = json.load(source)
         sessions = []
         for group in associations.eligible_groups(data, partner_id, is_cancelled, include_cancelled=True):
-            summary = {key:group[key] for key in ("id", "name", "training_type", "date_start", "date_end",
-                  "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status", "ssiap_pathways",
+            summary = {key:group[key] for key in ("id", "name", "nom", "training_type", "type_formation", "date_start", "date_end",
+                  "crm_center", "center", "centre", "date_debut", "date_fin", "partner_id", "archived", "is_archived", "status", "ssiap_pathways",
                   "training_duration_hours", "duration_hours", "total_hours", "contract_training_hours", "training_price") if key in group}
-            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail","vtc_real_training_dates")
+            if ssiap_pathways.level_one(group):
+                summary["ssiap_pathways"] = group.get("ssiap_pathways")
+            summary["trainees"] = [{**{key:t[key] for key in ("id","first_name","last_name","prenom","nom","email","mail","vtc_real_training_dates","ssiap_pathway")
                                     if key in t}, "registration_cancelled": is_cancelled(t)} for t in (group.get("trainees") or group.get("stagiaires") or []) if isinstance(t,dict)]
             sessions.append(summary)
         return {"sessions": sessions, "wedof_links": data.get("wedof_links", []),
@@ -1157,8 +1161,12 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         query = request.args.get("q", "").strip()[:120]
         choices = (manual_options(data, row, query=query) if query else build_comparison(data, row)["candidates"])
         items = []
+        groups = {str(s["id"]): s for s in data.get("sessions", [])}
         for c in choices:
+            group = groups.get(str(c["session_id"]), {})
+            trainee = next((t for t in group.get("trainees", []) if str(t["id"]) == c["trainee_id"]), {})
             items.append({**c, "session_archived":c["archived"], "session_training_type":c["training_type"],
+                          "ssiap_options":ssiap_pathways.association_options(group, trainee),
                           "session_date_start":c["start_date"], "session_date_end":c["end_date"],
                           "match_reason":" · ".join([*c["issues"], *(check["label"] for check in c["checks"])]),
                           "blocked":bool([issue for issue in c["issues"] if issue != "Cette session est archivée."])})
@@ -1183,6 +1191,14 @@ def register_dashboard(app, legacy, store, *, results_owner, vault, gmail_status
         outcome = []
         def apply(data):
             scoped = {**data, "sessions": list(associations.eligible_groups(data, partner_id, is_cancelled))}
+            pathway = request.form.get("ssiap_pathway")
+            if pathway:
+                group = next((s for s in scoped["sessions"] if str(s.get("id")) == sid), {})
+                trainee = next((t for t in group.get("trainees", []) if str(t.get("id")) == tid), None)
+                if not trainee or not ssiap_pathways.level_one(group):
+                    raise ValueError("La session ne correspond pas à ce parcours SSIAP 1.")
+                if pathway != ssiap_pathways.selected(trainee):
+                    set_enrolment(legacy, group, trainee, request.form)
             choices = manual_options(scoped, row, pair=(sid, tid))
             if len(choices) != 1 or any(i != "Cette session est archivée." for i in choices[0]["issues"]) or request.form.get("verified") != "yes":
                 raise ValueError("Vérifiez l’identité, la session et les éventuels conflits avant d’associer.")
