@@ -6,7 +6,7 @@ from flask import abort, jsonify, render_template, request
 import ssiap_pathways as paths
 
 
-def set_enrolment(services, training, trainee, payload):
+def set_enrolment(services, training, trainee, payload, *, billing_data=None):
     choice = str(payload.get("ssiap_pathway") or "")
     paths.validate_choice(training, choice)
     if not paths.enabled(training) and not paths.level_one(training):
@@ -24,7 +24,7 @@ def set_enrolment(services, training, trainee, payload):
     if current_choice == choice and str(trainee.get("training_price", "")) == price and diploma == (trainee.get("ssiap_original_diploma") or ""):
         return
     previous = {key: copy.deepcopy(trainee.get(key)) for key in (
-        "ssiap_pathway", "training_price", "convocation_aps_pdf_path", "convention_aps_pdf_path",
+        "ssiap_pathway", "training_price", "personal_amount", "convocation_aps_pdf_path", "convention_aps_pdf_path",
         "attestation_entree_aps_pdf_path", "attestation_fin_aps_pdf_path", "ssiap_attendance", "ssiap_original_diploma")}
     previous["changed_at"] = services._now_iso()
     trainee.setdefault("ssiap_pathway_history", []).append(previous)
@@ -38,6 +38,18 @@ def set_enrolment(services, training, trainee, payload):
                 if doc.get("key") in required:
                     by_key.setdefault(doc["key"], copy.deepcopy(doc))
         trainee["documents"] = list(by_key.values())
+    if billing_data is not None and (choice in paths.MAINTENANCE or current_choice in paths.MAINTENANCE):
+        # Only reprice an entirely self-funded registration without a contract, invoice or collection.
+        personal = services._money(trainee.get("personal_amount"))
+        committed = (trainee.get("convention_status") not in (None, "", "soon")
+                     or any(trainee.get(k) for k in ("yousign", "convention_aps_pdf_path", "convention_aps_signed_at",
+                            "company_convention", "qonto_invoice", "qonto_direct_debit_mandate_id",
+                            "cash_payment_enabled", "cash_payment_installments", "financings", "personal_financing_amount"))
+                     or any(row.get("traineeId") == trainee.get("id") and row.get("sessionId") == training.get("id")
+                            for row in billing_data.get("billing_lines", []) if isinstance(row, dict)))
+        if (not committed and personal > 0 and personal == services._money(previous["training_price"])
+                and not services._money(trainee.get("cpf_amount")) and not services._money(trainee.get("other_amount"))):
+            trainee["personal_amount"] = price
     trainee.update(ssiap_pathway=choice, training_price=price, ssiap_original_diploma=diploma,
                    ssiap_pathway_changed_at=previous["changed_at"], updated_at=previous["changed_at"])
     services.ensure_documents_schema_for_trainee(trainee, training.get("training_type") or training.get("type_formation") or "SSIAP")
@@ -87,7 +99,7 @@ def register(app, services):
             if services._trainee_registration_is_cancelled(trainee):
                 return {'ok': False, 'error': 'Cette inscription est annulée.', 'status': 409}
             try:
-                set_enrolment(services, training, trainee, payload)
+                set_enrolment(services, training, trainee, payload, billing_data=data)
             except ValueError as exc:
                 return {'ok': False, 'error': str(exc), 'status': 400}
             return {'ok': True, 'label': paths.CHOICES[paths.selected(trainee)]}

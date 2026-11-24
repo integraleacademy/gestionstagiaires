@@ -129,3 +129,16 @@ def test_edof_matching_uses_the_registered_path_dates(group):
     with pytest.raises(ValueError):
         paths.validate(training, {**training["ssiap_pathways"],"recyclage_dates":["2026-11-19","2026-11-19"]})
     assert before==training
+
+
+def test_unbilled_personal_share_follows_price_and_an_issued_invoice_keeps_its_amount(group):
+    training, client = group
+    t = enrol(group, "ssiap", personal_amount="980")
+    change = f"/api/sessions/S1/stagiaires/{t['id']}/parcours-ssiap"
+    assert client.post(change, json={"ssiap_pathway":"recyclage"}).status_code == 200
+    assert t["personal_amount"] == "250"
+    with gestion.app.test_request_context():
+        data = gestion.load_data()
+    data["billing_lines"] = [{"id":"invoice","sessionId":"S1","traineeId":t["id"],"qontoInvoiceId":"issued"}]
+    assert client.post(change, json={"ssiap_pathway":"remise_a_niveau"}).status_code == 200
+    assert t["training_price"] == "350" and t["personal_amount"] == "250"
