@@ -5,4 +5,10 @@
 #securityExamProgress,#securityExamArchive{margin-top:18px}
 #securityExamProgress p,#securityExamArchive p{margin:5px 0 12px}
 #securityExamProgress{border-left:3px solid #008da8}
+#securityExamDialog .uv-report-card{border-left:4px solid #14756d;margin-bottom:24px}
+#securityExamDialog .uv-report-controls{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px}
+#securityExamDialog .uv-report-controls label{flex:1 1 260px;min-width:0}
+#securityExamDialog .uv-report-controls select{width:100%;max-width:100%}
+#securityExamDialog .uv-report-card [hidden]{display:none}
+#securityExamDialog .uv-report-card [data-report-status]{margin:10px 0 0}
 @media(max-width:700px){#securityExamDialog .exam-candidate-top>.exam-actions{width:100%}#securityExamDialog .exam-candidate-top>.exam-actions .btn{flex:1;text-align:center}}

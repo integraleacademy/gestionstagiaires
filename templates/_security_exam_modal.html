@@ -1,6 +1,6 @@
 {% set jury_prefix = "apsJury" if session.afc_enabled else "ssiapExam" %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ssiap-exam.css', v='20261020-1') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/security-exam.css', v='20261020-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/security-exam.css', v='20261124-uv-report') }}">
 <dialog id="securityExamDialog" class="exam-dialog" aria-labelledby="securityExamTitle"
         {% if security_jury_supported %}data-jury-prefix="{{ jury_prefix }}" data-jury-url="{{ url_for('api_security_exam', session_id=session.id) }}"{% endif %}
         data-url="/api/admin/sessions/{{ session.id }}/{{ exam_dossier_slug }}-exam-dossiers">
@@ -51,7 +51,7 @@
   </div>
 </dialog>
 <script src="{{ url_for('static', filename='js/security-exam.js', v='20261023-afc-1') }}" defer></script>
-{% if is_native_aps or uv_exam_documents %}<script src="{{ url_for('static', filename='js/learning-exam-documents.js', v='20261105-answers') }}" defer></script>{% endif %}
+{% if is_native_aps or uv_exam_documents %}<script src="{{ url_for('static', filename='js/learning-exam-documents.js', v='20261124-uv-report') }}" defer></script>{% endif %}
 {% if security_jury_supported %}
 {% include '_exam_jury_mail_dialog.html' %}
 <script src="{{ url_for('static', filename='js/ssiap-exam.js', v='20261026-without-pv-1') }}" defer></script>
