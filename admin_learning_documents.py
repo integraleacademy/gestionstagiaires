@@ -1,4 +1,5 @@
 """Read-only individual/group printing of the existing learning evidence."""
+from collections import Counter
 from io import BytesIO
 from pathlib import Path
 
@@ -15,7 +16,7 @@ def register(host):
     app = host.app
 
     def context(sid):
-        data = host.load_data(run_background_tasks=False)
+        data = host.load_data(run_background_tasks=False, persist_normalization=False)
         training = host.find_session(data, sid)
         if not training or not (is_native_aps_session(training) or uv.eligible(training)):
             abort(404)
@@ -43,13 +44,40 @@ def register(host):
         training, _, people = context(session_id)
         course = uv.course_for(training)
         units = [r for r in uv.bank()['courses'].get(course, {}).get('units', []) if uv.unit(course, r['number'])] if uv.eligible(training) else []
+        roster = [dict(id=p['id'], name=' '.join(str(p.get(k) or '') for k in ('last_name', 'first_name')),
+                       submitted=[r['number'] for r in units if uv._result(p, course, r['number'])],
+                       certificate_url=url_for('manuals_shop.trainee_elearning_progress_certificate',
+                           session_id=session_id, trainee_id=p['id']) if is_native_aps_session(training) else '') for p in people]
+        counts = Counter(number for person in roster for number in person['submitted'])
         result = dict(ok=True, require_all_uv=course == 'aps', certificates=is_native_aps_session(training),
-            units=[dict(number=r['number'], title=r['title']) for r in units],
-            people=[dict(id=p['id'], name=' '.join(str(p.get(k) or '') for k in ('last_name', 'first_name')),
-                         submitted=[r['number'] for r in units if uv._result(p, course, r['number'])],
-                         certificate_url=url_for('manuals_shop.trainee_elearning_progress_certificate',
-                             session_id=session_id, trainee_id=p['id']) if is_native_aps_session(training) else '') for p in people])
+                      people=roster, units=[
+                          dict(number=r['number'], title=r['title'], completed=counts[r['number']],
+                               report_url=url_for('admin_uv_session_report', session_id=session_id, number=r['number'])
+                               if counts[r['number']] else None) for r in units])
         return jsonify(result), 200, {'Cache-Control': 'private, no-store'}
+
+    @app.get('/admin/sessions/<session_id>/questionnaires-uv/<int:number>/rapport.pdf')
+    @host.admin_login_required
+    def admin_uv_session_report(session_id, number):
+        from uv_session_report import ReportUnavailable, summarize
+        from uv_session_report_pdf import build
+
+        training, partner, people = context(session_id)
+        course = uv.course_for(training)
+        unit = uv.unit(course, number) if uv.eligible(training) else None
+        if not unit:
+            abort(404)
+        try:
+            report = summarize(people, course, number)
+        except ReportUnavailable as exc:
+            abort(409, description=str(exc))
+        internal = partner['id'] == host.INTEGRALE_PARTNER_ID
+        brand = 'Intégrale Academy' if internal else partner.get('name') or 'Organisme de formation'
+        output = build(report, training, course, unit, brand=brand, host=host)
+        response = send_file(output, mimetype='application/pdf', as_attachment=True,
+                             download_name=f'Rapport_{course.upper()}_UV{number:02}_{session_id}.pdf')
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
 
     @app.get('/admin/sessions/<session_id>/learning-documents/<kind>.pdf')
     @host.admin_login_required
