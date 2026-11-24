@@ -465,7 +465,7 @@
 
 {% if ssiap_supported %}
 {% include "_ssiap_pathway_style.html" %}
-<div class="ssiap-banner"><strong>Parcours de la session</strong><a class="btn btn-outline" href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Paramétrer SSIAP / SST</a><a class="btn btn-primary" href="{{ url_for('admin_ssiap_convocations',session_id=session.id) }}">Convocations du groupe</a><label>Afficher <select id="ssiapPathwayFilter"><option value="all">Tous</option><option value="ssiap">SSIAP seul</option><option value="ssiap_sst">SSIAP + SST</option></select></label></div>
+<div class="ssiap-banner"><strong>Parcours de la session</strong><a class="btn btn-outline" href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Paramétrer les parcours</a><a class="btn btn-primary" href="{{ url_for('admin_ssiap_convocations',session_id=session.id) }}">Convocations du groupe</a>{% if ssiap_level_one %}<a class="btn btn-outline" href="{{ url_for('admin_ssiap_attendance',session_id=session.id) }}">Présences par journée</a>{% endif %}<label>Afficher <select id="ssiapPathwayFilter"><option value="all">Tous</option>{% for option in ssiap_options %}<option value="{{ option.key }}">{{ option.label }}</option>{% endfor %}</select></label></div>
 {% endif %}
 <div class="table-wrap full-bleed">
   <table class="table trainees-table {% if is_native_aps %}trainees-table--native-aps{% endif %} {% if is_all_vtc %}trainees-table--all-vtc{% endif %}" id="traineesTable"
@@ -596,7 +596,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
 
-        {% if ssiap_supported %}<td class="ssiap-row-choice"><span class="ssiap-path-pill">{{ 'SSIAP + SST' if t.ssiap_pathway == 'ssiap_sst' else 'SSIAP seul' }}</span><br><a href="{{ url_for('admin_ssiap_trainee_pathway',session_id=session.id,trainee_id=t.id) }}">Choisir le parcours</a></td>{% endif %}
+        {% if ssiap_supported %}<td class="ssiap-row-choice"><span class="ssiap-path-pill">{{ (ssiap_options|selectattr('key','equalto',t.ssiap_pathway or 'ssiap')|map(attribute='label')|first) or 'SSIAP seul' }}</span><br><a href="{{ url_for('admin_ssiap_trainee_pathway',session_id=session.id,trainee_id=t.id) }}">Choisir le parcours</a></td>{% endif %}
         <td class="col-convention">
           <select class="status sel status-dot" data-field="convention_status" {{ read_only_attr }}>
             {% for v in enums.convention %}
@@ -889,6 +889,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 {% if is_ssiap_session %}
+        {% if t.ssiap_pathway in ['recyclage','remise_a_niveau'] %}
+        <td class="col-ssiap-exam">Formation continue</td><td class="col-ssiap-diploma"><a href="{{ url_for('admin_trainee_page',session_id=session.id,trainee_id=t.id,_anchor='automationHub') }}">Attestation de stage</a></td>
+        {% else %}
         {% set ssiap_exam_status = t.ssiap_exam_status or 'pending_results' %}
         <td class="col-ssiap-exam">
           <select class="sel ssiap-exam-select ssiap-exam-{{ ssiap_exam_status }}" data-field="ssiap_exam_status" {{ read_only_attr }}>
@@ -921,6 +924,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </div>
           {% if t.ssiap_diploma_number and ssiap_exam_status == 'certified' %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
         </td>
+        {% endif %}
         {% endif %}
         <td class="col-comment">
           <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
@@ -1173,7 +1177,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
       {% if edof_prefill %}<p role="status">Informations préremplies depuis le dossier EDOF {{ edof_prefill.folder_id }}. Vérifiez et complétez les champs avant de sauvegarder. La convention sera proposée à l’étape suivante.</p>{% endif %}
       {% if edof_prefill_error %}<p role="alert">{{ edof_prefill_error }}</p>{% endif %}
       <div class="form-grid trainee-create-grid">
-        {% if ssiap_supported and session.ssiap_pathways %}<label><div class="label">Parcours</div><select id="tSsiapPathway"><option value="ssiap">SSIAP seul</option><option value="ssiap_sst" {% if not session.ssiap_pathways.sst_dates %}disabled{% endif %}>SSIAP + SST</option></select></label>{% endif %}
+        {% if ssiap_supported and (ssiap_level_one or session.ssiap_pathways) %}
+        <label><div class="label">Parcours SSIAP</div><select id="tSsiapPathway">
+          {% for option in ssiap_options %}<option value="{{ option.key }}" data-price="{{ option.price }}" data-days="{{ option.days or '' }}" data-dates="{{ option.dates|map('frdate')|join(', ') }}" {% if not option.available %}disabled{% endif %} {% if option.key == ssiap_suggested and option.available %}selected{% endif %}>{{ option.label }}{% if option.days %} · {{ option.days }} jours · {{ option.price }} € TTC{% if not option.available %} · dates à renseigner{% endif %}{% endif %}</option>{% endfor %}
+        </select></label>
+        {% if ssiap_level_one %}<div><a href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Régler les journées des parcours</a></div>
+        <label id="ssiapCreatePrice" hidden><div class="label">Tarif convenu TTC (€)</div><input id="tSsiapPrice" type="number" min="0" step="0.01"><small id="tSsiapDays"></small></label>
+        <label id="ssiapCreateDiploma" hidden><div class="label">N° du diplôme SSIAP d’origine</div><input id="tSsiapDiploma" maxlength="100" placeholder="Peut être complété sur la fiche"></label>{% endif %}
+        {% endif %}
         <label>
           <div class="label">Nom</div>
           <input id="tLastName" type="text" placeholder="Nom">
@@ -3767,6 +3778,20 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   const edofPrefill = {{ edof_prefill|default(none)|tojson }};
   const edofPrefillError = {{ edof_prefill_error|default('')|tojson }};
   if (edofPrefill) applyImportedTraineeFields(edofPrefill);
+  const ssiapChoice = document.getElementById('tSsiapPathway');
+  function showSsiapChoice() {
+    const option = ssiapChoice?.selectedOptions[0];
+    const price = document.getElementById('tSsiapPrice');
+    if (!option || !price) return;
+    const short = Boolean(option.dataset.days);
+    document.getElementById('ssiapCreatePrice').hidden = !short;
+    document.getElementById('ssiapCreateDiploma').hidden = !short;
+    price.value = short ? (edofPrefill?.total_incl ?? option.dataset.price) : '';
+    price.readOnly = edofPrefill?.total_incl != null;
+    document.getElementById('tSsiapDays').textContent = option.dataset.dates;
+  }
+  ssiapChoice?.addEventListener('change', showSsiapChoice);
+  showSsiapChoice();
   if (edofPrefillError) document.getElementById('btnCreateTrainee').disabled = true;
 
   if (new URLSearchParams(window.location.search).get('openCreateTrainee') === '1') {
@@ -3960,7 +3985,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           send_access,
           ...(edofPrefill ? {edof_folder:edofPrefill.folder_id} : {}),
           ...(document.getElementById("tAfcStart") ? {training_date_start:document.getElementById("tAfcStart").value, afc_candidate_id:document.getElementById("afcSelectedCandidateId").value} : {}),
-          ...(document.getElementById("tSsiapPathway") ? {ssiap_pathway:document.getElementById("tSsiapPathway").value} : {})
+          ...(document.getElementById("tSsiapPathway") ? {ssiap_pathway:ssiapChoice.value, training_price:document.getElementById("tSsiapPrice")?.value, ssiap_original_diploma:document.getElementById("tSsiapDiploma")?.value} : {})
         })
       });
 

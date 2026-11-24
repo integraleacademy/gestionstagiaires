@@ -13,6 +13,7 @@ import time
 import uuid
 from zoneinfo import ZoneInfo
 import afc_schedule
+import ssiap_pathways
 
 
 STATE_KEY = "training_attestation_automation"
@@ -98,6 +99,11 @@ def _scheduled_date(services, training, kind, trainee=None):
 
 def _is_due(services, training, trainee, kind, today, activated_on, now):
     config = KINDS[kind]
+    if kind == "end" and ssiap_pathways.short_course(trainee):
+        try:
+            ssiap_pathways.check_attestation(training, trainee)
+        except ValueError:
+            return False
     if afc_schedule.has_withdrawn(trainee, today.isoformat()):
         return False
     if trainee.get(config["sent_key"]) or not _has_template(services, training, kind):

@@ -6,6 +6,8 @@ import unicodedata
 from typing import Any, Dict, Iterable, List, Optional
 
 from wedof_funding import FRANCE_TRAVAIL_FIELDS, extract_france_travail_funding
+from edof_matching import registration_dates
+import ssiap_pathways
 
 
 def normalize_email(value: Any) -> str:
@@ -148,7 +150,14 @@ def find_candidate_sessions(sessions: Iterable[Dict[str, Any]], start: str, end:
         archived = bool(session.get("archived") or session.get("is_archived")) or str(session.get("status") or "").casefold() in {"archived", "archivee", "archivée"}
         local_start = normalize_date(session.get("date_start") or session.get("date_debut"))
         local_end = normalize_date(session.get("date_end") or session.get("date_fin"))
-        if not archived and local_start == start and local_end == end:
+        if archived:
+            continue
+        trainees = session.get("trainees") or session.get("stagiaires") or []
+        if ssiap_pathways.level_one(session) and any(ssiap_pathways.short_course(t) for t in trainees):
+            matched = [t for t in trainees if registration_dates(session, t) == (start, end)]
+            if matched:
+                candidates.append({**session, "trainees": matched, "stagiaires": matched})
+        elif local_start == start and local_end == end:
             candidates.append(session)
     return candidates
 
@@ -193,6 +202,8 @@ def find_trainee_cpf_candidates(
     )
     local_first_name = normalize_name(trainee.get("first_name") or trainee.get("prenom"))
     local_last_name = normalize_name(trainee.get("last_name") or trainee.get("nom"))
+    if ssiap_pathways.short_course(trainee):
+        session_obj = ssiap_pathways.effective_session(session_obj, trainee)
     local_start = normalize_date(session_obj.get("date_start") or session_obj.get("date_debut"))
     local_end = normalize_date(session_obj.get("date_end") or session_obj.get("date_fin"))
     permitted = {str(value) for value in allowed_states} if allowed_states is not None else None

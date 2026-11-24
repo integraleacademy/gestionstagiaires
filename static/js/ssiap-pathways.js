@@ -22,6 +22,9 @@
       const values = new FormData(settings);
       const config = Object.fromEntries(['ssiap_hours','sst_hours','ssiap_schedule','sst_schedule','ssiap_price','ssiap_sst_price'].map(key=>[key,values.get(key)]));
       config.sst_dates = values.getAll('sst_date').filter(Boolean);
+      for (const key of ['recyclage','remise_a_niveau']) {
+        if (values.has(key + '_date')) config[key + '_dates'] = values.getAll(key + '_date').filter(Boolean);
+      }
       const payload = {date_start:values.get('date_start'),date_end:values.get('date_end'),exam_date:values.get('exam_date'),ssiap_pathways:config};
       try {
         try { await post(settings.dataset.url,payload); }
@@ -38,9 +41,22 @@
   const trainee = document.getElementById('ssiapTraineeForm');
   if (trainee) {
     const select = trainee.elements.ssiap_pathway;
+    const options = JSON.parse(trainee.dataset.options);
+    function updateDetails() {
+      const option = options.find(item => item.key === select.value);
+      const short = Boolean(option?.days);
+      document.getElementById('ssiapInitialSummary').hidden = short;
+      const summary = document.getElementById('ssiapMaintenanceSummary');
+      if (summary) {
+        summary.hidden = !short;
+        document.getElementById('ssiapShortDays').textContent = (option?.dates || []).map(day => day.split('-').reverse().join('/')).join(', ') + ' · ' + (option?.days * 7) + ' h';
+      }
+    }
+    updateDetails();
     select.addEventListener('change', () => {
+      updateDetails();
       document.getElementById('ssiapSstSummary').hidden = select.value !== 'ssiap_sst';
-      const price = JSON.parse(trainee.dataset.prices)[select.value];
+      const price = options.find(item => item.key === select.value).price;
       if (price !== '' && price !== null) {
         trainee.elements.training_price.value = price;
         document.getElementById('ssiapPriceHint').textContent = 'Tarif proposé pour ce parcours. Vous pouvez l’ajuster avant d’enregistrer.';
@@ -50,6 +66,24 @@
       event.preventDefault(); const button=event.submitter; button.disabled=true; message('Enregistrement…');
       try { await post(trainee.dataset.url,Object.fromEntries(new FormData(trainee))); window.location.assign(trainee.dataset.return); }
       catch(error) { message(error.message); } finally { button.disabled=false; }
+    });
+  }
+  const attendance = document.getElementById('ssiapAttendance');
+  if (attendance) {
+    document.getElementById('ssiapPrint').addEventListener('click', () => window.print());
+    attendance.querySelectorAll('[data-presence-url]').forEach(control => {
+      let saved = control.value;
+      control.addEventListener('change', async () => {
+        control.disabled = true;
+        try {
+          await post(control.dataset.presenceUrl, {day: attendance.dataset.day, status: control.value});
+          saved = control.value;
+          message('Présence enregistrée.');
+        } catch (error) {
+          control.value = saved;
+          message(error.message);
+        } finally { control.disabled = false; }
+      });
     });
   }
   const send=document.getElementById('ssiapBulkSend');

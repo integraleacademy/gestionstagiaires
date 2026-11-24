@@ -1,6 +1,7 @@
 """Create an enrolment from a verified accepted dossier within one local store transaction."""
 import datetime as dt
 import re
+import ssiap_pathways
 from zoneinfo import ZoneInfo
 
 from edof_directory import FIRST_SESSION, canonical_dates, normalized, session_date
@@ -57,6 +58,11 @@ def matching_sessions(data, partner_id, row, *, today=None):
             continue
         first = session_date(group.get("date_start") or group.get("date_debut"))
         last = session_date(group.get("date_end") or group.get("date_fin"))
+        choice = ssiap_pathways.suggested_choice(row.get("title"))
+        if choice and ssiap_pathways.level_one(group):
+            days = ssiap_pathways.settings(group)[choice + "_dates"]
+            if days:
+                first, last = days[0], days[-1]
         exact = bool(first and last and first == start and last == end)
         if last and last < today and not exact:
             continue
@@ -112,7 +118,8 @@ def create_registration(legacy, folder, session_id, fields):
             return data
         if not group:
             raise ValueError("La session sélectionnée n’est plus disponible.")
-        trainee = legacy._new_session_trainee(group, fields)
+        choice = ssiap_pathways.suggested_choice(fields.get("title"))
+        trainee = legacy._new_session_trainee(group, {**fields, **({"ssiap_pathway": choice} if choice else {})})
         insert_registration(legacy, data, folder, session_id, fields, trainee)
         return data
     return legacy._atomic_update_data(apply)

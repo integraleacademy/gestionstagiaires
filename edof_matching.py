@@ -7,6 +7,7 @@ Names are useful for suggesting a review, never sufficient to establish a link.
 import datetime as dt
 import re
 import unicodedata
+import ssiap_pathways
 
 
 MAX_CANDIDATES = 6
@@ -67,6 +68,8 @@ def _session(group):
 
 def registration_dates(group, trainee):
     """VTC enrolments can have their own period within a shared exam group."""
+    if ssiap_pathways.short_course(trainee):
+        group = ssiap_pathways.effective_session(group, trainee)
     text = _text(trainee.get("vtc_real_training_dates"))
     is_vtc = re.search(r"\bvtc\b", _name(group.get("training_type")) + " " + _name(group.get("name")))
     if text and is_vtc:

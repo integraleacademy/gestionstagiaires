@@ -9468,6 +9468,10 @@ def _ssiap_document_template(session_obj, trainee, kind, fallback):
     path = ssiap_pathways.resolve(session_obj, trainee, strict=True)
     if path is None:
         return fallback(session_obj)
+    if path.get("short"):
+        name = {"entry": "attestationentreessiap", "end": "attestationfinssiap",
+                "convention": "conventionssiap", "convocation": "convocationssiap"}[kind]
+        return os.path.join(app.root_path, "templates_word", name + "_maintien.docx")
     names = {"entry": "attestationentreessiap_parcours.docx", "end": "attestationfinssiap_parcours.docx",
              "convention": "conventionssiap_parcours.docx",
              "convocation": "convocationssiap_parcours_sst.docx" if path["with_sst"] else "convocationssiap_parcours.docx"}
@@ -13375,7 +13379,16 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
 
     if tt == "A3P":
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
-    if tt.startswith("SSIAP"):
+    if tt.startswith("SSIAP") and ssiap_pathways.short_course(trainee):
+        support = {"accept": "application/pdf,image/jpeg,image/png"}
+        docs.extend([{**support, "key": "ssiap_original", "label": "Diplôme SSIAP 1 d’origine ou équivalence"},
+                     {**support, "key": "attestation_secourisme_ssiap", "label": "Qualification de secourisme en cours de validité"}])
+        if ssiap_pathways.selected(trainee) == "recyclage":
+            docs.append({**support, "key": "ssiap_activite", "label": "Justificatif des 1 607 heures d’activité sur les 36 derniers mois"})
+        else:
+            docs.append({**REQUIRED_DOCS["SSIAP_ONLY"][0], "optional": True,
+                         "label": "Certificat médical de moins de trois mois si vous n’exercez pas dans un service de sécurité incendie"})
+    elif tt.startswith("SSIAP"):
         docs += list(REQUIRED_DOCS["SSIAP_ONLY"])
     if _is_dirigeant_candidate_sheet_training(tt):
         docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
@@ -13430,6 +13443,9 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
                 d["file"] = ""; changed = True
             if "files" not in d or not isinstance(d.get("files"), list):
                 d["files"] = []
+                changed = True
+            if k == "certificat_medical_ssiap" and d.get("optional") and not rd.get("optional"):
+                d.pop("optional")
                 changed = True
             if rd.get("optional") and not d.get("optional"):
                 d["optional"] = True; changed = True
@@ -17930,15 +17946,14 @@ def admin_sessions():
             _sync_aps_period_dates(s)
         if not ended_cards_only:
             # Registration and CRM prefill can still select a past VTC/VAE session.
-            pathways = s.get("ssiap_pathways")
             session_choices.append({
                 "id": s.get("id"), "name": _session_get(s, "name", ""),
                 "training_type": training_type, "status_key": status_key,
                 "date_start": _session_get(s, "date_start", ""),
                 "date_end": _session_get(s, "date_end", ""),
                 "afc_enabled": afc_schedule.enabled(s),
-                "has_ssiap_pathways": isinstance(pathways, dict),
-                "has_sst_dates": isinstance(pathways, dict) and bool(pathways.get("sst_dates")),
+                **({"ssiap_options": ssiap_pathways.choice_options(s)}
+                   if ssiap_pathways.level_one(s) or ssiap_pathways.enabled(s) else {}),
             })
             if status_key == "ended":
                 out_sessions.append({"id": s.get("id"), "deferred": True})
@@ -20034,9 +20049,10 @@ def admin_wedof_manual_enrolments():
             if not isinstance(trainee_obj, dict):
                 continue
             trainee = _manual_trainee_item(trainee_obj)
+            individual = ssiap_pathways.effective_session(session_obj, trainee_obj) if ssiap_pathways.short_course(trainee_obj) else session_obj
             ranked = _manual_trainee_enrolment_score(
                 trainee,
-                session_obj,
+                individual,
                 query=query,
                 email=email,
                 phone=phone,
@@ -20062,8 +20078,10 @@ def admin_wedof_manual_enrolments():
                 "session_id": session_item["id"],
                 "session_name": session_item["name"],
                 "session_training_type": session_item["training_type"],
-                "session_date_start": session_item["date_start"],
-                "session_date_end": session_item["date_end"],
+                "session_date_start": _session_get(individual, "date_start", ""),
+                "session_date_end": _session_get(individual, "date_end", ""),
+                **({"ssiap_options": ssiap_pathways.association_options(session_obj, trainee_obj)}
+                   if ssiap_pathways.level_one(session_obj) else {}),
                 "session_archived": session_item["archived"],
                 "trainee_id": trainee["id"],
                 "first_name": trainee["first_name"],
@@ -20188,6 +20206,7 @@ def _manual_link_response(message: str, status: int, *, result: Optional[Dict[st
 
 @app.post("/admin/wedof/matching/manual-link")
 @admin_login_required
+@admin_write_required
 def admin_wedof_manual_link():
     started_at = time.monotonic()
     external_id = str(request.form.get("external_id") or "").strip()
@@ -20236,8 +20255,20 @@ def admin_wedof_manual_link():
         if _trainee_registration_is_cancelled(trainee):
             result.update(error="Cette inscription est annulée et ne peut pas être associée à WEDOF.")
             return canonical
-        local_dates = (normalize_date(local_session.get("date_start") or local_session.get("date_debut")),
-                       normalize_date(local_session.get("date_end") or local_session.get("date_fin")))
+        staged = copy.deepcopy(trainee)
+        pathway = request.form.get("ssiap_pathway")
+        if pathway and pathway != ssiap_pathways.selected(trainee):
+            if not ssiap_pathways.level_one(local_session) or (local_session.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
+                result.update(error="Le parcours ne correspond pas à une session SSIAP 1 du centre.")
+                return canonical
+            try:
+                ssiap_routes.set_enrolment(sys.modules[__name__], local_session, staged, request.form)
+            except ValueError as exc:
+                result.update(error=str(exc))
+                return canonical
+        individual = ssiap_pathways.effective_session(local_session, staged) if ssiap_pathways.short_course(staged) or pathway else local_session
+        local_dates = (normalize_date(_session_get(individual, "date_start", "")),
+                       normalize_date(_session_get(individual, "date_end", "")))
         wedof_dates = (normalize_date(wedof.get("start_date")), normalize_date(wedof.get("end_date")))
         if local_dates != wedof_dates and request.form.get("confirm_date_mismatch") not in {"1", "true", "on"}:
             result.update(error="La confirmation de la différence de dates est obligatoire.")
@@ -20245,6 +20276,8 @@ def admin_wedof_manual_link():
         outcome = save_manual_wedof_link(canonical, external_id=external_id, session_id=session_id,
                                          trainee_id=trainee_id, state=state, date_start=wedof_dates[0],
                                          date_end=wedof_dates[1])
+        if outcome != "conflict" and pathway:
+            trainee.update(staged)
         active_external_ids = {str(item.get("external_id") or "") for item in canonical.get("wedof_links", [])
                                if isinstance(item, dict) and item.get("active") is True}
         eligible_status_ids = {str(item.get("external_id") or "") for item in canonical.get("wedof_automation_status", [])
@@ -26003,6 +26036,9 @@ def admin_trainees(session_id: str):
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways"),
                  "vtc_practice_slots": (s.get(vtc_practice.KEY) or {}).get("slots", [])},
         ssiap_supported=ssiap_pathways.supported(s),
+        ssiap_options=ssiap_pathways.choice_options(s) if ssiap_pathways.supported(s) else [],
+        ssiap_level_one=ssiap_pathways.level_one(s),
+        ssiap_suggested=ssiap_pathways.suggested_choice((edof_prefill or {}).get("title")),
         ssiap_exam_supported=ssiap_exam.supported(s) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
         security_jury_supported=bool(ssiap_exam.security_exam_jury.level(ssiap_exam.for_family(s, "security"))) and s.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID),
         trainees=trainees,
@@ -27467,11 +27503,20 @@ def _apply_session_update(data, session_id, payload, *, persist=None):
     except ValueError as exc:
         return jsonify(ok=False, error=str(exc)), 400
     afc_calendar_changed = any(s.get(k, "") != payload[k] for k in (*afc_schedule.SESSION_DATES, "date_start", "date_end") if k in payload)
-    if "ssiap_pathways" in payload or (ssiap_pathways.enabled(s) and any(k in payload for k in ("date_start", "date_end"))):
+    short_enrolments = [t for t in _registered_trainees(s) if ssiap_pathways.short_course(t)]
+    if "ssiap_pathways" in payload or ((ssiap_pathways.enabled(s) or short_enrolments)
+                                      and any(k in payload for k in ("date_start", "date_end"))):
         try:
-            config = ssiap_pathways.validate({**s, **payload}, payload.get("ssiap_pathways", s.get("ssiap_pathways")))
+            updated_session = {**s, **payload}
+            config = ssiap_pathways.validate(updated_session, payload.get("ssiap_pathways", ssiap_pathways.settings(s)))
             if not config["sst_dates"] and any(ssiap_pathways.selected(t) == "ssiap_sst" for t in _session_trainees_list(s)):
                 raise ValueError("Des stagiaires suivent le SST : conservez au moins une journée SST.")
+            for trainee in short_enrolments:
+                dates = config.get(ssiap_pathways.selected(trainee) + "_dates", [])
+                if not dates:
+                    raise ValueError("Des stagiaires sont inscrits au parcours court. Renseignez ses journées.")
+                if set(trainee.get("ssiap_attendance") or {}) - set(dates):
+                    raise ValueError("Une présence a déjà été saisie sur une journée que vous souhaitez retirer.")
             payload["ssiap_pathways"] = config
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 400
@@ -27638,10 +27683,12 @@ def _new_session_trainee(s, payload):
     pathway_choice = str(payload.get("ssiap_pathway") or "ssiap")
     if ssiap_pathways.enabled(s) or payload.get("ssiap_pathway"):
         ssiap_pathways.validate_choice(s, pathway_choice)
-        if ssiap_pathways.enabled(s):
+        if ssiap_pathways.enabled(s) or pathway_choice in ssiap_pathways.MAINTENANCE:
             proposed_price = ssiap_pathways.settings(s)[pathway_choice + "_price"]
             if proposed_price != "":
                 default_price = proposed_price
+        if pathway_choice in ssiap_pathways.MAINTENANCE and payload.get("training_price") not in (None, ""):
+            default_price = ssiap_pathways.number(payload["training_price"], "Tarif", optional=True)
 
     public_token = uuid.uuid4().hex
 
@@ -27714,8 +27761,13 @@ def _new_session_trainee(s, payload):
         "ypareo_cursus_erreur": "",
     }
     t.update(afc_schedule.trainee_update(s, t, payload))
-    if ssiap_pathways.enabled(s):
+    if ssiap_pathways.enabled(s) or pathway_choice in ssiap_pathways.MAINTENANCE:
         t["ssiap_pathway"] = pathway_choice
+        if pathway_choice in ssiap_pathways.MAINTENANCE:
+            diploma = str(payload.get("ssiap_original_diploma") or "").strip()
+            if len(diploma) > 100:
+                raise ValueError("Le numéro de diplôme doit tenir sur 100 caractères.")
+            t["ssiap_original_diploma"] = diploma
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""), afc_schedule.enabled(s))
     ensure_documents_schema_for_trainee(t, training_type)
@@ -27745,6 +27797,8 @@ def api_create_trainee(session_id: str):
             return jsonify(ok=False, error="Une seule source d’inscription peut être utilisée."), 400
         try:
             edof_fields = app.extensions["edof_registration_prefill"](edof_folder, session_id)
+            if not payload.get("ssiap_pathway") and ssiap_pathways.level_one(s):
+                payload["ssiap_pathway"] = ssiap_pathways.suggested_choice(edof_fields.get("title")) or "ssiap"
         except ValueError as exc:
             return jsonify(ok=False, error=str(exc)), 409
     afc_candidate_id = str(payload.get("afc_candidate_id") or "").strip()
@@ -28060,6 +28114,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify(ok=False, error=str(exc)), 400
     if any(t.get(k, "") != payload[k] for k in afc_schedule.TRAINEE_DATES if k in payload):
         t["afc_dates_changed_at"] = _now_iso()
+    if "ssiap_exam_status" in payload and ssiap_pathways.short_course(t):
+        return jsonify(ok=False, error="Ce parcours court ne comporte pas d’examen initial SSIAP."), 400
     previous_trainee = copy.deepcopy(t)
     previous_registration_cancelled = _trainee_registration_is_cancelled(t)
     previous_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
@@ -32340,6 +32396,11 @@ def _ssiap_etiquette_checklist(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
         "label": "Contrat de formation signé",
         "checked": (trainee.get("convention_status") or "").strip().lower() == "signed",
     }]
+    if ssiap_pathways.short_course(trainee):
+        for requirement in required_docs_for_training("SSIAP", trainee):
+            doc = docs_by_key.get(requirement["key"], {})
+            checklist.append({"label": requirement["label"], "checked": doc.get("status") == "CONFORME"})
+        return checklist
     for label, key in (
         ("Pièce d’identité", "id"),
         ("Carte vitale", "carte_vitale_doc"),
@@ -32390,7 +32451,7 @@ def _afc_etiquette_checklist(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bytes:
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
     is_afc = afc_schedule.enabled(session_obj)
-    label_session = afc_schedule.effective_session(session_obj, trainee)
+    label_session = _trainee_training_session(session_obj, trainee)
     template_name = "etiquette_afc.docx" if is_afc else _etiquette_template_name(training_type)
     if not template_name:
         abort(400, f"Aucun modèle Word prévu pour la formation : {training_type}")
@@ -32403,8 +32464,8 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
     replacements = {
         "{{NOM}}": (trainee.get("last_name", "") or "").upper(),
         "{{PRENOM}}": (trainee.get("first_name", "") or "").upper(),
-        "{{FORMATION}}": afc_schedule.TITLE if is_afc else _session_get(session_obj, "name", ""),
-        "{{TYPE_FORMATION}}": "AFC" if is_afc else training_type,
+        "{{FORMATION}}": afc_schedule.TITLE if is_afc else _session_get(label_session, "name", ""),
+        "{{TYPE_FORMATION}}": "AFC" if is_afc else label_session.get("_ssiap_pathway_label") or training_type,
         "{{DATES}}": f"{fr_date(_session_get(label_session,'date_start',''))} → {fr_date(_session_get(label_session,'date_end',''))}",
     }
     if is_afc:
@@ -32617,12 +32678,14 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         checklist.append({"label": item, "checked": checked})
 
     is_afc = afc_schedule.enabled(s)
-    label_session = afc_schedule.effective_session(s, t)
+    label_session = _trainee_training_session(s, t)
     if is_afc:
         formation_label_text = "FORMATION AFC"
         checklist = _afc_etiquette_checklist(t)
     elif training_type.startswith("SSIAP"):
         checklist = _ssiap_etiquette_checklist(t)
+        if ssiap_pathways.short_course(t):
+            formation_label_text = ssiap_pathways.CHOICES[ssiap_pathways.selected(t)]
 
     return render_template(
         "admin_etiquette_print.html",
@@ -34944,6 +35007,8 @@ def public_trainee_space(token):
     display_session = aps_enrolments.learner_session(vtc_elearning_activation.learner_session(s, t))
     display_session = desp_vae_elearning.learner_session(display_session, t)
     display_session = {**display_session, **afc_schedule.view(s)}
+    if ssiap_pathways.short_course(t):
+        display_session = ssiap_pathways.effective_session(display_session, t)
     has_native_elearning = bool(display_session.get("aps_native_modules") or display_session.get("aps_native_course_id"))
     aps_elearning_enabled = (is_aps_training or display_session.get("individual_aps_access") or (show_vtc and has_native_elearning)) and bool(display_session.get("aps_elearning_enabled"))
     aps_elearning_start_date = _session_start_date(display_session) if aps_elearning_enabled else None
@@ -39931,6 +39996,8 @@ def _aps_end_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str 
 
 
 def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    if ssiap_pathways.short_course(trainee):
+        ssiap_pathways.check_attestation(session_obj, trainee)
     session_obj = _trainee_training_session(session_obj, trainee)
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
@@ -40119,7 +40186,7 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
     ]
-    if not is_dirigeant and str(config.get("slug") or "") != "vtc":
+    if not is_dirigeant and str(config.get("slug") or "") != "vtc" and not ssiap_pathways.short_course(trainee):
         required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
     for value, message in required:
         if not str(value or "").strip():
@@ -44400,6 +44467,11 @@ def buildBillingLinesFromSessions(
         if not session_id or not training:
             continue
         for trainee in _session_trainees_list(sess):
+            course = ssiap_pathways.resolve(sess, trainee) if ssiap_pathways.short_course(trainee) else None
+            item_name = course["title"] if course else training
+            item_start = course["date_start"] if course else start.isoformat()
+            item_end = course["date_end"] if course else (end or start).isoformat()
+            item_exam = "" if course else _session_get(sess, "exam_date", "") or ""
             for financing, line_id, stored in _trainee_billing_sources(session_id, trainee, existing, cpf_by_trainee):
                 trainee_id = str(trainee['id'])
                 persisted = dict(stored)
@@ -44501,10 +44573,10 @@ def buildBillingLinesFromSessions(
                     'clientCity': persisted.get('clientCity') or trainee.get('city') or '',
                     'siret': persisted.get('siret') or '',
                     'invoiceNotes': persisted.get('invoiceNotes') or '',
-                    'formationName': training, 'sessionName': _session_get(sess, 'name', '') or training,
-                    'dateStart': start.isoformat(), 'dateEnd': end.isoformat() if end else '', 'examDate': _session_get(sess, 'exam_date', '') or '',
-                    'dateLabel': f"du {fr_date(start.isoformat())} au {fr_date((end or start).isoformat())}" + (f" — examen le {fr_date(_session_get(sess, 'exam_date', ''))}" if _session_get(sess, 'exam_date', '') else ''),
-                    'description': f"Formation {training} - {trainee.get('first_name','')} {trainee.get('last_name','')} - {financing.get('label') or financing['type']}",
+                    'formationName': item_name, 'sessionName': _session_get(sess, 'name', '') or training,
+                    'dateStart': item_start, 'dateEnd': item_end, 'examDate': item_exam,
+                    'dateLabel': f"du {fr_date(item_start)} au {fr_date(item_end)}" + (f" — examen le {fr_date(item_exam)}" if item_exam else ''),
+                    'description': f"Formation {item_name} - {trainee.get('first_name','')} {trainee.get('last_name','')} - {financing.get('label') or financing['type']}",
                     'vatRate': _money(trainee.get('qonto_vat_rate') if trainee.get('qonto_vat_rate') not in (None, '') else 0),
                 }
                 # A cash payment suggests a specific case by default, but an admin
@@ -44691,6 +44763,9 @@ def _cpf_virtual_invoice_line(
         or 'Formation CPF'
     ).strip()
     session_name = str(_session_get(session_obj, 'name', '') or training).strip()
+    if ssiap_pathways.short_course(trainee):
+        session_obj = ssiap_pathways.effective_session(session_obj, trainee)
+        training = session_obj.get('name') or training
     date_start = str(
         normalize_date(_session_get(session_obj, 'date_start', '') or snapshot.get('start_date')) or ''
     )

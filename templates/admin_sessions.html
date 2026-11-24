@@ -1067,8 +1067,16 @@
       <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
         <div class="label">Session</div>
         <select id="traineeTargetSession"></select>
-      </label><label id="createSsiapPathwayWrap" class="trainee-create-section" style="display:none"><div class="label">Parcours</div><select id="createSsiapPathway"><option value="ssiap">SSIAP seul</option><option value="ssiap_sst">SSIAP + SST</option></select>
       </label>
+      <div id="createSsiapPathwayWrap" class="trainee-create-section" hidden>
+        <label><span class="label">Parcours SSIAP</span><select id="createSsiapPathway"></select></label>
+        <a id="sessionSsiapSettingsLink">Régler les journées des parcours</a>
+        <div id="sessionSsiapShortFields" hidden>
+          <p id="sessionSsiapShortDates"></p>
+          <label><span class="label">Tarif convenu TTC (€)</span><input id="sessionSsiapPrice" type="number" min="0" step="0.01"></label>
+          <label><span class="label">N° du diplôme SSIAP d’origine</span><input id="sessionSsiapDiploma" maxlength="100" placeholder="Peut être complété sur la fiche"></label>
+        </div>
+      </div>
 
       <div class="form-grid trainee-create-grid">
         <label>
@@ -1650,7 +1658,14 @@
   async function createTraineeFromSessions(send_access){
     const payload = getTraineeCreatePayload();
     const target = availableSessionsForCreate.find(s=>s.id===document.getElementById("traineeTargetSession")?.value);
-    if(target?.has_ssiap_pathways) payload.ssiap_pathway=document.getElementById("createSsiapPathway").value;
+    if (target?.ssiap_options?.length) {
+      const field = document.getElementById("createSsiapPathway");
+      payload.ssiap_pathway = field.value;
+      if (target.ssiap_options.find(option => option.key === field.value)?.days) {
+        payload.training_price = document.getElementById("sessionSsiapPrice").value;
+        payload.ssiap_original_diploma = document.getElementById("sessionSsiapDiploma").value;
+      }
+    }
     if(!payload.last_name || !payload.first_name){
       alert("Nom + prénom obligatoires");
       return;
@@ -1718,13 +1733,32 @@
       document.getElementById("sessionTAfcEnd").value = current?.date_end || "";
       dates.dataset.sessionId = current?.id || "";
     }
-    const target=availableSessionsForCreate.find(s=>s.id===document.getElementById("traineeTargetSession")?.value);
-    const wrap=document.getElementById("createSsiapPathwayWrap"), field=document.getElementById("createSsiapPathway");
-    wrap.style.display=target?.has_ssiap_pathways ? "block" : "none";
-    const hasSst=!!target?.has_sst_dates;
-    field.querySelector('[value="ssiap_sst"]').disabled=!hasSst;
-    if(!hasSst)field.value="ssiap";
+    const field = document.getElementById("createSsiapPathway");
+    const options = current?.ssiap_options || [];
+    document.getElementById("createSsiapPathwayWrap").hidden = !options.length;
+    if (field.dataset.sessionId !== (current?.id || "")) {
+      field.dataset.sessionId = current?.id || "";
+      field.replaceChildren();
+      for (const option of options) {
+        const label = option.days ? `${option.label} · ${option.days} jours · ${option.price} € TTC` : option.label;
+        const entry = new Option(label + (option.available ? "" : " · dates à renseigner"), option.key);
+        entry.disabled = !option.available;
+        field.add(entry);
+      }
+      document.getElementById("sessionSsiapDiploma").value = "";
+      document.getElementById("sessionSsiapSettingsLink").href = current ? `/admin/sessions/${encodeURIComponent(current.id)}/parcours-ssiap` : "";
+      showSessionSsiapDetails();
+    }
   }
+  function showSessionSsiapDetails() {
+    const field = document.getElementById("createSsiapPathway");
+    const current = availableSessionsForCreate.find(item => item.id === field.dataset.sessionId);
+    const choice = current?.ssiap_options?.find(option => option.key === field.value);
+    document.getElementById("sessionSsiapShortFields").hidden = !choice?.days;
+    document.getElementById("sessionSsiapPrice").value = choice?.days ? choice.price : "";
+    document.getElementById("sessionSsiapShortDates").textContent = (choice?.dates || []).map(d => d.split("-").reverse().join("/")).join(", ");
+  }
+  document.getElementById("createSsiapPathway").addEventListener("change",showSessionSsiapDetails);
   document.getElementById("traineeTargetSession")?.addEventListener("change",updateSsiapCreateChoice);
   function refreshSessionChoices(){
     const select = document.getElementById("traineeTargetSession");
