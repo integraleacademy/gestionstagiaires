@@ -231,8 +231,12 @@ def document_context(training, trainee, fr_date):
     }
     if path.get("short"):
         dates_label = ", ".join(fr_date(d) for d in path["dates"])
-        venue = trainee.get("lieu_formation") or training.get("lieu_formation") or PUGET_VENUE
-        context.update(lieu_formation=venue, detail_parcours=f"{path['label']} · {path['total_hours']} h · {dates_label}",
+        venue = (str(trainee.get("lieu_formation") or "").strip()
+                 or str(training.get("lieu_formation") or "").strip() or PUGET_VENUE)
+        puget_map = bool(re.search(r"\b54[\s,]+(?:chemin|ch\.?)\s+du\s+carr[ée]ou\b", venue, re.I)
+                         and re.search(r"\b83480\b|\bpuget[\s-]+sur[\s-]+argens\b", venue, re.I))
+        context.update(maintien_ssiap=True, jours_parcours=path["days"], plan_acces_puget=puget_map,
+                       lieu_formation=venue, detail_parcours=f"{path['label']} · {path['total_hours']} h · {dates_label}",
                        dates_parcours=dates_label, periode_formation=dates_label,
                        programme_parcours=path["programme"], objectifs_parcours=path["objectives"],
                        prerequis_parcours=path["requirements"], attestation_parcours=path["certificate"],

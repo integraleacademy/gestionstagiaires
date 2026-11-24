@@ -9468,9 +9468,9 @@ def _ssiap_document_template(session_obj, trainee, kind, fallback):
     path = ssiap_pathways.resolve(session_obj, trainee, strict=True)
     if path is None:
         return fallback(session_obj)
-    if path.get("short"):
+    if path.get("short") and kind != "convocation":
         name = {"entry": "attestationentreessiap", "end": "attestationfinssiap",
-                "convention": "conventionssiap", "convocation": "convocationssiap"}[kind]
+                "convention": "conventionssiap"}[kind]
         return os.path.join(app.root_path, "templates_word", name + "_maintien.docx")
     names = {"entry": "attestationentreessiap_parcours.docx", "end": "attestationfinssiap_parcours.docx",
              "convention": "conventionssiap_parcours.docx",
