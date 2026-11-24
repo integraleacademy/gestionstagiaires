@@ -94,6 +94,6 @@ def summarize(people, course, number):
         participants.append(Participant(name, (first[:1] + last[:1]).upper() or '–',
                                         person.get('identity_photo') or '', score, status))
     if not scores:
-        raise ReportUnavailable('Le rapport sera disponible dès la première copie remise pour cette UV.')
+        raise ReportUnavailable('Le rapport sera disponible dès qu’un stagiaire aura terminé cette UV.')
     ordered = sorted(questions.values(), key=lambda q: (q.number, min(q.versions)))
     return UnitReport(participants, ordered, scores, set(editions))

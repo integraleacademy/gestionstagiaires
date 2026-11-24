@@ -13,6 +13,7 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Flowable, Paragraph, Table, TableStyle
 from werkzeug.exceptions import Forbidden, NotFound
 
+from elearning_exam_pdf import _logo as pdf_logo
 from identity_photos import load_photo
 from uv_questionnaire_pdf import fonts
 
@@ -98,12 +99,14 @@ class ParticipantCard(Flowable):
         c.setLineWidth(.6)
         c.roundRect(.4, .4, self.width - .8, self.height - .8, 6, stroke=1, fill=1)
         _avatar(c, self.host, p, 8, (self.height - 25) / 2, 25, bold)
-        self.name.drawOn(c, 41, self.height - 8 - self.name.height)
-        _text(c, 41, 7, 'Copie remise' if p.score is not None else p.status, regular, 7.5, MUTED)
         if p.score is not None:
+            self.name.drawOn(c, 41, (self.height - self.name.height) / 2)
             c.setFillColor(PALE)
             c.roundRect(self.width - 49, (self.height - 18) / 2, 42, 18, 6, fill=1, stroke=0)
             _text(c, self.width - 28, self.height / 2 - 3.5, f'{p.score}/20', bold, 9, TEAL, 'center')
+        else:
+            self.name.drawOn(c, 41, self.height - 8 - self.name.height)
+            _text(c, 41, 7, p.status, regular, 7.5, MUTED)
 
 
 def _roster_rows(report, host, face):
@@ -233,11 +236,13 @@ def _draw_rows(c, group, top, face, questions=False):
     c.restoreState()
 
 
-def _frame(c, face, brand, label, stamp, page, count):
+def _frame(c, face, brand, logo, label, stamp, page, count):
     regular, bold = face
-    c.setFillColor(TEAL)
-    c.roundRect(MARGIN, HEIGHT - 43, 4, 18, 2, stroke=0, fill=1)
-    _in_box(c, brand, bold, 12, INK, MARGIN + 12, HEIGHT - 25, BODY - 185, 19)
+    brand_x = MARGIN
+    if logo is not None:
+        logo.drawOn(c, MARGIN, HEIGHT - 30 - logo.drawHeight / 2)
+        brand_x += logo.drawWidth + 10
+    _in_box(c, brand, bold, 12, INK, brand_x, HEIGHT - 23, WIDTH - MARGIN - 110 - brand_x, 19)
     _text(c, WIDTH - MARGIN, HEIGHT - 39, label, bold, 9, MUTED, 'right')
     c.setStrokeColor(RULE)
     c.setLineWidth(.7)
@@ -252,15 +257,15 @@ def _overview(c, face, report, unit, training):
     top = HEIGHT - 70
     c.setFillColor(INK)
     c.roundRect(MARGIN, top - 105, BODY, 105, 9, fill=1, stroke=0)
-    _text(c, MARGIN + 17, top - 21, 'RAPPORT FORMATEUR', bold, 8.4, GOLD)
+    _text(c, MARGIN + 17, top - 21, 'Rapport détaillé', bold, 10, GOLD)
     _in_box(c, unit['title'], bold, 20, white, MARGIN + 17, top - 29, BODY - 34, 48)
     _in_box(c, training.get('name') or training.get('nom') or training['id'], regular, 9.4,
             HexColor('#DDE9ED'), MARGIN + 17, top - 83, BODY - 34, 16)
     top -= 116
     scores = report.scores
     mean = f'{sum(scores)/len(scores):.1f}'.replace('.', ',')
-    cards = [('Participation', f'{len(scores)} / {len(report.participants)}', 'copies remises'),
-             ('Moyenne du groupe', f'{mean}/20', 'sur les copies remises'),
+    cards = [('Participation', f'{len(scores)} / {len(report.participants)}', 'questionnaires terminés'),
+             ('Moyenne du groupe', f'{mean}/20', 'sur les stagiaires évalués'),
              ('Notes extrêmes', f'{min(scores)} – {max(scores)}', 'minimum et maximum sur 20')]
     width = (BODY - 16) / 3
     for i, (label, value, hint) in enumerate(cards):
@@ -303,12 +308,13 @@ def _revision_focus(c, report, face, top):
         y -= prompt.height + 9
 
 
-def build(report, training, course, unit, *, brand, host):
+def build(report, training, course, unit, *, brand, host, logo_path=None):
     output = BytesIO()
     c = Canvas(output, pagesize=A4, pageCompression=1)
     face = fonts()
+    logo = pdf_logo(logo_path, 85, 42)
     label = f'{course.upper()}   /   UV {unit["number"]:02}'
-    c.setTitle(f'Rapport formateur · {label} · {unit["title"]}')
+    c.setTitle(f'Rapport détaillé · {label} · {unit["title"]}')
     c.setAuthor(brand)
     stamp = datetime.now(ZoneInfo('Europe/Paris')).strftime('%d/%m/%Y à %Hh%M')
     first_top, next_top = HEIGHT - 348, HEIGHT - 122
@@ -319,7 +325,7 @@ def build(report, training, course, unit, *, brand, host):
                                  first_top - BOTTOM, next_top - BOTTOM, q_top - BOTTOM)
     total = len(groups) + len(details)
     for i, group in enumerate(groups, 1):
-        _frame(c, face, brand, label, stamp, i, total)
+        _frame(c, face, brand, logo, label, stamp, i, total)
         top = first_top if i == 1 else next_top
         if i == 1:
             _overview(c, face, report, unit, training)
@@ -329,10 +335,10 @@ def build(report, training, course, unit, *, brand, host):
             _revision_focus(c, report, face, top - sum(h for _, h in group) - 12)
         c.showPage()
     for i, group in enumerate(details, len(groups) + 1):
-        _frame(c, face, brand, label, stamp, i, total)
+        _frame(c, face, brand, logo, label, stamp, i, total)
         _text(c, MARGIN, HEIGHT - 88, 'Analyse des questions', face[1], 21)
         _text(c, MARGIN, HEIGHT - 106, 'La bonne réponse figure sous chaque question. « Sans rép. » indique un délai écoulé.', face[0], 9, MUTED)
-        _text(c, MARGIN, HEIGHT - 120, 'Le taux de réussite porte sur les copies remises ayant reçu cette question.', face[0], 9, MUTED)
+        _text(c, MARGIN, HEIGHT - 120, 'Le taux de réussite est calculé parmi les stagiaires évalués sur cette question.', face[0], 9, MUTED)
         if len(report.versions) > 1:
             _text(c, MARGIN, HEIGHT - 134, 'La date sous le numéro distingue les variantes du questionnaire.', face[0], 9, MUTED)
         _draw_rows(c, group, q_top, face, questions=True)
