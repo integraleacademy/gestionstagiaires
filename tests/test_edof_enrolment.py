@@ -122,9 +122,24 @@ def test_newer_cancellation_supersedes_cached_acceptance(site):
 
 def test_missing_full_read_is_loading_and_registration_is_not_invented(site):
     prepare(site,full=False)
-    assert not site.client.get(BASE+'/registration').json['ready']
+    options = site.client.get(BASE+'/registration').json
+    assert not options['ready'] and 'value="v1"' in options['html']
+    pending = site.client.get(BASE+'/registration?wait=1').json
+    assert not pending['ready'] and 'html' not in pending
     assert site.client.post(BASE+'/create-trainee',data={'csrf':site.csrf,'session_id':'v1'},headers=HEADERS).status_code==409
     assert not json.loads(site.local.read_text())['sessions'][0]['trainees']
+
+
+def test_still_valid_full_fiche_can_be_reused_after_ten_minutes(site):
+    row = prepare(site)
+    key = watch.key(site.owner, row["folder_id"])
+    saved = site.vault.get(key)
+    site.vault.put(key, {**saved, "checked":time.time() - 3600}, ttl=86400)
+    assert site.client.get(BASE + "/registration").json["ready"]
+    new_email = directory.email_proof(site.store.connector_key, row["folder_id"], "changed@example.invalid")
+    site.vault.put(directory.record_key(site.owner), {"checked":time.time(),
+                   "rows":{row["folder_id"]:{**row, "email_proof":new_email}}})
+    assert not site.client.get(BASE + "/registration").json["ready"]
 
 
 def test_watch_is_scoped_and_protected(site):

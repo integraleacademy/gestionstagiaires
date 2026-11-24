@@ -93,9 +93,10 @@ def insert_registration(legacy, data, folder, session_id, fields, trainee):
         if same_name or same_email:
             raise ValueError("Une inscription existe déjà dans cette session. Utilisez « Associer ce stagiaire ».")
     trainee["financing_type"] = "CPF"
-    if row.get("total_incl") is not None:
+    # SSIAP maintenance has its own reviewed course price. The EDOF amount
+    # stays on the source dossier until the administrator allocates funding.
+    if not ssiap_pathways.short_course(trainee) and row.get("total_incl") is not None:
         trainee["training_price"] = row["total_incl"]
-    # The total may include co-financing. The normal convention step reviews it.
     trainee["edof_registration"] = {k: v for k, v in row.items() if v is not None and v != ""}
     if save_manual_wedof_link(data, external_id=folder, session_id=session_id, trainee_id=trainee["id"],
                              state="accepted", date_start=row["session_start_date"], date_end=row["session_end_date"]) != "created":

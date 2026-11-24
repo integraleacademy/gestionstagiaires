@@ -1182,7 +1182,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% for option in ssiap_options %}<option value="{{ option.key }}" data-price="{{ option.price }}" data-days="{{ option.days or '' }}" data-dates="{{ option.dates|map('frdate')|join(', ') }}" {% if not option.available %}disabled{% endif %} {% if option.key == ssiap_suggested and option.available %}selected{% endif %}>{{ option.label }}{% if option.days %} · {{ option.days }} jours · {{ option.price }} € TTC{% if not option.available %} · dates à renseigner{% endif %}{% endif %}</option>{% endfor %}
         </select></label>
         {% if ssiap_level_one %}<div><a href="{{ url_for('admin_ssiap_pathways',session_id=session.id) }}">Régler les journées des parcours</a></div>
-        <label id="ssiapCreatePrice" hidden><div class="label">Tarif convenu TTC (€)</div><input id="tSsiapPrice" type="number" min="0" step="0.01"><small id="tSsiapDays"></small></label>
+        <label id="ssiapCreatePrice" hidden><div class="label">Tarif convenu TTC (€)</div><input id="tSsiapPrice" type="number" min="0" step="0.01"><small id="tSsiapDays"></small>
+          {% if edof_prefill and edof_prefill.get('total_incl') is not none %}<small>Le montant indiqué dans EDOF est de {{ edof_prefill.total_incl|string|replace('.', ',') }} €. Vous pourrez répartir le financement lors de la convention.</small>{% endif %}
+        </label>
         <label id="ssiapCreateDiploma" hidden><div class="label">N° du diplôme SSIAP d’origine</div><input id="tSsiapDiploma" maxlength="100" placeholder="Peut être complété sur la fiche"></label>{% endif %}
         {% endif %}
         <label>
@@ -3786,8 +3788,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const short = Boolean(option.dataset.days);
     document.getElementById('ssiapCreatePrice').hidden = !short;
     document.getElementById('ssiapCreateDiploma').hidden = !short;
-    price.value = short ? (edofPrefill?.total_incl ?? option.dataset.price) : '';
-    price.readOnly = edofPrefill?.total_incl != null;
+    price.value = short ? option.dataset.price : '';
     document.getElementById('tSsiapDays').textContent = option.dataset.dates;
   }
   ssiapChoice?.addEventListener('change', showSsiapChoice);
