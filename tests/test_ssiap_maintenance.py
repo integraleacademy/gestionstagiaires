@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+from docx import Document
 
 import app as gestion
 import edof_matching
@@ -37,6 +38,45 @@ def enrol(group, choice, **values):
         "send_access":False, "ssiap_pathway":choice, **values})
     assert result.status_code == 200, result.get_json()
     return next(t for t in training["trainees"] if t["email"] == choice + "@example.test")
+
+
+def convocation_text(training, trainee, output):
+    template = gestion._ssiap_document_template(training, trainee, "convocation", gestion._aps_template_path)
+    context = gestion._build_aps_convocation_context(training, trainee)
+    gestion._render_docx_with_python_template(template, str(output), context)
+    body = Document(output).element.body
+    return " ".join(" ".join(body.xpath(".//w:t/text()")).split())
+
+
+@pytest.mark.parametrize("choice,venue,expect_map", [
+    ("recyclage", "", True),
+    ("remise_a_niveau", "54 chemin du Carréou, 83480 Puget-sur-Argens", True),
+    ("remise_a_niveau", "Salle A & B, 10 rue des Écoles, 15000 Aurillac", False),
+])
+def test_maintenance_convocation_uses_initial_design_and_its_own_schedule(group, tmp_path, choice, venue, expect_map):
+    training, _ = group
+    # The named days can be nonconsecutive within a longer SSIAP 1 session.
+    training["ssiap_pathways"][choice + "_dates"][0] = "2026-11-12"
+    trainee = enrol(group, choice)
+    trainee["lieu_formation"] = venue
+    text = convocation_text(training, trainee, tmp_path / "maintien.docx")
+    initial = convocation_text(training, {**trainee, "ssiap_pathway": "ssiap"}, tmp_path / "initial.docx")
+    for heading in ("CONVOCATION OFFICIELLE EN FORMATION", "DOCUMENTS ADMINISTRATIFS", "RÈGLES DE VIE EN FORMATION"):
+        assert heading in text and heading in initial
+    assert "CONVOCATION OFFICIELLE À L’EXAMEN" in initial and "23/11/2026" in initial
+    assert "examen" not in text.lower() and "enveloppe timbrée" not in text
+    assert "23/11/2026" not in text and "09/11/2026" not in text and "70 heures" not in text
+    assert "{{" not in text and "{%" not in text
+    assert paths.CHOICES[choice] in text
+    days = training["ssiap_pathways"][choice + "_dates"]
+    for day in days:
+        assert gestion.fr_date(day) in text
+    assert f"{len(days)} jours {7 * len(days)} heures" in text
+    assert "9 h à 12 h" in text and "13 h à 17 h" in text
+    assert paths.MAINTENANCE[choice]["requirements"] in text
+    assert (venue or paths.PUGET_VENUE) in text
+    assert ("PLAN D’ACCÈS & PARKINGS" in text) is expect_map
+    assert "PLAN D’ACCÈS & PARKINGS" in initial
 
 
 @pytest.mark.parametrize("month,start,end,first", [
