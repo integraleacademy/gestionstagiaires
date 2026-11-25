@@ -125,9 +125,9 @@ def test_enrolment_documents_financing_and_completion(group, choice, price, hour
     with pytest.raises(ValueError,match="diplôme"):
         gestion._build_aps_end_attestation_context(training,t)
     draft = gestion._build_aps_end_attestation_context(training, t, preview=True)
-    assert draft["entete_attestation"] == "APERÇU" and "diplôme" in draft["mention_delivrance"]
+    assert "Projet avant validation" in draft["mention_delivrance"] and "diplôme" in draft["mention_delivrance"]
     t.update(ssiap_original_diploma="D-EXEMPLE",birth_date="1990-04-01",birth_city="Lyon")
-    assert gestion._build_aps_end_attestation_context(training, t)["entete_attestation"] == "ATTESTATION"
+    assert gestion._build_aps_end_attestation_context(training, t)["mention_delivrance"] == "Document délivré pour servir et valoir ce que de droit."
     assert gestion._build_aps_end_attestation_context(training,t)["diplome_origine"] == "D-EXEMPLE"
     assert client.post("/api/sessions/S1/update",json={"ssiap_pathways":{**training["ssiap_pathways"],choice+"_dates":[]}}).status_code == 400
     assert client.get("/admin/sessions/S1/parcours-ssiap").status_code == 200
@@ -147,14 +147,17 @@ def test_mixed_roster_only_lists_expected_trainees_and_initial_exam(group):
     training["ssiap_pathways"]["sst_dates"] = ["2026-11-24"]
     enrol(group, "ssiap_sst")
     initial.pop("ssiap_pathway")  # Legacy registration with no explicit selection.
+    training["trainees"].append({**ran, "id":"second-ran"})
     training["trainees"].append({**rec, "id":"cancelled", "registration_cancelled":True})
     roster = client.get("/admin/sessions/S1/trainees")
     header, = html.fromstring(roster.text).find_class('session-stats')
     assert {card.find_class('stat-title')[0].text: card.find_class('stat-value')[0].text
             for card in header.find_class('stat')} == {
-        "Total inscrits": "4", "SSIAP seul": "1", "SSIAP + SST": "1",
-        "Remise à niveau (RAN)": "1", "Recyclage": "1",
+        "Inscrits en formation initiale": "2", "Inscrits en formation continue": "3", "Total général": "5",
     }
+    assert [row.text for row in header.find_class("stat-sub")] == [
+        "SSIAP seul (1) · SSIAP + SST (1)", "Recyclage (1) · Remise à niveau (2)",
+    ]
     assert roster.status_code == 200 and "250 € TTC" in roster.text and "350 € TTC" in roster.text
 
 
@@ -265,8 +268,14 @@ def test_short_attestations_reuse_initial_branding_and_render_individual_fields(
         for target in [paths.CHOICES[choice], "Salle du centre", "08h30–12h30 / 13h30–16h30", *map(gestion.fr_date, dates)]:
             assert target in text
         assert "{{" not in text and "70 heures" not in text
+        assert "Ce stage s’inscrit dans le maintien des connaissances" not in text
         if kind == "end":
-            assert "NUM-ORIGINE" in text and "Lyon" in text
+            assert "ATTESTATION DE FIN DE FORMATION" in text and "NUM-ORIGINE" in text and "Lyon" in text
+            draft = {**trainee, "ssiap_attendance": {}}
+            document.write_bytes(Path(template).read_bytes())
+            gestion._replace_docx_xml_placeholders(str(document), build(training, draft, preview=True))
+            preview = " ".join(Document(document).element.body.xpath(".//w:t/text()"))
+            assert "ATTESTATION DE FIN DE FORMATION" in preview and "Projet avant validation" in preview
 
     page = client.get(f"/admin/sessions/S1/stagiaires/{trainee['id']}")
     assert page.status_code == 200

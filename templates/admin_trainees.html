@@ -64,10 +64,23 @@
   </div>
 
   <div class="session-stats {% if is_vtc_header %}session-stats-vtc{% endif %}">
+    {% if stats.ssiap %}
+    {% set counts = stats.ssiap %}
+    <div class="stat">
+      <div class="stat-title">Inscrits en formation initiale</div>
+      <div class="stat-value">{{ counts.ssiap + counts.ssiap_sst }}</div>
+      <div class="stat-sub">SSIAP seul ({{ counts.ssiap }}) · SSIAP + SST ({{ counts.ssiap_sst }})</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Inscrits en formation continue</div>
+      <div class="stat-value">{{ counts.recyclage + counts.remise_a_niveau }}</div>
+      <div class="stat-sub">Recyclage ({{ counts.recyclage }}) · Remise à niveau ({{ counts.remise_a_niveau }})</div>
+    </div>
+    {% endif %}
     <div class="stat stat-vtc stat-total">
       <div class="stat-icon">👥</div>
       <div>
-        <div class="stat-title">{{ "Total inscrits" if stats.ssiap else "Stagiaires" }}</div>
+        <div class="stat-title">{{ "Total général" if stats.ssiap else "Stagiaires" }}</div>
         <div class="stat-value">{{ stats.total }}</div>
       </div>
     </div>
@@ -107,14 +120,7 @@
         </div>
       </div>
       {% endif %}
-    {% elif stats.ssiap %}
-      {% for key, label in [('ssiap', 'SSIAP seul'), ('ssiap_sst', 'SSIAP + SST'), ('remise_a_niveau', 'Remise à niveau (RAN)'), ('recyclage', 'Recyclage')] %}
-      <div class="stat">
-        <div class="stat-title">{{ label }}</div>
-        <div class="stat-value">{{ stats.ssiap[key] }}</div>
-      </div>
-      {% endfor %}
-    {% else %}
+    {% elif not stats.ssiap %}
     <div class="stat">
       <div class="stat-title">Conformes</div>
       <div class="stat-value">{{ stats.conform_count }}</div>

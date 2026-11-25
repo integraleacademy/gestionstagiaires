@@ -17,6 +17,8 @@ BLUE = colors.HexColor('#285d83')
 GOLD = colors.HexColor('#c5a15a')
 MUTED = colors.HexColor('#526479')
 LINE = colors.HexColor('#dce5ee')
+GREEN = colors.HexColor('#19733e')
+RED = colors.HexColor('#bd252d')
 
 
 def fonts():
@@ -66,6 +68,15 @@ def _draw_unit(canvas, training, trainee, course, row, result, correction, notic
     full_width = width - 2 * margin
     column_width = (full_width - gutter) / 2
     body = ParagraphStyle('choice', fontName=regular, fontSize=9, leading=11, textColor=NAVY)
+    correct_choice = ParagraphStyle(
+        'correctChoice', parent=body, textColor=GREEN, borderColor=GREEN, borderWidth=1.2,
+        borderRadius=6, leftIndent=6, rightIndent=6, borderPadding=(1, 4, 1, 4),
+        spaceBefore=2.5, spaceAfter=2.5,
+    )
+    wrong_choice = ParagraphStyle(
+        'wrongChoice', parent=body, leftIndent=16, bulletIndent=0.5,
+        bulletFontName=bold, bulletFontSize=12, bulletColor=RED,
+    )
     prompt = ParagraphStyle('question', parent=body, fontName=bold, fontSize=9.4, leading=12, spaceAfter=3)
     note = ParagraphStyle('explanation', parent=body, fontSize=8.3, leading=10.5, textColor=MUTED)
     topic = ParagraphStyle('topic', parent=prompt, fontSize=12, leading=15, textColor=BLUE)
@@ -81,13 +92,18 @@ def _draw_unit(canvas, training, trainee, course, row, result, correction, notic
         selected = result.get('answers', {}).get(question['id']) if result else None
         for letter, option in enumerate(question['options']):
             marks = []
-            if corrected and option['id'] == question['answer']:
+            style, bullet = body, None
+            correct = corrected and option['id'] == question['answer']
+            if correct:
                 marks.append('Bonne réponse')
+                style = correct_choice
             if selected == option['id']:
                 marks.append('Votre réponse')
-            suffix = f' <font name="{bold}" color="#285d83">· {" · ".join(marks)}</font>' if marks else ''
+                if not correct:
+                    style, bullet = wrong_choice, '×'
+            suffix = f' <font name="{bold}">· {" · ".join(marks)}</font>' if marks else ''
             box = '' if corrected else '[   ]  '
-            items.append(Paragraph(f"{box}{chr(65 + letter)}. {escape(option['text'])}{suffix}", body))
+            items.append(Paragraph(f"{box}{chr(65 + letter)}. {escape(option['text'])}{suffix}", style, bulletText=bullet))
         if corrected:
             prefix = 'Sans réponse (temps écoulé). ' if result and not selected else ''
             items.extend((Spacer(1, 2), Paragraph(prefix + escape(question['explanation']), note)))
