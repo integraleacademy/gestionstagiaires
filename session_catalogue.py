@@ -1,6 +1,6 @@
 """Attach the planning catalogue to the academy's administrative sessions."""
 from copy import deepcopy
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import hmac
 import os
 import re
@@ -103,9 +103,23 @@ def choose(row, candidates):
     return None
 
 
-def updates(row, training, previous):
+def updates(host, row, training, previous):
     result = dict(date_start=row["start"], date_end=row["end"], crm_center=CITIES.get(row["centre"], ""),
                   exam_date=row["exam"])
+    if row["slug"] == "ssiap-1" and row.get("standard_start"):
+        result["date_start"] = row["standard_start"]
+        first = date.fromisoformat(row["start"])
+        gap = (date.fromisoformat(row["standard_start"]) - first).days
+        days = [first + timedelta(days=i) for i in range(gap)] if 0 < gap <= 7 else []
+        sst = [d.isoformat() for d in days if d.weekday() < 5]
+        if len(sst) == 2:
+            existing = host.ssiap_pathways.settings(training)
+            # Keep an established individual timetable. For new groups the two
+            # published SST days precede the common SSIAP training period.
+            if not existing["sst_dates"] or existing["sst_dates"] == sst:
+                result["ssiap_pathways"] = {**host.ssiap_pathways.settings({**training, **result}), "sst_dates": sst}
+            elif previous and previous["source"].get("standard_start") != row["standard_start"]:
+                raise ValueError("Les journées SST enregistrées doivent être vérifiées avant le report.")
     if row["slug"] == "afc":
         result.update(afc_enabled=True, ssiap_exam_date=row.get("ssiap_exam", ""))
     prefix = {"aps": "aps", "desp-dssp": "dirigeant"}.get(row["slug"])
@@ -157,11 +171,13 @@ def reconcile(host, data, rows):
                                 partner_id=host.INTEGRALE_PARTNER_ID, trainees=[], archived=False, created_at=host._now_iso())
             local = local_identity(host, training)
             aliases = list(previous.get("aliases", []))
-            for key in [local, previous.get("source", {}), *row.get("aliases", []), row]:
+            # A second SSIAP start identifies a formula, not a rescheduled full group.
+            local_keys = [] if row.get("standard_start") and local.get("start") == row["standard_start"] else [local]
+            for key in [*local_keys, previous.get("source", {}), *row.get("aliases", []), row]:
                 key = signature(key)
                 if key["start"] and key not in aliases:
                     aliases.append(key)
-            projection = updates(row, training, previous)
+            projection = updates(host, row, training, previous)
             # Only the scheduling fields are shared. Run normal date protections
             # for enrolled trainees and for sessions already linked to WeDoF.
             if row["visibility"] != "closed":
@@ -211,10 +227,22 @@ def feed(host, trainings):
         if training.get("archived"):
             row["visibility"] = "closed"
         # Only enumerated schedule fields and aggregate sales leave the service.
-        result.append({**{k: row.get(k, "") for k in (*FIELDS, "remote_start", "remote_end", "onsite_start", "onsite_end")},
+        entry = {**{k: row.get(k, "") for k in (*FIELDS, "standard_start", "remote_start", "remote_end", "onsite_start", "onsite_end")},
                        "id": "platform-" + state["id"] if state else "gestion-" + str(training["id"]),
                        "visibility": row.get("visibility", "match"), "aliases": aliases,
-                       "capacity": row.get("capacity") if state else None, "sold": len(host._registered_trainees(training))})
+                       "capacity": row.get("capacity") if state else None, "sold": len(host._registered_trainees(training))}
+        result.append(entry)
+        if row["slug"] == "ssiap-1":
+            options = host.ssiap_pathways.settings(training)
+            for path, code in (("recyclage", "recyclage-ssiap-1"), ("remise_a_niveau", "remise-a-niveau-ssiap-1")):
+                days = sorted(options.get(path + "_dates", []))
+                periods = [{"centre": k["centre"], "start": k["start"], "end": k["end"]} for k in [row, *aliases] if k.get("start") and k.get("end")]
+                result.append({**entry, "id": entry["id"] + "-" + path, "slug": code, "exam": "", "standard_start": "",
+                               "start": days[0] if days else row["start"], "end": days[-1] if days else row["end"],
+                               "onsite_start": days[0] if days else "", "onsite_end": days[-1] if days else "",
+                               "remote_start": "", "remote_end": "", "group_periods": periods, "aliases": [],
+                               "visibility": entry["visibility"] if days else "closed"})
+
     return result
 
 
@@ -227,7 +255,7 @@ def validate(payload):
                 or row.get("slug") not in TYPES or row.get("visibility") not in ("public", "internal", "closed", "match")
                 or row.get("centre") not in ("", *CITIES) or type(row.get("capacity")) is not int or not 1 <= row["capacity"] <= 12):
             raise ValueError("Session de planning invalide")
-        for key in ("start", "end", "exam", "remote_start", "remote_end", "onsite_start", "onsite_end", "ssiap_exam"):
+        for key in ("start", "end", "exam", "remote_start", "remote_end", "onsite_start", "onsite_end", "ssiap_exam", "standard_start"):
             if row.get(key):
                 datetime.strptime(row[key], "%Y-%m-%d")
         if not row.get("start") or not row.get("end"):

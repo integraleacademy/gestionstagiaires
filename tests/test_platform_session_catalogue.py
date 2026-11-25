@@ -76,3 +76,17 @@ def test_private_aggregate_endpoint(row, monkeypatch, tmp_path):
     assert client.get(endpoint).status_code==401
     reply=client.get(endpoint,headers={"Authorization":"Bearer local-test"})
     assert reply.status_code==200 and reply.json["sessions"][0]["sold"]==0
+
+
+def test_ssiap_variants_share_active_enrolments_and_preserve_wedof_period(row):
+    row.update(slug="ssiap-1", start="2027-02-11", standard_start="2027-02-15", end="2027-02-26", exam="2027-03-01")
+    training = dict(id="conserve", name="SSIAP 1", training_type="SSIAP 1", date_start=row["standard_start"],
+                    date_end=row["end"], exam_date=row["exam"], trainees=[{"id":"inscrit"}])
+    data = {"sessions":[training], "wedof_links":[{"active":True, "session_id":"conserve"}]}
+    with host.app.app_context():
+        assert cat.reconcile(host, data, [row]) == {"conflicts":0}
+    assert len(data["sessions"]) == 1 and training["ssiap_pathways"]["sst_dates"] == ["2027-02-11", "2027-02-12"]
+    merged, refresher, renewal = cat.feed(host, [training])
+    assert (refresher["sold"], refresher["start"], renewal["end"]) == (1, "2027-02-25", "2027-02-26")
+    assert (merged["start"], merged["standard_start"], merged["sold"]) == ("2027-02-11", "2027-02-15", 1)
+    assert not any(alias["start"] == "2027-02-15" for alias in merged["aliases"])
