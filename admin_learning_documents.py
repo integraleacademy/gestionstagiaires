@@ -55,7 +55,7 @@ def register(host):
                        certificate_url=url_for('manuals_shop.trainee_elearning_progress_certificate',
                            session_id=session_id, trainee_id=p['id']) if is_native_aps_session(training) else '') for p in people]
         counts = Counter(number for person in roster for number in person['submitted'])
-        result = dict(ok=True, require_all_uv=course == 'aps', certificates=is_native_aps_session(training),
+        result = dict(ok=True, require_all_uv=False, certificates=is_native_aps_session(training),
                       people=roster, units=[
                           dict(number=r['number'], title=r['title'], completed=counts[r['number']],
                                report_url=url_for('admin_uv_session_report', session_id=session_id, number=r['number'])
@@ -80,7 +80,7 @@ def register(host):
         internal = partner['id'] == host.INTEGRALE_PARTNER_ID
         brand = 'Intégrale Academy' if internal else partner.get('name') or 'Organisme de formation'
         output = build(report, training, course, unit, brand=brand, host=host, logo_path=centre_logo(partner))
-        response = send_file(output, mimetype='application/pdf', as_attachment=True,
+        response = send_file(output, mimetype='application/pdf',
                              download_name=f'Rapport_{course.upper()}_UV{number:02}_{session_id}.pdf')
         response.headers['Cache-Control'] = 'private, no-store'
         return response
@@ -95,10 +95,10 @@ def register(host):
         if not selected or not selected <= {str(p['id']) for p in people}:
             abort(400, 'Sélectionnez au moins un stagiaire actif de cette session.')
         people = [p for p in people if str(p['id']) in selected]
-        writer = PdfWriter()
         if kind == 'attestations':
             if not is_native_aps_session(training):
                 abort(404)
+            writer = PdfWriter()
             reader = ProgressReader(host)
             logo = centre_logo(partner)
             for person in people:
@@ -106,6 +106,10 @@ def register(host):
                 report = reader.report(source, person, session_obj=effective)
                 content = certificate_pdf(report, partner, source, person, logo_path=logo)
                 writer.append(BytesIO(content), outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')}")
+            output = BytesIO()
+            writer.write(output)
+            writer.close()
+            output.seek(0)
         else:
             if not uv.eligible(training):
                 abort(404)
@@ -118,10 +122,8 @@ def register(host):
                 abort(400, 'Unité de valeur invalide.')
             if len(people) * len(numbers) > 500:
                 abort(400, 'Sélectionnez moins de 500 questionnaires par impression.')
-            if course == 'aps' and any(not uv._result(p, course, n) for p in people for n in valid):
-                abort(409, 'Impression bloquée : chaque stagiaire sélectionné doit avoir terminé tous ses questionnaires de fin d’UV.')
+            copies = []
             for person in people:
-                units = []
                 for number in sorted(map(int, numbers)):
                     result = uv._result(person, course, number)
                     if not result:
@@ -129,21 +131,11 @@ def register(host):
                     row = uv.unit(course, number, result['version'])
                     if not row:
                         abort(409, 'L’édition d’un questionnaire est indisponible. Aucun PDF partiel n’a été produit.')
-                    if course == 'aps':
-                        units.append((row, result))
-                        continue
-                    content = uv.pdf(training, person, course, row, result=result, correction=True)
-                    writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')} · UV {number:02}")
-                if units:
-                    from uv_questionnaire_pdf import build_dossier
-                    content = build_dossier(training, person, units, course=course, notice=uv.NOTICE)
-                    writer.append(content, outline_item=f"{person.get('last_name', '')} {person.get('first_name', '')}")
-        if not writer.pages:
-            abort(409, 'Aucun questionnaire terminé pour cette sélection.')
-        output = BytesIO()
-        writer.write(output)
-        writer.close()
-        output.seek(0)
+                    copies.append((person, row, result))
+            if not copies:
+                abort(409, 'Aucun questionnaire terminé pour cette sélection.')
+            from uv_questionnaire_pdf import build_copies
+            output = build_copies(training, course, copies, title="Questionnaires de fin d’UV", notice=uv.NOTICE)
         response = send_file(output, mimetype='application/pdf', download_name=f'{kind}-{session_id}.pdf')
         response.headers['Cache-Control'] = 'private, no-store'
         return response

@@ -119,7 +119,7 @@ def test_old_attempt_finishes_with_its_original_questions_and_correction(case):
     admin(client)
     response = client.get('/admin/sessions/S1/stagiaires/T1/questionnaires-uv/2.pdf?mode=answers')
     text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(response.data)).pages)
-    assert old['questions'][0]['prompt'] in text
+    assert old['questions'][0]['prompt'] in ' '.join(text.split())
     assert 'Score : 20/20' in text
 
 
@@ -286,6 +286,8 @@ def test_admin_pdf_blank_and_correction(case):
     assert client.get(path).status_code==200
     assert client.get(path.replace('T1','other')).status_code==404
     blank=client.get(path+'.pdf')
+    assert blank.headers['Content-Disposition'].startswith('inline;')
+    assert 1 <= len(PdfReader(BytesIO(blank.data)).pages) <= 2
     assert all(page.images for page in PdfReader(BytesIO(blank.data)).pages)
     text='\n'.join(p.extract_text() for p in PdfReader(BytesIO(blank.data)).pages)
     assert 'Bonne réponse' not in text and 'Camille MARTIN' in text

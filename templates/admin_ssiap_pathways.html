@@ -24,7 +24,7 @@
 <section class="ssiap-panel"><h2>Les tarifs des parcours initiaux</h2><p class="ssiap-muted">Facultatifs. Ils seront proposés lors du choix du parcours. Les montants déjà enregistrés dans les dossiers restent conservés jusqu’à votre modification.</p><div class="ssiap-grid">
 <label class="ssiap-field">SSIAP seul — tarif TTC (€)<input name="ssiap_price" type="number" min="0" step="0.01" value="{{ config.ssiap_price }}" placeholder="À renseigner"></label>
 <label class="ssiap-field">SSIAP + SST — tarif TTC (€)<input name="ssiap_sst_price" type="number" min="0" step="0.01" value="{{ config.ssiap_sst_price }}" placeholder="À renseigner"></label></div></section>
-{% if maintenance %}<section class="ssiap-panel"><h2>Recyclage et remise à niveau SSIAP 1</h2><p>{{ maintenance_schedule|default('9 h à 12 h et 13 h à 17 h') }}. Renseignez les journées prévues pour chaque parcours proposé.</p>
+{% if maintenance %}<section class="ssiap-panel"><h2>Recyclage et remise à niveau SSIAP 1</h2><p>{{ config.ssiap_schedule }}. Renseignez les journées prévues pour chaque parcours proposé.</p>
 {% for key, course in maintenance.items() %}<h3>{{ course.label }} · {{ course.days * 7 }} h · {{ course.price }} € TTC</h3><div class="ssiap-grid">
 {% set dates=config[key + '_dates'] %}{% for i in range(course.days) %}<label class="ssiap-field">Jour {{ i + 1 }}<input type="date" name="{{ key }}_date" value="{{ dates[i]|default('') }}"></label>{% endfor %}
 </div>{% endfor %}</section>{% endif %}

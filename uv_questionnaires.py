@@ -512,7 +512,7 @@ def register(app, services, *, learner_lookup=None, public_only=False):
             abort(404)
         output = pdf(training, trainee, course, row,
                      result=result if mode == 'answers' else None, correction=mode != 'blank')
-        response = send_file(output, mimetype='application/pdf', as_attachment=True,
+        response = send_file(output, mimetype='application/pdf',
                             download_name=f'{course.upper()}_UV{number:02}_{trainee_id}_{mode}.pdf')
         response.headers['Cache-Control'] = 'private, no-store'
         return response

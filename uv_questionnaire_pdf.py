@@ -1,19 +1,21 @@
-"""Print-friendly formative evaluation with clearly separated question blocks."""
+"""Two-page, printable individual UV questionnaires and submitted copies."""
 from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable, KeepTogether
+from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus import KeepInFrame, Paragraph, Spacer
 
 NAVY = colors.HexColor('#182f49')
 BLUE = colors.HexColor('#285d83')
 GOLD = colors.HexColor('#c5a15a')
-MUTED = colors.HexColor('#607389')
+MUTED = colors.HexColor('#526479')
 LINE = colors.HexColor('#dce5ee')
 
 
@@ -28,152 +30,117 @@ def fonts():
     return 'Helvetica', 'Helvetica-Bold'
 
 
-class Question(Flowable):
-    def __init__(self, index, question, normal, bold, small, selected=None, correction=False):
-        super().__init__()
-        self.index, self.question, self.selected, self.correction = index, question, selected, correction
-        self.normal, self.bold, self.small = normal, bold, small
-
-    def wrap(self, availWidth, availHeight):
-        self.width = availWidth
-        self.prompt = Paragraph(escape(self.question['prompt']), self.bold)
-        self.prompt_h = self.prompt.wrap(availWidth-42, 1000)[1]
-        self.options = []
-        for option in self.question['options']:
-            text = option['text']
-            if self.correction and option['id'] == self.question['answer']:
-                text += '  •  Bonne réponse'
-            if self.selected == option['id']:
-                text += '  •  Votre réponse'
-            p = Paragraph(escape(text), self.normal)
-            self.options.append((option, p, max(17, p.wrap(availWidth-64, 1000)[1]+4)))
-        self.height = 18+self.prompt_h+10+sum(x[2] for x in self.options)+12
-        self.explanation = None
-        if self.correction:
-            text = self.question['explanation']
-            if self.selected == '':
-                text = 'Sans réponse (temps écoulé). '+text
-            self.explanation = Paragraph(escape(text), self.small)
-            self.height += self.explanation.wrap(availWidth-30,1000)[1]+16
-        return self.width, self.height
-
-    def draw(self):
-        c = self.canv
-        c.setStrokeColor(LINE); c.setFillColor(colors.white)
-        c.roundRect(0, 0, self.width, self.height, 8, fill=1, stroke=1)
-        c.setFillColor(BLUE); c.roundRect(12,self.height-34,23,23,6,fill=1,stroke=0)
-        c.setFillColor(colors.white); c.setFont(self.bold.fontName,9)
-        c.drawCentredString(23.5,self.height-26,f'{self.index:02}.')
-        y=self.height-15-self.prompt_h
-        self.prompt.drawOn(c,42,y)
-        y-=12
-        for option,p,h in self.options:
-            y-=h
-            c.setStrokeColor(MUTED); c.setLineWidth(.7)
-            c.roundRect(18,y+h-14,8,8,1.5,fill=0,stroke=1)
-            if self.selected == option['id']:
-                c.setFillColor(BLUE); c.roundRect(19.5,y+h-12.5,5,5,1,fill=1,stroke=0)
-            p.drawOn(c,36,y+h-4-p.height)
-        if self.explanation:
-            y-=10
-            c.setStrokeColor(LINE);c.line(15,y,self.width-15,y)
-            self.explanation.drawOn(c,15,y-8-self.explanation.height)
+def _draw_block(canvas, items, x, top, width, height):
+    # Account for actual wrapped text, including longer archived editions.
+    block = KeepInFrame(width, height, items, mode='shrink', mergeSpace=False)
+    _, used = block.wrapOn(canvas, width, height)
+    block.drawOn(canvas, x, top - used)
+    return top - used
 
 
 def build(training, trainee, course, row, result=None, correction=False, *, title, notice):
-    normal_font, bold_font = fonts()
-    output = BytesIO()
-    doc = SimpleDocTemplate(output,pagesize=(210*mm,297*mm),rightMargin=17*mm,leftMargin=17*mm,
-                            topMargin=41*mm,bottomMargin=20*mm,title=title,author='Intégrale Academy')
-    normal = ParagraphStyle('uvbody',fontName=normal_font,fontSize=9,leading=13,textColor=NAVY)
-    bold = ParagraphStyle('uvbold',parent=normal,fontName=bold_font,fontSize=10,leading=14)
-    small = ParagraphStyle('uvsmall',parent=normal,fontSize=8,leading=12,textColor=MUTED)
-    def p(text,style=normal): return Paragraph(escape(str(text)),style)
-    name=' '.join(str(trainee.get(k) or '') for k in ('first_name','last_name')).strip()
-    mode='Réponses et correction' if result else 'Corrigé formateur' if correction else 'Questionnaire vierge'
-    topic=p(row['title'],ParagraphStyle('uvtopic',parent=bold,fontSize=13,leading=17,spaceAfter=12))
-    info=[topic,p(f'Stagiaire : {name}   •   Dossier : {trainee.get("id", "")}'),Spacer(1,5),
-          p(f'Session : {training.get("name", "")}'),Spacer(1,10)]
-    if result:
-        info.extend([p(f'Score : {result["score"]}/20   •   Terminé le {result["submitted_at"]}',bold),Spacer(1,8)])
-    else:
-        info.extend([p('Date : ____________________    Formateur : ____________________'),Spacer(1,6),
-                     p('Signature du stagiaire : ______________________________________'),Spacer(1,10)])
-    info += [p('20 questions   •   1 seule réponse   •   1 point par bonne réponse',bold),Spacer(1,5),
-             p(notice,small),Spacer(1,14)]
-    story=[KeepTogether(info)]
-    for i,q in enumerate(row['questions'],1):
-        # Let complete question cards flow according to their measured height.
-        # A fixed break every four questions leaves near-empty pages when the
-        # first page's identity block or longer choices cause an earlier break.
-        selected=result.get('answers',{}).get(q['id']) if result else None
-        story += [Question(i,q,normal,bold,small,selected,correction or bool(result)),Spacer(1,10)]
-    def page(c,d):
-        w,h=d.pagesize
-        c.setFillColor(NAVY);c.rect(0,h-9*mm,w,9*mm,fill=1,stroke=0)
-        c.setFont(bold_font,8);c.setFillColor(colors.white)
-        c.drawString(17*mm,h-6*mm,'INTÉGRALE ACADEMY')
-        c.drawRightString(w-17*mm,h-6*mm,f'{course.upper()}  /  UV {row["number"]:02}')
-        c.drawImage(str(Path(__file__).with_name('static')/'logo-integrale.png'),
-                    17*mm,h-33*mm,width=21*mm,height=21*mm,preserveAspectRatio=True,mask='auto')
-        c.setFillColor(NAVY);c.setFont(bold_font,19)
-        c.drawString(44*mm,h-21*mm,"Questionnaire de fin d'UV")
-        c.setFont(normal_font,12);c.setFillColor(BLUE)
-        c.drawString(44*mm,h-28*mm,'Evaluation formative')
-        c.setFont(normal_font,8);c.setFillColor(MUTED)
-        c.drawRightString(w-17*mm,h-28*mm,mode)
-        c.setStrokeColor(GOLD);c.setLineWidth(1.4);c.line(17*mm,h-35*mm,w-17*mm,h-35*mm)
-        c.setStrokeColor(LINE);c.setLineWidth(.6);c.line(17*mm,16*mm,w-17*mm,16*mm)
-        c.setFillColor(MUTED);c.setFont(normal_font,7)
-        c.drawString(17*mm,11*mm,f'{course.upper()} · UV {row["number"]:02} · Evaluation formative')
-        c.drawRightString(w-17*mm,11*mm,f'Page {d.page}')
-    doc.build(story,onFirstPage=page,onLaterPages=page)
-    output.seek(0)
-    return output
+    return build_copies(training, course, [(trainee, row, result)], correction=correction, title=title, notice=notice)
 
 
-def build_dossier(training, person, units, *, course, notice):
-    """Print all requested UVs in continuous reading order for one learner."""
-    from reportlab.lib.pagesizes import A4
-    regular, bold = fonts()
+def build_copies(training, course, copies, *, title, notice, correction=True):
+    # One canvas shares the logo and fonts across all candidates and UVs.
     out = BytesIO()
-    doc = SimpleDocTemplate(out, pagesize=A4, leftMargin=13*mm, rightMargin=13*mm,
-                            topMargin=17*mm, bottomMargin=14*mm, title="Questionnaires de fin d’UV")
-    body = ParagraphStyle("option", fontName=regular, fontSize=8, leading=10, textColor=NAVY)
-    prompt = ParagraphStyle("question", parent=body, fontName=bold, spaceBefore=4, spaceAfter=2)
-    note = ParagraphStyle("correction", parent=body, textColor=MUTED, fontSize=7.5, leading=9)
-    section = ParagraphStyle("unit", parent=prompt, fontSize=12, leading=15, spaceBefore=8,
-                             spaceAfter=4, keepWithNext=True)
-    name = " ".join(str(person.get(k) or "") for k in ("last_name", "first_name")).strip()
-    story = [Paragraph(escape(notice), note)]
-    for unit, result in units:
-        story.append(Paragraph(f"UV {unit['number']:02} · {escape(unit['title'])}", section))
-        info = f"Score : {result['score']}/20 · Terminé le {escape(str(result['submitted_at']))}"
-        story.append(Paragraph(info, body))
-        for index, question in enumerate(unit["questions"], 1):
-            selected = result.get("answers", {}).get(question["id"])
-            parts = [Paragraph(f"{index}. {escape(question['prompt'])}", prompt)]
-            for i, option in enumerate(question["options"]):
-                marks = []
-                if option["id"] == question["answer"]:
-                    marks.append("Bonne réponse")
-                if selected == option["id"]:
-                    marks.append("Votre réponse")
-                label = f"{chr(65+i)}. {escape(option['text'])}"
-                parts.append(Paragraph(label + (" · " + " · ".join(marks) if marks else ""), body))
-            prefix = "Sans réponse. " if not selected else ""
-            parts.append(Paragraph(prefix + escape(question["explanation"]), note))
-            story.append(KeepTogether(parts))
-
-    def frame(canvas, document):
-        width, height = A4
-        canvas.setFont(bold, 9)
-        canvas.drawString(13*mm, height-11*mm, "Questionnaires de fin d’UV · " + course.upper())
-        canvas.drawRightString(width-13*mm, height-11*mm, "Réponses et correction")
-        canvas.setFont(regular, 8)
-        identity = f"{name} · {person['id']} · {training.get('name', '')}"
-        canvas.drawString(13*mm, 8*mm, identity[:96])
-        canvas.drawRightString(width-13*mm, 8*mm, f"Page {document.page}")
-    doc.build(story, onFirstPage=frame, onLaterPages=frame)
+    canvas = Canvas(out, pagesize=A4)
+    canvas.setTitle(title)
+    canvas.setAuthor('Intégrale Academy')
+    for index, (trainee, row, result) in enumerate(copies):
+        key = f'copie-{index}'
+        canvas.bookmarkPage(key)
+        name = ' '.join(str(trainee.get(k) or '') for k in ('last_name', 'first_name')).strip()
+        canvas.addOutlineEntry(f"{name} · UV {row['number']:02}", key)
+        _draw_unit(canvas, training, trainee, course, row, result, correction, notice)
+    canvas.save()
     out.seek(0)
     return out
+
+
+def _draw_unit(canvas, training, trainee, course, row, result, correction, notice):
+    regular, bold = fonts()
+    width, height = A4
+    margin, gutter = 12 * mm, 8 * mm
+    full_width = width - 2 * margin
+    column_width = (full_width - gutter) / 2
+    body = ParagraphStyle('choice', fontName=regular, fontSize=9, leading=11, textColor=NAVY)
+    prompt = ParagraphStyle('question', parent=body, fontName=bold, fontSize=9.4, leading=12, spaceAfter=3)
+    note = ParagraphStyle('explanation', parent=body, fontSize=8.3, leading=10.5, textColor=MUTED)
+    topic = ParagraphStyle('topic', parent=prompt, fontSize=12, leading=15, textColor=BLUE)
+    mode = 'Réponses et correction' if result else 'Corrigé formateur' if correction else 'Questionnaire vierge'
+    corrected = correction or bool(result)
+    name = ' '.join(str(trainee.get(k) or '') for k in ('first_name', 'last_name')).strip()
+    identity = f"Stagiaire : {name}   ·   Dossier : {trainee.get('id', '')}"
+    unit = f"{course.upper()} · UV {row['number']:02}"
+    questions = row['questions']
+
+    def question_items(index, question):
+        items = [Paragraph(f"{index:02}. {escape(question['prompt'])}", prompt)]
+        selected = result.get('answers', {}).get(question['id']) if result else None
+        for letter, option in enumerate(question['options']):
+            marks = []
+            if corrected and option['id'] == question['answer']:
+                marks.append('Bonne réponse')
+            if selected == option['id']:
+                marks.append('Votre réponse')
+            suffix = f' <font name="{bold}" color="#285d83">· {" · ".join(marks)}</font>' if marks else ''
+            box = '' if corrected else '[   ]  '
+            items.append(Paragraph(f"{box}{chr(65 + letter)}. {escape(option['text'])}{suffix}", body))
+        if corrected:
+            prefix = 'Sans réponse (temps écoulé). ' if result and not selected else ''
+            items.extend((Spacer(1, 2), Paragraph(prefix + escape(question['explanation']), note)))
+        return items
+
+    midpoint = (len(questions) + 1) // 2
+    pages = [questions[:midpoint], questions[midpoint:]] if len(questions) > 10 else [questions]
+    first = 1
+    for page_no, page_questions in enumerate(pages, 1):
+        canvas.setFillColor(NAVY)
+        canvas.rect(0, height - 8 * mm, width, 8 * mm, fill=1, stroke=0)
+        canvas.setFillColor(colors.white)
+        canvas.setFont(bold, 8.5)
+        canvas.drawString(margin, height - 5.5 * mm, 'INTÉGRALE ACADEMY')
+        canvas.drawRightString(width - margin, height - 5.5 * mm, unit)
+        canvas.drawImage(str(Path(__file__).with_name('static') / 'logo-integrale.png'),
+                         margin, height - 26 * mm, 16 * mm, 16 * mm, preserveAspectRatio=True, mask='auto')
+        canvas.setFillColor(NAVY)
+        canvas.setFont(bold, 17)
+        canvas.drawString(margin + 20 * mm, height - 18 * mm, "Questionnaire de fin d'UV")
+        canvas.setFillColor(MUTED)
+        canvas.setFont(regular, 9)
+        canvas.drawString(margin + 20 * mm, height - 24 * mm, 'Evaluation formative')
+        canvas.drawRightString(width - margin, height - 24 * mm, mode)
+        meta = [Paragraph(escape(row['title']), topic),
+                Paragraph(escape(identity) + '   ·   Session : ' + escape(str(training.get('name') or '')), body)]
+        if result:
+            meta.append(Paragraph(f"Score : {result['score']}/20   ·   Terminé le {escape(str(result['submitted_at']))}", body))
+        pages_top = _draw_block(canvas, meta, margin, height - 29 * mm, full_width, 27 * mm)
+        canvas.setStrokeColor(GOLD)
+        canvas.line(margin, pages_top - 4, width - margin, pages_top - 4)
+
+        top, bottom = pages_top - 12, 24 * mm
+        half = (len(page_questions) + 1) // 2
+        for column, group in enumerate((page_questions[:half], page_questions[half:])):
+            items = []
+            for question in group:
+                if items:
+                    items.append(Spacer(1, 10))
+                items.extend(question_items(first, question))
+                first += 1
+            if items:
+                _draw_block(canvas, items, margin + column * (column_width + gutter),
+                            top, column_width, top - bottom)
+        canvas.setStrokeColor(LINE)
+        canvas.line(width / 2, top, width / 2, bottom)
+        canvas.line(margin, bottom - 4, width - margin, bottom - 4)
+        if not result:
+            canvas.setFont(regular, 8.5)
+            canvas.drawString(margin, 18 * mm, 'Date : __________________   Formateur : __________________   Signature du stagiaire : __________________')
+        canvas.setFillColor(MUTED)
+        canvas.setFont(regular, 8)
+        canvas.drawString(margin, 13 * mm, f'{len(questions)} questions · 1 seule réponse · 1 point par bonne réponse')
+        canvas.drawRightString(width - margin, 13 * mm, f'{unit} · Page {page_no}/{len(pages)}')
+        _draw_block(canvas, [Paragraph(escape(notice), note)], margin, 10 * mm, full_width, 7 * mm)
+        canvas.showPage()

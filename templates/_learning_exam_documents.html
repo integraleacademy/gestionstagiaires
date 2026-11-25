@@ -9,13 +9,13 @@
     </div>
     <div class="uv-report-controls">
       <label class="exam-field">Questionnaire terminé<select data-report-unit disabled><option>Chargement…</option></select></label>
-      <a class="btn btn-primary" data-report-download hidden>Télécharger le rapport PDF</a>
+      <a class="btn btn-primary" data-report-download target="_blank" rel="noopener" hidden>Ouvrir le rapport PDF ↗</a>
     </div>
     <p class="exam-muted" data-report-status role="status">Chargement des résultats…</p>
   </div>
   {% endif %}
   <div class="exam-summary"><div><h3>{{ 'Copies individuelles' if kind == 'questionnaires' else label }}</h3><p class="exam-muted">{% if kind == 'attestations' %}Les mêmes attestations que dans le suivi individuel, avec les heures réelles et la mention de suivi partiel si le parcours est en cours.{% else %}Imprimez les questionnaires remplis par les stagiaires en présentiel.{% endif %}</p></div></div>
-  <form action="{{ url_for('admin_learning_documents_pdf', session_id=session.id, kind=kind) }}" method="get" target="_blank" data-learning-form>
+  <form action="{{ url_for('admin_learning_documents_pdf', session_id=session.id, kind=kind) }}" method="get" target="_blank" rel="noopener" data-learning-form>
     {% if kind == 'questionnaires' %}
     <div class="exam-grid" style="margin-bottom:16px;">
       <label class="exam-field">Unité de valeur<select name="uv" data-learning-units><option value="">Toutes les UV</option></select></label>

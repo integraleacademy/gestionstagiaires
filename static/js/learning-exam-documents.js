@@ -22,7 +22,6 @@
     const reportLink = panel.querySelector('[data-report-download]');
     const reportStatus = panel.querySelector('[data-report-status]');
     const refresh = panel.querySelector('[data-report-refresh]');
-    let requireAll = false, unitCount = 0;
     let people = [], loaded = false, busy = false;
     const checks = () => [...list.querySelectorAll('input[name="trainee_id"]')];
     function updateReportLink() {
@@ -52,13 +51,11 @@
     }
     function update() {
       const number = units?.value || '';
-      let printable = 0, blocked = 0;
+      let printable = 0;
       checks().forEach(check => {
         const person = people.find(p => String(p.id) === check.value);
-        const complete = !requireAll || person.submitted.length === unitCount;
-        const available = complete && (!units || person.submitted.some(n => !number || String(n) === number));
-        if (check.checked && !complete) blocked++;
-        check.disabled = !requireAll && !available;
+        const available = !units || person.submitted.some(n => !number || String(n) === number);
+        check.disabled = !available;
         if (check.checked && available) printable++;
         const link = check.closest('article').querySelector('[data-learning-individual]');
         const url = new URL(form.action, window.location.origin);
@@ -70,9 +67,11 @@
       });
       panel.querySelector('[data-learning-count]').textContent = `${checks().filter(c => c.checked && !c.disabled).length} stagiaire(s) sélectionné(s)`;
       toggle.textContent = checks().some(c => c.checked && !c.disabled) ? 'Tout désélectionner' : 'Tout sélectionner';
-      print.disabled = !printable || blocked > 0;
-      toggle.disabled = !people.length;
-      status.textContent = blocked ? `Impression bloquée : ${blocked} stagiaire(s) sélectionné(s) doivent encore terminer des questionnaires.` : people.length ? (requireAll ? 'Tous les questionnaires de chaque stagiaire sélectionné doivent être terminés avant impression.' : units ? 'Seules les réponses aux questionnaires terminés sont imprimées.' : 'Chaque PDF s’ouvre dans un nouvel onglet : utilisez ensuite le bouton Imprimer du lecteur PDF.') : 'Aucun stagiaire actif dans cette session.';
+      print.disabled = !printable;
+      toggle.disabled = checks().every(check => check.disabled);
+      status.textContent = !people.length ? 'Aucun stagiaire actif dans cette session.' : units
+        ? 'Seules les copies des UV terminées sont disponibles pour impression.'
+        : 'Le PDF s’ouvre dans un nouvel onglet pour impression.';
     }
     async function load() {
       if (busy || (loaded && !reportUnit)) return;
@@ -82,11 +81,9 @@
         const payload = await data();
         const previousChecks = new Map(checks().map(check => [check.value, check.checked]));
         people = payload.people;
-        requireAll = Boolean(units && payload.require_all_uv);
-        unitCount = payload.units.length;
         if (units && !loaded) units.insertAdjacentHTML('beforeend', payload.units.map(u => `<option value="${u.number}">UV ${String(u.number).padStart(2,'0')} · ${esc(u.title)}</option>`).join(''));
         if (reportUnit) showReports(payload.units);
-        list.innerHTML = people.map(p => `<article class="exam-card" style="padding:12px 16px;margin-bottom:8px;"><div class="exam-candidate-top"><label class="exam-check"><input type="checkbox" name="trainee_id" value="${esc(p.id)}" checked><strong>${esc(p.name)}</strong></label><div class="exam-actions">${units ? `<span class="exam-muted">Questionnaires terminés : ${p.submitted.length} / ${payload.units.length}</span>` : ''}<a class="btn btn-outline" target="_blank" rel="noopener" data-learning-individual>Imprimer individuellement ↗</a><span class="exam-muted" data-learning-empty hidden>${requireAll ? 'Questionnaires incomplets' : 'Aucun questionnaire terminé'}</span></div></div></article>`).join('');
+        list.innerHTML = people.map(p => `<article class="exam-card" style="padding:12px 16px;margin-bottom:8px;"><div class="exam-candidate-top"><label class="exam-check"><input type="checkbox" name="trainee_id" value="${esc(p.id)}" checked><strong>${esc(p.name)}</strong></label><div class="exam-actions">${units ? `<span class="exam-muted">Questionnaires terminés : ${p.submitted.length} / ${payload.units.length}</span>` : ''}<a class="btn btn-outline" target="_blank" rel="noopener" data-learning-individual>Imprimer individuellement ↗</a><span class="exam-muted" data-learning-empty hidden>Aucune copie pour cette sélection</span></div></div></article>`).join('');
         checks().forEach(check => {
           if (previousChecks.has(check.value)) check.checked = previousChecks.get(check.value);
         });
