@@ -13057,7 +13057,7 @@ def _log_charles_hebergement_trace(scope: str, message: str, **kwargs: Any) -> N
 # UI enums (for template)
 # =========================
 
-FORMATION_TYPES = ["APS", "MAC APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
+FORMATION_TYPES = ["APS", "MAC APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "SSIAP 2", "SSIAP 3", "CHEF DE POSTE", "VTC"]
 TSHIRT_SIZES = {"S", "M", "L", "XL", "XXL"}
 AFC_DECISION_OPTIONS = ["RETENU", "NON RETENU"]
 AFC_REFUSAL_REASONS = [
@@ -18064,6 +18064,7 @@ def admin_sessions():
     template = "partials/admin_session_cards.html" if ended_cards_only else "admin_sessions.html"
     html = render_template(
         template,
+        catalogue_conflicts=data.get("session_catalogue_conflicts", []) if visible_partner_id == INTEGRALE_PARTNER_ID else [],
         session_choices=session_choices,
         sessions=out_sessions,
         formation_types=[] if ended_cards_only else _partner_allowed_formation_types(),

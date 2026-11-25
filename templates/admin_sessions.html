@@ -901,6 +901,10 @@
 </div>
 
 
+{% if catalogue_conflicts %}
+<details class="card" style="margin:1rem;padding:1rem"><summary>{{ catalogue_conflicts|length }} rattachement(s) de session à vérifier</summary>
+<ul>{% for item in catalogue_conflicts %}<li><a href="https://plateformegestion.onrender.com/sessions/{{ item.id|urlencode }}/edit">{{ item.slug }} · {{ item.centre }} · {{ item.start }}</a> — {{ item.reason }}</li>{% endfor %}</ul></details>
+{% endif %}
 <div class="grid cards" id="sessionsGrid" data-ended-url="{{ url_for('admin_ended_session_cards', **request.args) }}">
   {% include "partials/admin_session_cards.html" %}
 </div>

@@ -37,6 +37,8 @@ max_requests_jitter = 0
 def post_worker_init(worker):
     # Start after the fork, including after a deploy/restart without any visit.
     import app as legacy_app
+    import session_catalogue
+    session_catalogue.start_worker(legacy_app)
     from vtc_elearning_activation import start_worker
     start_worker(legacy_app)
     import parcours_alternance
@@ -50,7 +52,7 @@ def post_worker_init(worker):
 
 def worker_exit(server, worker):
     import app as legacy_app
-    for name in ("campus_directory", "qonto_webhook_worker", "vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker", "afc_training_mail_worker", "convocation_jobs"):
+    for name in ("session_catalogue_worker", "campus_directory", "qonto_webhook_worker", "vtc_elearning_worker", "parcours_alternance_worker", "exam_retakes_worker", "afc_training_mail_worker", "convocation_jobs"):
         state = legacy_app.app.extensions.get(name)
         if state:
             state["stop"].set()

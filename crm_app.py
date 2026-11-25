@@ -16,7 +16,10 @@ from cpf_provider import register_wedof_guards
 from cpf_provider_bridge import register_production_control
 
 
+import session_catalogue
+
 app = legacy_app.app
+session_catalogue.register(legacy_app)
 register_maintenance_recovery(app)
 register_native_elearning(legacy_app)
 register_wedof_invoice_reconciliation(legacy_app)
