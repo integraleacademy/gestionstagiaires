@@ -40024,7 +40024,6 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date))
     if ssiap_pathways.short_course(trainee):
-        context["entete_attestation"] = "APERÇU" if pending else "ATTESTATION"
         context["mention_delivrance"] = ("Projet avant validation. " + pending if pending
                                          else "Document délivré pour servir et valoir ce que de droit.")
     return context

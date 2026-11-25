@@ -299,6 +299,40 @@ def test_admin_pdf_blank_and_correction(case):
     assert 'no-store' in completed.headers['Cache-Control']
 
 
+@pytest.mark.parametrize("mode", ["answers", "correction", "blank"])
+def test_printed_uv_marks_correct_answers_and_only_the_selected_error(mode):
+    import fitz
+
+    questions = [
+        dict(id=f'q{i}', prompt=f'Question {i}', answer='b', explanation='Correction.',
+             options=[dict(id=key, text=f'Option{key.upper()}{i}') for key in 'abc'])
+        for i in range(1, 4)
+    ]
+    unit = dict(number=2, title='Vérification', questions=questions)
+    result = dict(score=1, submitted_at='25/11/2026', answers={'q1':'b', 'q2':'c', 'q3':''})
+    pdf = uv.pdf({}, {}, 'aps', unit, result=result if mode == 'answers' else None, correction=mode != 'blank')
+    with fitz.open(stream=pdf.getvalue(), filetype='pdf') as doc:
+        page = doc[0]
+        outlines = [path['rect'] for path in page.get_drawings()
+                    if path['color'] and path['color'][1] > max(path['color'][0], path['color'][2])]
+        assert len(outlines) == (0 if mode == 'blank' else 3)
+        for q in questions:
+            for option in q['options']:
+                word, = page.search_for(option['text'])
+                center = (word.tl + word.br) / 2
+                assert any(center in rect for rect in outlines) == (mode != 'blank' and option['id'] == q['answer'])
+        crosses = [span for block in page.get_text('dict')['blocks'] if block['type'] == 0
+                   for line in block['lines'] for span in line['spans'] if span['text'].strip() == '×']
+        assert len(crosses) == (1 if mode == 'answers' else 0)
+        if crosses:
+            cross = crosses[0]
+            red, green, blue = fitz.sRGB_to_rgb(cross['color'])
+            assert red > max(green, blue)
+            box = fitz.Rect(cross['bbox'])
+            chosen, = page.search_for('OptionC2')
+            assert box.x1 < chosen.x0 and box.y0 < (chosen.y0 + chosen.y1) / 2 < box.y1
+
+
 def test_portal_admin_closed_accordions_and_sst_hidden(case,monkeypatch):
     from bs4 import BeautifulSoup
     client,training,trainee,_=case
