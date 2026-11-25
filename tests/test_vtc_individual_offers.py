@@ -1,4 +1,5 @@
 """Regression tests for individual VTC practical training / vehicle-only offers."""
+from datetime import date
 from unittest import mock
 
 from docx import Document
@@ -105,10 +106,15 @@ def test_offer_does_not_use_theory_exam_date_and_only_shows_matching_funding(vtc
     training, trainee = vtc
     training.pop("exam_practice_date")
     training["exam_date"] = "2026-11-25"
+    # Keep the issue date distinct from the theory date even on 25 November.
+    issue_clock = mock.Mock(wraps=date)
+    issue_clock.today.return_value = date(2026, 11, 18)
+    monkeypatch.setattr(offers.vtc_offer_contracts, "date", issue_clock)
     trainee.update(vtc_offer="practice", cpf_amount="450", personal_amount="150")
     monkeypatch.setattr(offers, "write_pdf", lambda host, doc, *args: doc)
     doc = offers.convention(app, training, trainee, output_dir=tmp_path)
     body = " ".join(doc.element.body.xpath(".//w:t/text()"))
+    assert "Fait à Puget-sur-Argens, le 18/11/2026." in body
     assert "25/11/2026" not in body and "selon convocation officielle" in body
     assert "450,00 €" in body and "150,00 €" in body and "Mon Compte Formation" in body
 

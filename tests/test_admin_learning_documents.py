@@ -2,6 +2,8 @@ import copy
 from io import BytesIO
 from unittest.mock import patch
 
+import pytest
+from lxml import html
 from pypdf import PdfReader
 
 import app as host
@@ -37,30 +39,33 @@ def test_same_attestations_individual_or_group_without_changing_progress(aps_cas
     assert not (aps_case.persist_dir / 'native_elearning' / 'tracking.sqlite3').exists()
 
 
-def test_questionnaires_only_print_submitted_answers_from_complete_aps_dossiers(aps_case):
+@pytest.mark.parametrize("course", ["aps", "a3p"])
+def test_submitted_uv_prints_immediately_from_partially_completed_dossiers(aps_case, course):
     training, person, base = setup(aps_case)
-    row = uv.unit('aps', 2)
-    person['uv_questionnaires'] = {'aps': {'2': {'version': uv.VERSION, 'score':20,
-        'submitted_at':'2026-11-16', 'answers':{q['id']:q['answer'] for q in row['questions']}}}}
-    query = {'trainee_id':[person['id'],'other'], 'uv':'2'}
-    assert aps_case.client.get(base+'questionnaires.pdf',query_string=query).status_code == 409
-    for item in uv.bank()['courses']['aps']['units']:
-        number = item['number']
-        if uv.unit('aps', number):
-            person['uv_questionnaires']['aps'][str(number)] = dict(version=uv.VERSION, score=20, submitted_at='2026-11-16',
-                answers={q['id']:q['answer'] for q in item['questions']})
-    assert aps_case.client.get(base+'questionnaires.pdf',query_string=query).status_code == 409
-    query['trainee_id'] = person['id']
+    training.update(training_type=course.upper(), name="Session " + course.upper())
+    row = uv.unit(course, 2)
+    person['uv_questionnaires'] = {course: {'2': {'version': uv.VERSION, 'score': 20,
+        'submitted_at': '2026-11-16', 'answers': {q['id']: q['answer'] for q in row['questions']}}}}
+    query = {'trainee_id': [person['id'], 'other'], 'uv': '2'}
+    index = aps_case.client.get('/api/admin/sessions/session-aps/learning-documents').json
+    assert not index['require_all_uv']
+    assert next(u for u in index['units'] if u['number'] == 2)['completed'] == 1
+    roster = html.fromstring(aps_case.client.get('/admin/sessions/session-aps/trainees').text)
+    link, = roster.xpath('//*[@data-report-download]')
+    assert link.get('target') == '_blank' and 'noopener' in link.get('rel').split()
     for mode in ('blank', 'correction'):
-        assert aps_case.client.get(base+'questionnaires.pdf', query_string={**query,'mode':mode}).status_code == 400
-    answers = aps_case.client.get(base+'questionnaires.pdf',query_string=query)
-    assert answers.status_code == 200 and 'inline' in answers.headers['Content-Disposition']
-    text = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(answers.data)).pages)
+        assert aps_case.client.get(base + 'questionnaires.pdf', query_string={**query, 'mode': mode}).status_code == 400
+    with patch('admin_learning_documents.uv.unit', wraps=uv.unit) as lookup:
+        response = aps_case.client.get(base + 'questionnaires.pdf', query_string=query)
+        assert any(c.args == (course, 2, uv.VERSION) for c in lookup.call_args_list)
+    assert response.status_code == 200 and 'inline' in response.headers['Content-Disposition']
+    pages = PdfReader(BytesIO(response.data)).pages
+    assert 1 <= len(pages) <= 2
+    text = ' '.join(p.extract_text() for p in pages)
     assert 'Alice' in text and 'Bob' not in text and '20/20' in text and 'Votre réponse' in text
-    assert aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'uv':'1'}).status_code == 400
-    with patch('admin_learning_documents.uv.unit', wraps=uv.unit) as unit:
-        aps_case.client.get(base+'questionnaires.pdf',query_string={**query,'mode':'answers'})
-        assert any(c.args == ('aps', 2, uv.VERSION) for c in unit.call_args_list)
+    assert all(f'{i:02}.' in text for i in range(1, 21))
+    assert aps_case.client.get(base + 'questionnaires.pdf', query_string={**query, 'trainee_id': 'other'}).status_code == 409
+    assert aps_case.client.get(base + 'questionnaires.pdf', query_string={**query, 'uv': '999'}).status_code == 400
 
 
 def test_documents_require_valid_selection_and_same_tenant(aps_case):

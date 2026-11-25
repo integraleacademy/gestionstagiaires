@@ -12156,6 +12156,7 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
         "non_conform_count": total - conform_count,
         "session_is_conform": (total > 0 and conform_count == total),
         "cnaps_accepted_count": cnaps_accepted_count,
+        "ssiap": ssiap_pathways.enrolment_counts(trainees) if ssiap_pathways.supported(session) and not afc_schedule.enabled(session) else {},
         "vtc": compute_vtc_exam_stats(trainees) if "VTC" in (training_type or "").upper() else {},
     }
 
@@ -13385,9 +13386,8 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
                      {**support, "key": "attestation_secourisme_ssiap", "label": "Qualification de secourisme en cours de validité"}])
         if ssiap_pathways.selected(trainee) == "recyclage":
             docs.append({**support, "key": "ssiap_activite", "label": "Justificatif des 1 607 heures d’activité sur les 36 derniers mois"})
-        else:
-            docs.append({**REQUIRED_DOCS["SSIAP_ONLY"][0], "optional": True,
-                         "label": "Certificat médical de moins de trois mois si vous n’exercez pas dans un service de sécurité incendie"})
+        docs.append({**REQUIRED_DOCS["SSIAP_ONLY"][0],
+                     "label": "Certificat médical obligatoire de moins de trois mois à l’entrée en stage, selon le modèle officiel"})
     elif tt.startswith("SSIAP"):
         docs += list(REQUIRED_DOCS["SSIAP_ONLY"])
     if _is_dirigeant_candidate_sheet_training(tt):
@@ -39995,9 +39995,15 @@ def _aps_end_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str 
     return f"attestation_fin_formation_aps_{last_name}{suffix}"
 
 
-def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any], *, preview: bool = False) -> Dict[str, str]:
+    pending = ""
     if ssiap_pathways.short_course(trainee):
-        ssiap_pathways.check_attestation(session_obj, trainee)
+        try:
+            ssiap_pathways.check_attestation(session_obj, trainee)
+        except ValueError as exc:
+            if not preview:
+                raise
+            pending = str(exc)
     session_obj = _trainee_training_session(session_obj, trainee)
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
@@ -40017,26 +40023,31 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
     }
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date))
+    if ssiap_pathways.short_course(trainee):
+        context["entete_attestation"] = "APERÇU" if pending else "ATTESTATION"
+        context["mention_delivrance"] = ("Projet avant validation. " + pending if pending
+                                         else "Document délivré pour servir et valoir ce que de droit.")
     return context
 
 
 
-def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "", *, preview_dir: Optional[str] = None) -> Tuple[str, str]:
     template_path = _ssiap_document_template(session_obj, trainee, "end", _aps_end_attestation_template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/attestationfinaps.docx")
-    os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
+    output_dir = preview_dir or APS_END_ATTESTATION_DIR
+    os.makedirs(output_dir, exist_ok=True)
     base = _aps_end_attestation_base_filename(trainee, trainee_id)
     base = _ssiap_document_filename(base, session_obj, trainee)
-    final_docx_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".docx")
-    final_pdf_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".pdf")
+    final_docx_path = os.path.join(output_dir, base + ".docx")
+    final_pdf_path = os.path.join(output_dir, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
-    _replace_docx_xml_placeholders(final_docx_path, _build_aps_end_attestation_context(session_obj, trainee))
+    _replace_docx_xml_placeholders(final_docx_path, _build_aps_end_attestation_context(session_obj, trainee, preview=preview_dir is not None))
     _assert_docx_has_no_unresolved_variables(final_docx_path)
     lo_binary = _find_libreoffice_binary()
     if os.path.exists(final_pdf_path):
         os.remove(final_pdf_path)
-    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_END_ATTESTATION_DIR, final_docx_path]
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, final_docx_path]
     try:
         subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
     except subprocess.CalledProcessError as exc:
@@ -52857,8 +52868,10 @@ def admin_preview_aps_end_attestation(session_id: str, trainee_id: str):
     if _trainee_registration_is_cancelled(t):
         return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
-        _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
-        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
+        with tempfile.TemporaryDirectory(prefix="attestation-fin-apercu-") as preview_dir:
+            _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id, preview_dir=preview_dir)
+            return send_file(BytesIO(Path(pdf_path).read_bytes()), mimetype="application/pdf",
+                             download_name=os.path.basename(pdf_path), max_age=0)
     except Exception as exc:
         app.logger.exception("[ATTESTATION FIN APS] Aperçu impossible")
         return make_response(f"Aperçu attestation de fin APS impossible : {html.escape(str(exc))}", 400)

@@ -67,7 +67,7 @@
     <div class="stat stat-vtc stat-total">
       <div class="stat-icon">👥</div>
       <div>
-        <div class="stat-title">Stagiaires</div>
+        <div class="stat-title">{{ "Total inscrits" if stats.ssiap else "Stagiaires" }}</div>
         <div class="stat-value">{{ stats.total }}</div>
       </div>
     </div>
@@ -107,6 +107,13 @@
         </div>
       </div>
       {% endif %}
+    {% elif stats.ssiap %}
+      {% for key, label in [('ssiap', 'SSIAP seul'), ('ssiap_sst', 'SSIAP + SST'), ('remise_a_niveau', 'Remise à niveau (RAN)'), ('recyclage', 'Recyclage')] %}
+      <div class="stat">
+        <div class="stat-title">{{ label }}</div>
+        <div class="stat-value">{{ stats.ssiap[key] }}</div>
+      </div>
+      {% endfor %}
     {% else %}
     <div class="stat">
       <div class="stat-title">Conformes</div>

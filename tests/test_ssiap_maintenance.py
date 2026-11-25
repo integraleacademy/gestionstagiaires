@@ -1,6 +1,8 @@
 import copy
+from pathlib import Path
 
 import pytest
+from lxml import html
 from docx import Document
 
 import app as gestion
@@ -72,7 +74,7 @@ def test_maintenance_convocation_uses_initial_design_and_its_own_schedule(group,
     for day in days:
         assert gestion.fr_date(day) in text
     assert f"{len(days)} jours {7 * len(days)} heures" in text
-    assert "9 h à 12 h" in text and "13 h à 17 h" in text
+    assert "08h30–12h30 / 13h30–16h30" in text
     assert paths.MAINTENANCE[choice]["requirements"] in text
     assert (venue or paths.PUGET_VENUE) in text
     assert ("PLAN D’ACCÈS & PARKINGS" in text) is expect_map
@@ -104,6 +106,9 @@ def test_enrolment_documents_financing_and_completion(group, choice, price, hour
         assert len(ctx["dates_parcours"].split(", ")) == len(days)
     assert gestion._aps_convention_replacements(training,t)["montant_formation"] == price
     req = {d['key'] for d in t['documents']}
+    med = next(d for d in t["documents"] if d["key"] == "certificat_medical_ssiap")
+    assert not med.get("optional") and med["template_url_endpoint"] == "public_ssiap_medical_certificate_template"
+    assert "obligatoire" in med["label"]
     assert "ssiap_original" in req and "attestation_secourisme_ssiap" in req
     assert ("ssiap_activite" in req) == (choice == "recyclage")
     line, = gestion.buildBillingLinesFromSessions([training])
@@ -119,7 +124,10 @@ def test_enrolment_documents_financing_and_completion(group, choice, price, hour
     client.post(base+"/presence-ssiap",json={"day":days[-1],"status":"present"})
     with pytest.raises(ValueError,match="diplôme"):
         gestion._build_aps_end_attestation_context(training,t)
+    draft = gestion._build_aps_end_attestation_context(training, t, preview=True)
+    assert draft["entete_attestation"] == "APERÇU" and "diplôme" in draft["mention_delivrance"]
     t.update(ssiap_original_diploma="D-EXEMPLE",birth_date="1990-04-01",birth_city="Lyon")
+    assert gestion._build_aps_end_attestation_context(training, t)["entete_attestation"] == "ATTESTATION"
     assert gestion._build_aps_end_attestation_context(training,t)["diplome_origine"] == "D-EXEMPLE"
     assert client.post("/api/sessions/S1/update",json={"ssiap_pathways":{**training["ssiap_pathways"],choice+"_dates":[]}}).status_code == 400
     assert client.get("/admin/sessions/S1/parcours-ssiap").status_code == 200
@@ -136,7 +144,17 @@ def test_mixed_roster_only_lists_expected_trainees_and_initial_exam(group):
     assert [t["id"] for t in ssiap_exam.active_candidates(gestion,training)] == [initial["id"]]
     assert not ssiap_exam.candidate_settings(training, {**rec,"ssiap_exam_status":"certified"})["included"]
     assert not paths.expected_on(training, rec, "2026-11-23")
+    training["ssiap_pathways"]["sst_dates"] = ["2026-11-24"]
+    enrol(group, "ssiap_sst")
+    initial.pop("ssiap_pathway")  # Legacy registration with no explicit selection.
+    training["trainees"].append({**rec, "id":"cancelled", "registration_cancelled":True})
     roster = client.get("/admin/sessions/S1/trainees")
+    header, = html.fromstring(roster.text).find_class('session-stats')
+    assert {card.find_class('stat-title')[0].text: card.find_class('stat-value')[0].text
+            for card in header.find_class('stat')} == {
+        "Total inscrits": "4", "SSIAP seul": "1", "SSIAP + SST": "1",
+        "Remise à niveau (RAN)": "1", "Recyclage": "1",
+    }
     assert roster.status_code == 200 and "250 € TTC" in roster.text and "350 € TTC" in roster.text
 
 
@@ -154,6 +172,21 @@ def test_existing_dossier_personal_price_and_historical_documents(group):
     assert next(d["file"] for d in t["documents"] if d["key"] == "certificat_medical_ssiap") == "existing.pdf"
     assert client.post(change,json={"ssiap_pathway":"ssiap"}).status_code == 200
     assert not next(d for d in t["documents"] if d["key"] == "certificat_medical_ssiap").get("optional")
+
+
+@pytest.mark.parametrize("choice", ["recyclage", "remise_a_niveau"])
+def test_existing_short_dossiers_refresh_medical_requirement_without_losing_files(group, choice):
+    training, _ = group
+    t = enrol(group, choice)
+    med = next(d for d in t["documents"] if d["key"] == "certificat_medical_ssiap")
+    med.update(optional=True, label="Si vous n’exercez pas", file="deja-depose.pdf", status="CONFORME")
+    gestion.ensure_documents_schema_for_trainee(t, training["training_type"])
+    assert not med.get("optional") and "obligatoire" in med["label"]
+    assert (med["file"], med["status"]) == ("deja-depose.pdf", "CONFORME")
+    t["documents"].remove(med)
+    gestion.ensure_documents_schema_for_trainee(t, training["training_type"])
+    missing = next(d for d in t["documents"] if d["key"] == "certificat_medical_ssiap")
+    assert not missing.get("optional") and missing["status"] == "NON DÉPOSÉ"
 
 
 def test_edof_matching_uses_the_registered_path_dates(group):
@@ -207,3 +240,38 @@ def test_unbilled_personal_share_follows_price_and_an_issued_invoice_keeps_its_a
     data["billing_lines"] = [{"id":"invoice","sessionId":"S1","traineeId":t["id"],"qontoInvoiceId":"issued"}]
     assert client.post(change, json={"ssiap_pathway":"remise_a_niveau"}).status_code == 200
     assert t["training_price"] == "350" and t["personal_amount"] == "250"
+
+
+@pytest.mark.parametrize("choice", ["recyclage", "remise_a_niveau"])
+def test_short_attestations_reuse_initial_branding_and_render_individual_fields(group, choice, tmp_path):
+    from zipfile import ZipFile
+
+    training, client = group
+    trainee = enrol(group, choice)
+    dates = training["ssiap_pathways"][choice + "_dates"]
+    trainee.update(ssiap_original_diploma="NUM-ORIGINE", birth_date="1990-04-01", birth_city="Lyon",
+                   ssiap_attendance={day: "present" for day in dates}, lieu_formation="Salle du centre")
+    for kind, fallback, build in [("entry", gestion._aps_entry_attestation_template_path, gestion._build_aps_entry_attestation_context),
+                                  ("end", gestion._aps_end_attestation_template_path, gestion._build_aps_end_attestation_context)]:
+        template = gestion._ssiap_document_template(training, trainee, kind, fallback)
+        with ZipFile(fallback(training)) as initial, ZipFile(template) as adapted:
+            for asset in initial.namelist():
+                if asset.startswith(("word/media/", "word/header", "word/footer")) or asset == "word/styles.xml":
+                    assert adapted.read(asset) == initial.read(asset)
+        document = tmp_path / (kind + ".docx")
+        document.write_bytes(Path(template).read_bytes())
+        gestion._replace_docx_xml_placeholders(str(document), build(training, trainee))
+        text = " ".join(Document(document).element.body.xpath(".//w:t/text()"))
+        for target in [paths.CHOICES[choice], "Salle du centre", "08h30–12h30 / 13h30–16h30", *map(gestion.fr_date, dates)]:
+            assert target in text
+        assert "{{" not in text and "70 heures" not in text
+        if kind == "end":
+            assert "NUM-ORIGINE" in text and "Lyon" in text
+
+    page = client.get(f"/admin/sessions/S1/stagiaires/{trainee['id']}")
+    assert page.status_code == 200
+    links = html.fromstring(page.text).xpath('//a[contains(@href, "/preview")]')
+    for endpoint in ("convention", "convocation-aps", "attestation-entree-aps", "attestation-fin-aps"):
+        matching = [a for a in links if a.get("href", "").endswith("/" + endpoint + "/preview")]
+        assert matching and all(a.get("target") == "_blank" and "noopener" in a.get("rel", "").split() for a in matching)
+        assert all("data-open-document-preview-modal" not in a.attrib for a in matching)

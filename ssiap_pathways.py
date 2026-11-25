@@ -12,14 +12,14 @@ MAINTENANCE = {
         "label": "Recyclage SSIAP 1", "days": 2, "price": "250",
         "programme": "Prévention (5 h), moyens de secours (3 h) et mises en situation d’intervention (6 h).",
         "objectives": "Actualiser ses connaissances en prévention et intervenir avec les moyens de secours adaptés.",
-        "requirements": "Diplôme SSIAP 1 ou équivalent, secourisme en cours de validité, échéance triennale respectée et justificatif de 1 607 h d’activité sur les 36 derniers mois.",
+        "requirements": "Diplôme SSIAP 1 ou équivalent, secourisme en cours de validité, échéance triennale respectée et justificatif de 1 607 h d’activité sur les 36 derniers mois. Certificat médical de moins de trois mois à l’entrée en stage obligatoire.",
         "certificate": "Attestation de recyclage SSIAP 1",
     },
     "remise_a_niveau": {
         "label": "Remise à niveau SSIAP 1", "days": 3, "price": "350",
         "programme": "Fondamentaux (3 h), exploitation du PC sécurité (2 h), rondes (2 h), prévention (5 h), moyens de secours (3 h) et mises en situation d’intervention (6 h).",
         "objectives": "Reprendre les fondamentaux, exploiter le poste de sécurité, effectuer les rondes et intervenir en équipe.",
-        "requirements": "Diplôme SSIAP 1 ou équivalent et secourisme en cours de validité. Certificat médical de moins de trois mois pour le personnel qui n’exerce pas dans un service de sécurité incendie.",
+        "requirements": "Diplôme SSIAP 1 ou équivalent et secourisme en cours de validité. Certificat médical de moins de trois mois à l’entrée en stage obligatoire.",
         "certificate": "Attestation de remise à niveau SSIAP 1",
     },
 }
@@ -28,7 +28,6 @@ CHOICES = {"ssiap": "SSIAP seul", "ssiap_sst": "SSIAP + SST",
 # Annexe 1 du courrier IA/SSIAP/2027-02 (Puget-sur-Argens).
 PUGET_2027 = ("2027-02-24", "2027-06-02", "2027-09-22", "2027-11-17")
 PUGET_VENUE = "Intégrale Academy · 54 chemin du Carreou, 83480 Puget-sur-Argens"
-MAINTENANCE_SCHEDULE = "9 h à 12 h et 13 h à 17 h"
 DEFAULTS = {
     "ssiap_hours": "70", "sst_hours": "14",
     "ssiap_schedule": "08h30–12h30 / 13h30–16h30",
@@ -152,6 +151,14 @@ def selected(trainee):
     return trainee.get("ssiap_pathway") or "ssiap"
 
 
+def enrolment_counts(trainees):
+    counts = dict.fromkeys(CHOICES, 0)
+    for trainee in trainees:
+        choice = selected(trainee)
+        counts[choice if choice in counts else "ssiap"] += 1
+    return counts
+
+
 def validate_choice(training, choice):
     if not supported(training) or choice not in CHOICES:
         raise ValueError("Choisissez un parcours SSIAP disponible.")
@@ -179,8 +186,7 @@ def resolve(training, trainee, *, strict=False):
         hours = str(spec["days"] * 7)
         return {**config, **spec, "choice": choice, "title": spec["label"], "with_sst": False,
                 "short": True, "dates": days, "sst_dates": [], "ssiap_start": start, "ssiap_end": end,
-                "date_start": start, "date_end": end, "total_hours": hours, "ssiap_hours": hours,
-                "ssiap_schedule": MAINTENANCE_SCHEDULE}
+                "date_start": start, "date_end": end, "total_hours": hours, "ssiap_hours": hours}
     with_sst = choice == "ssiap_sst"
     dates = config["sst_dates"] if with_sst else []
     start, end = group_period(training)

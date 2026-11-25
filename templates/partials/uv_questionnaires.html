@@ -25,9 +25,9 @@
         <div class="uvhub-actions">
           {% if uv_admin %}
           <a class="uvhub-link is-primary" target="_blank" rel="noopener" href="{{ url_for('admin_uv_questionnaire_demo', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">Tester le questionnaire</a>
-          <a class="uvhub-link" href="{{ url_for('admin_uv_questionnaire', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">Voir la correction</a>
-          <a class="uvhub-link" href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">PDF vierge ↓</a>
-          {% if uv.completed %}<a class="uvhub-link" href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number, mode='answers') }}">Réponses ↓</a>{% endif %}
+          <a class="uvhub-link" target="_blank" rel="noopener" href="{{ url_for('admin_uv_questionnaire', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">Voir la correction</a>
+          <a class="uvhub-link" target="_blank" rel="noopener" href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}">PDF vierge ↗</a>
+          {% if uv.completed %}<a class="uvhub-link" target="_blank" rel="noopener" href="{{ url_for('admin_uv_questionnaire_pdf', session_id=session.id, trainee_id=trainee.id, number=uv.number, mode='answers') }}">Réponses ↗</a>{% endif %}
           {% if (uv.completed or uv.in_progress) and not is_read_only %}
           <form class="uvhub-reset" method="post" action="{{ url_for('admin_uv_questionnaire_reset', session_id=session.id, trainee_id=trainee.id, number=uv.number) }}"
                 data-confirmation="Remettre à zéro l’UV {{ '%02d'|format(uv.number) }} de {{ trainee.first_name }} {{ trainee.last_name }} ? Ses réponses et sa note pour cette UV seront effacées."

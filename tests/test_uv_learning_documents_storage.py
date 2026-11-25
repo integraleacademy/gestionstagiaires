@@ -162,7 +162,7 @@ def test_unit_report_available_on_first_submission_with_portraits_and_pending_le
 
     response = case.client.get(report_url)
     assert response.status_code == 200 and response.mimetype == 'application/pdf'
-    assert 'attachment' in response.headers['Content-Disposition']
+    assert response.headers['Content-Disposition'].startswith('inline;')
     assert 'no-store' in response.headers['Cache-Control']
     pdf = PdfReader(BytesIO(response.data))
     assert 2 <= len(pdf.pages) <= 5

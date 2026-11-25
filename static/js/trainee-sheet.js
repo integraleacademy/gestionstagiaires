@@ -1371,12 +1371,17 @@ function updateDocsRelanceState(status, plannedDateIso){
       trainingType: vaeConventionConfig.trainingType,
       previewUrl: vaeConventionConfig.previewUrl,
       onPreview: async (payload)=>{
-        await saveVaeConventionFinancing(payload);
-        await window.openConventionPreview?.(vaeConventionConfig.previewUrl, {
-          title: vaeConventionConfig.isVae ? "Convention VAE" : "Convention",
-          description: vaeConventionConfig.isVae ? "Vérifiez la convention VAE avant l’envoi pour signature électronique." : "Vérifiez la convention avant l’envoi pour signature électronique.",
-          frameTitle: vaeConventionConfig.isVae ? "Aperçu de la convention VAE" : "Aperçu de la convention"
-        });
+        // Reserve the tab during the click, before saving any edited financing fields.
+        const tab = window.open("about:blank", "_blank");
+        if (!tab) throw new Error("Autorisez l’ouverture du nouvel onglet pour consulter la convention.");
+        tab.opener = null;
+        try {
+          await saveVaeConventionFinancing(payload);
+          tab.location.replace(vaeConventionConfig.previewUrl);
+        } catch (error) {
+          tab.close();
+          throw error;
+        }
       }
     });
   }
