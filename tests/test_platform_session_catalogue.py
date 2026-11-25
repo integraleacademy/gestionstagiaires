@@ -79,7 +79,7 @@ def test_private_aggregate_endpoint(row, monkeypatch, tmp_path):
 
 
 def test_ssiap_variants_share_active_enrolments_and_preserve_wedof_period(row):
-    row.update(slug="ssiap-1", start="2027-02-11", standard_start="2027-02-15", end="2027-02-26", exam="2027-03-01")
+    row.update(slug="ssiap-1", start="2027-02-11", standard_start="2027-02-15", end="2027-02-26", exam="")
     training = dict(id="conserve", name="SSIAP 1", training_type="SSIAP 1", date_start=row["standard_start"],
                     date_end=row["end"], exam_date=row["exam"], trainees=[{"id":"inscrit"}])
     data = {"sessions":[training], "wedof_links":[{"active":True, "session_id":"conserve"}]}

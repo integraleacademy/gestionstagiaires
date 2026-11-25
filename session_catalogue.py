@@ -66,7 +66,11 @@ def same_group(a, b):
 
 
 def correspondence(a, b):
-    return same_group(a, b) and sum(bool(a.get(key)) and a[key] == b.get(key) for key in ("start", "end", "exam")) >= 2
+    if not same_group(a, b):
+        return False
+    starts = {b.get("start"), b.get("standard_start")} if b["slug"] == "ssiap-1" else {b.get("start")}
+    return sum((bool(a.get("start")) and a["start"] in starts, bool(a.get("end")) and a["end"] == b.get("end"),
+                bool(a.get("exam")) and a["exam"] == b.get("exam"))) >= 2
 
 
 def overlaps(a, b):
@@ -78,7 +82,7 @@ def own(host, training):
 
 
 def signature(row):
-    return {k: row.get(k, "") for k in FIELDS}
+    return {k: row.get(k, "") for k in (*FIELDS, "standard_start")}
 
 
 def choose(row, candidates):
