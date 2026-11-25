@@ -45,6 +45,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature
 import ssiap_diploma_numbers
 import ssiap_diploma_registry
 from email_design import render_email as render_academy_email, normalize_email_text_signature
+import session_catalogue
 import afc_schedule
 import uv_questionnaires
 import aps_kickoff
@@ -17927,7 +17928,8 @@ def admin_sessions():
         if bool(s.get("archived")):
             continue
 
-        duplicate_key = _session_duplicate_key(s, visible_partner_id)
+        source_id = s.get(session_catalogue.STATE, {}).get("id")
+        duplicate_key = ("planning", source_id) if source_id else _session_duplicate_key(s, visible_partner_id)
         if duplicate_key in visible_session_keys:
             continue
         visible_session_keys.add(duplicate_key)
@@ -18021,6 +18023,7 @@ def admin_sessions():
 
         out_sessions.append({
             **afc_schedule.view(s),
+            "catalogue_source": s.get(session_catalogue.STATE, {}).get("source", {}),
             "id": s.get("id"),
             "name": _session_get(s, "name", ""),
             "training_type": _session_get(s, "training_type", ""),
@@ -26808,7 +26811,8 @@ def _compute_aps_period_dates(date_start: str, presentiel_start: str = "") -> Di
 def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
     # AFC has one training period and two separate exams. Never infer an APS exam
     # from the end of the full AFC session or overwrite its global period.
-    if afc_schedule.enabled(session_obj):
+    planning = session_obj.get(session_catalogue.STATE, {}).get("source", {})
+    if afc_schedule.enabled(session_obj) or planning.get("unscheduled"):
         return
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
     if not training_type.startswith("APS"):
@@ -26859,7 +26863,9 @@ def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
     ).isoformat()
     session_obj["aps_computed_exam_date"] = computed_exam_date
     exam = _parse_iso_date(_session_get(session_obj, "exam_date", ""))
-    if not exam or presentiel_end >= exam:
+    if planning.get("edited") and "exam" in planning:
+        session_obj.update(date_start=planning["start"], date_end=planning["end"], exam_date=planning["exam"])
+    elif not exam or presentiel_end >= exam:
         session_obj["exam_date"] = computed_exam_date
 
 def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
@@ -27482,10 +27488,14 @@ def api_update_session(session_id: str):
     return _apply_session_update(data, session_id, payload, persist=save_data)
 
 
-def _apply_session_update(data, session_id, payload, *, persist=None):
+def _apply_session_update(data, session_id, payload, *, persist=None, from_catalogue=False):
     s = find_session(data, session_id)
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    authoritative_name = s.get(session_catalogue.STATE, {}).get("source", {}).get("name")
+    if not from_catalogue and authoritative_name and "name" in payload and payload["name"] != authoritative_name:
+        return jsonify(ok=False, error="Modifiez le nom de cette session dans Plateforme Gestion."), 409
 
     try:
         if "vtc_practice_slots" not in payload and s.get(vtc_practice.KEY) and "practice_training_date" in payload:
@@ -27639,6 +27649,8 @@ def api_unarchive_session(session_id: str):
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
+    if session_catalogue.withdrawn(s):
+        return jsonify(ok=False, error="Cette session a été supprimée dans Plateforme Gestion."), 409
     s["archived"] = False
     # optionnel: garder archived_at pour l'historique, ou le vider
     # s["archived_at"] = ""
@@ -56031,6 +56043,7 @@ def _admin_searchable_sessions() -> list:
         if isinstance(course, dict)
         and (course.get("partner_id") or INTEGRALE_PARTNER_ID) == visible_partner_id
         and not _is_wedof_leads_session(course)
+        and not session_catalogue.withdrawn(course)
     ]
 
 
@@ -56649,6 +56662,8 @@ def admin_sessions_archived():
     for s in data.get("sessions", []):
         if not bool(s.get("archived")):
             continue
+        if session_catalogue.withdrawn(s) and not _session_trainees_list(s):
+            continue
         if _is_wedof_leads_session(s):
             continue
 
@@ -56659,7 +56674,7 @@ def admin_sessions_archived():
         )
         session_dossier_complete = (len(trainees) > 0 and dossier_complete_total == len(trainees))
         out_sessions.append({
-            "id": s.get("id"),
+            "id": s.get("id"), "withdrawn": session_catalogue.withdrawn(s),
             "name": _session_get(s, "name", ""),
             "training_type": _session_get(s, "training_type", ""),
             "date_start": _session_get(s, "date_start", ""),

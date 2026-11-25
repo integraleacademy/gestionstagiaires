@@ -46,12 +46,13 @@
   <article class="card session-card session-card--{{ s.status_key }}{% if s.status_key == "ended" and s.financial_overview %} session-card--financial-{{ "closed" if s.financial_overview.closed else "open" }}{% endif %} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-id="{{ s.id }}" data-session-training-type="{{ training_upper }}">
     <div class="session-card__header">
       <div class="session-card__identity">
-        <h2 class="session-card__title {% if not is_read_only %}session-name-editable{% endif %}"
-             {% if not is_read_only %}
+        <h2 class="session-card__title {% if not is_read_only and not s.get('catalogue_source', {}).get('name') %}session-name-editable{% endif %}"
+             {% if not is_read_only and not s.get('catalogue_source', {}).get('name') %}
              data-inline-session-name="{{ s.id }}"
              data-session-name="{{ s.name }}"
              title="Cliquer pour modifier le nom"
-             {% endif %}>{{ s.name }}</h2>
+             {% elif s.get('catalogue_source', {}).get('name') %}title="Nom défini dans Plateforme Gestion"{% endif %}>{{ s.name }}</h2>
+        {% if s.get('catalogue_source', {}).get('venue') %}<div class="session-venue">{{ s.get('catalogue_source', {}).get('venue') }}</div>{% endif %}
         <div class="session-tags" aria-label="Type et statut de session">
           <span class="pill pill-training">{{ "AFC APS + SSIAP 1" if s.afc_enabled else ("CHAUFFEUR VTC" if training_upper == "VTC" else s.training_type) }}</span>
           <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
