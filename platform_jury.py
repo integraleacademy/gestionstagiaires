@@ -34,6 +34,41 @@ class MatchError(ValueError):
     pass
 
 
+def apply_afc_rosters(training, source_id, exams):
+    """Replace complete planning snapshots, including empty juries after a removal."""
+    families = {'aps': 'security_exam', 'ssiap1': 'ssiap_exam'}
+    if not isinstance(exams, dict) or set(exams) != set(families):
+        return False
+    snapshots = {}
+    for key, family in families.items():
+        group = exams[key]
+        if not isinstance(group, dict) or not isinstance(group.get('members'), list):
+            return False
+        date = group.get('date')
+        if not isinstance(date, str) or (date and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', date)):
+            return False
+        members = []
+        seen = set()
+        for person in group['members']:
+            if not isinstance(person, dict):
+                return False
+            jid, name, status = (person.get(k) for k in ('id', 'name', 'status'))
+            if (not isinstance(jid, str) or not jid or jid in seen or not isinstance(name, str)
+                    or status not in ('present', 'absent', 'waiting', 'to_invite')):
+                return False
+            seen.add(jid)
+            members.append({'id': jid, 'name': name, 'status': status})
+        snapshots[family] = {'source_id': source_id, 'date': date, 'members': members}
+    changed = False
+    for family, snapshot in snapshots.items():
+        state = training.setdefault(family, {})
+        if state.get('platform_roster') != snapshot:
+            state['platform_roster'] = snapshot
+            state['revision'] = state.get('revision', 0) + 1
+            changed = True
+    return changed
+
+
 def locate(services, data, selector, linked_source=''):
     if not selector['level'] and not selector['afc'] and not selector['target_id']:
         raise MatchError('Associez cette session à un examen dans la fiche jury.')
@@ -42,6 +77,8 @@ def locate(services, data, selector, linked_source=''):
         if training.get('partner_id') not in (None, '', services.INTEGRALE_PARTNER_ID):
             continue
         if not exam.jury_supported(training) or afc_schedule.enabled(training) != selector['afc']:
+            continue
+        if selector['afc'] and training.get('platform_catalogue', {}).get('id') not in (None, '', selector['source_id']):
             continue
         config = exam.settings(training)
         if selector['level'] and config['level'] != selector['level']:
@@ -108,7 +145,7 @@ def record(services, data, selector, person):
     source = selector['source_id'] + '/' + person['id']
     training = locate(services, data, selector, source if version else '')
     state = training.setdefault(exam.state_key(training), {})
-    config = exam.settings(training)
+    config = exam.settings(training, include_inactive_jury=True)
     members = list(config['jury'])
     links = state.get('platform_confirmations', {})
     saved_version = state.get('platform_name_versions', {}).get(source, 0)
@@ -139,7 +176,7 @@ def record(services, data, selector, person):
                 if person[field] and not member.get(field):
                     member[field] = person[field]
     else:
-        if len(members) >= 12:
+        if len(exam.settings(training)['jury']) >= 12:
             raise MatchError('La session compte déjà douze membres de jury.')
         stable_id = 'pg-' + hashlib.sha256(person['id'].encode()).hexdigest()[:24]
         if any(m['id'] == stable_id for m in members):

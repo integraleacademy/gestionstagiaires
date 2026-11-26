@@ -179,3 +179,51 @@ def test_incomplete_or_past_reminder_is_not_presented_as_scheduled(overview):
     training['exam_date'] = '2020-01-01'
     badge = summary(gestion, training)['members'][0]['badges'][1]
     assert badge['state'] == 'not_sent' and 'Échéance passée' in badge['detail']
+
+
+def test_linked_afc_card_follows_the_planning_rosters_and_retires_old_confirmations(overview):
+    import platform_jury
+    import session_catalogue as catalogue
+
+    client, training, data = overview
+    day = training['exam_date']
+    row = dict(id='source', slug='afc', centre='puget', start=day, end=day, exam=day, ssiap_exam=day,
+               visibility='internal', capacity=12)
+    training.update(afc_enabled=True, date_start=day, date_end=day, ssiap_exam_date=day,
+                    platform_catalogue={'id': 'source', 'source': row})
+    old = copy.deepcopy(training['security_exam'])
+    training['ssiap_exam'] = old
+    old['config']['jury'][0]['last_name'] = 'RETIRÉ'
+    old['platform_confirmations'] = {'source/retired': 'J1'}
+    old['mail_history'] = [receipt(training)]
+    training['security_exam']['platform_confirmations'] = {'source/active': 'J1'}
+    current = {'source': {
+        'aps': {'date': day, 'members': [{'id': 'active', 'name': 'Alex JURY', 'status': 'present'},
+                                        {'id': 'next', 'name': 'Lou INVITÉ', 'status': 'waiting'}]},
+        'ssiap1': {'date': day, 'members': [{'id': 'active', 'name': 'Alex JURY', 'status': 'to_invite'}]},
+    }}
+    foreign = copy.deepcopy(training)
+    foreign.update(id='FOREIGN', partner_id='autre-centre')
+    data['sessions'].append(foreign)
+    with gestion.app.app_context():
+        catalogue.reconcile(gestion, data, [row], afc_juries=current)
+        with pytest.raises(catalogue.NoChange):
+            catalogue.reconcile(gestion, data, [row], afc_juries=current)
+        with pytest.raises(catalogue.NoChange):
+            catalogue.reconcile(gestion, data, [row])  # An older or unavailable source cannot empty a jury.
+    assert 'platform_roster' not in foreign['ssiap_exam']
+    assert 'INVITÉ' not in str(catalogue.feed(gestion, [training]))
+    aps, ssiap = card_html(client)[0].split('aria-label="Jury SSIAP 1"')
+    assert '1/2 présent' in aps and 'Alex JURY' in aps and 'Lou INVITÉ' in aps and 'En attente de réponse' in aps
+    assert '0/1 présent' in ssiap and 'Alex JURY' in ssiap and 'À inviter' in ssiap
+    assert 'Jury complet' not in ssiap and 'RETIRÉ' not in ssiap
+    assert exam.settings(training)['jury'] == [] and old['mail_history'] == [receipt(training)]
+    assert not platform_jury.apply_afc_rosters(training, 'source', {'aps': current['source']['aps']})
+    current['source']['ssiap1']['members'][0].update(id='retired', status='present', name='Alex RÉAFFECTÉ')
+    current['source']['aps']['members'] = []
+    assert platform_jury.apply_afc_rosters(training, 'source', current['source'])
+    assert exam.settings(training)['jury'][0]['role'] == 'president'
+    aps, ssiap = card_html(client)[0].split('aria-label="Jury SSIAP 1"')
+    assert '0/2 présent' in aps and 'Jury à renseigner' in aps and 'Lou INVITÉ' not in aps
+    assert 'Jury complet · 1/1 présent' in ssiap and 'Alex RÉAFFECTÉ' in ssiap
+    assert 'Président du jury' in ssiap and 'Invitation envoyée' in ssiap
