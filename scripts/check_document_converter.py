@@ -168,14 +168,19 @@ def check_aps_invitation():
         publish(Document(editable), template.name, "aps", editable, pdf)
         with pymupdf.open(pdf) as book:
             dates = book[0].get_text()
-            require(len(book) == 7 and all(value in dates for value in
+            require(len(book) == 8 and all(value in dates for value in
                     ["Du 1er au 10 mars 2027", "Du 11 mars au 15 avril 2027", "Le 16 avril 2027 à 08h00"]),
                     "Missing APS training or exam dates on the cover")
+            calendar_page = book[3].get_text()
+            require(all(value in calendar_page for value in
+                    ["Mars 2027", "Avril 2027", "01/03/2027 à 08h30",
+                     "16/04/2027 à 08h00", "Sous réserve de modifications."]),
+                    "Missing APS monthly calendar or session details")
             require(any(link.get("uri", "").endswith("/parking-puget.svg") for link in book[-1].get_links()),
                     "Missing Puget parking plan")
             require((ROOT / "static/images/convocations/parking-puget.svg").is_file(),
                     "Enlarged Puget parking map missing from the image")
-    print("OK: APS cover dates, seven-page invitation and Puget parking map", flush=True)
+    print("OK: APS monthly calendar, cover dates and Puget parking map", flush=True)
 
 
 def main():

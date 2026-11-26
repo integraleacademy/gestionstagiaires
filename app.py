@@ -61,6 +61,7 @@ import sqlite3
 import convocation_preview
 import training_convocations
 import academy_convocations
+from training_days import is_aps_working_day as _is_aps_working_day
 import convocation_jobs
 import cnaps_read_jobs
 import bts_cnaps_tracking_api as cnaps_tracking_source
@@ -26844,45 +26845,6 @@ def admin_session_financial_report(session_id: str):
         session=session_view,
         report=_session_financial_report(data, session_item),
     )
-
-
-def _easter_date(year: int) -> datetime.date:
-    a = year % 19
-    b = year // 100
-    c = year % 100
-    d = b // 4
-    e = b % 4
-    f = (b + 8) // 25
-    g = (b - f + 1) // 3
-    h = (19 * a + b - d - g + 15) % 30
-    i = c // 4
-    k = c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 22 * l) // 451
-    month = (h + l - 7 * m + 114) // 31
-    day = ((h + l - 7 * m + 114) % 31) + 1
-    return datetime.date(year, month, day)
-
-
-def _french_public_holidays(year: int) -> set[datetime.date]:
-    easter = _easter_date(year)
-    return {
-        datetime.date(year, 1, 1),
-        easter + datetime.timedelta(days=1),
-        datetime.date(year, 5, 1),
-        datetime.date(year, 5, 8),
-        easter + datetime.timedelta(days=39),
-        easter + datetime.timedelta(days=50),
-        datetime.date(year, 7, 14),
-        datetime.date(year, 8, 15),
-        datetime.date(year, 11, 1),
-        datetime.date(year, 11, 11),
-        datetime.date(year, 12, 25),
-    }
-
-
-def _is_aps_working_day(day: datetime.date) -> bool:
-    return day.weekday() < 5 and day not in _french_public_holidays(day.year)
 
 
 def _next_aps_working_day(day: datetime.date) -> datetime.date:

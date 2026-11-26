@@ -1,7 +1,8 @@
-"""APS layout for the personalized seven-page Puget training invitation."""
+"""APS layout for the personalized Puget training invitation."""
 
 from reportlab.pdfbase.pdfmetrics import stringWidth
 
+from . import aps_calendar
 from .drawing import Book, BW, L, R, WHITE, split_lines
 
 TEXT = "#19283A"
@@ -47,6 +48,7 @@ def cover(p):
     p.emit(8, x, 37, 350, "Bar", 11.4, MUTED)
     p.emit(9, x, 55, 305, "Cond", 31)
     p.icon("calendar", R - 26, 58, 24, BLUE)
+    p.link(x, 52, R - x, 39, "#p4")
     p.line(x, 98, R, 98, "#BBCBE0", 0.9)
     for index, icon, y in [
         (10, "laptop", 113),
@@ -70,7 +72,7 @@ def cover(p):
     p.emit(20, 427, 415, 372, "BarB", 15, TEXT, 19)
     p.emit(21, 34, 490, 340, "BarB", 10.5, MUTED)
     p.printed_link(22, 34, 506, 355, p.ref.portal, 10.6)
-    p.printed_link(23, 427, 502, 376, "#p7", 11.5)
+    p.printed_link(23, 427, 502, 376, f"#p{p.total}", 11.5)
     p.finish()
 
 
@@ -166,19 +168,20 @@ def schedule(p):
     p.icon("laptop", L + 12, 249, 20, BLUE)
     p.emit(12, L + 47, 242, BW - 59, "BarB", 10.6, TEXT, 13)
     p.emit(13, L, 288, BW, "Cond", 21)
+    p.printed_link(14, R - 166, 298, 166, "#p4", 10.4)
     p.rect(L, 319, BW, 24, WASH)
     cols = [(L + 31, 109), (L + 153, 164), (L + 327, 264)]
     for n, (x, w) in enumerate(cols):
-        p.emit(14 + n, x, 325, w, "BarB", 9.8, BLUE)
+        p.emit(15 + n, x, 325, w, "BarB", 9.8, BLUE)
     for n, icon in enumerate(["building", "laptop", "building", "badge"]):
         y = 349 + n * 38
         p.icon(icon, L + 4, y + 5, 17, BLUE)
         for k, (x, w) in enumerate(cols):
-            fitted(p, 17 + n * 3 + k, x, y, w, 32, "BarB" if k == 0 else "Bar", 10.7)
+            fitted(p, 18 + n * 3 + k, x, y, w, 32, "BarB" if k == 0 else "Bar", 10.7)
         if n < 3:
             p.line(L, y + 33, R, y + 33, RULE)
     p.rect(L, 500, BW, 29, NAVY)
-    p.emit(29, L + 11, 507, BW - 22, "BarB", 10.6, WHITE)
+    p.emit(30, L + 11, 507, BW - 22, "BarB", 10.6, WHITE)
     p.finish()
 
 
@@ -266,10 +269,23 @@ def parking(p):
 
 
 def make(source, path):
+    calendar_page = 3  # The visual calendar follows the detailed timetable.
+    session = aps_calendar.Schedule.from_page(source.pages[calendar_page])
+    groups = session.month_groups()
+    # Long sessions may span several calendar pages, keeping the original letters intact.
+    source.pages[calendar_page : calendar_page + 1] = [
+        source.pages[calendar_page]
+    ] * len(groups)
+    source.blocks[calendar_page : calendar_page + 1] = [
+        source.blocks[calendar_page]
+    ] * len(groups)
+    source.pages[0][-1] = f"Voir le plan des parkings en page {len(source.pages)}"
     p = Book(source, path, "aps")
     cover(p)
     letters(p)
     schedule(p)
+    for months in groups:
+        aps_calendar.page(p, session, months)
     letters(p, exam=True)
     documents(p)
     rules(p)
