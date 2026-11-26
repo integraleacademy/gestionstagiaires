@@ -71,12 +71,25 @@ def access_details():
 
 
 def set_training_header(document):
-    """Replace the legacy Paris letterhead that prints rue de Rivoli on every page."""
+    """Use the current Paris letterhead and centre stamp on new-session attestations."""
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.opc.constants import RELATIONSHIP_TYPE as RT
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
     from docx.shared import Cm, Pt, RGBColor
+
+    # The entry and completion templates share the same historical stamp. The
+    # director's handwritten signature is a separate image in the same paragraph.
+    old_stamp_ids = {rel.rId for rel in document.part.rels.values()
+                     if rel.reltype == RT.IMAGE and rel.target_part.sha1 == "84d667d465d36414a241fe0c96aa8ebb14ee1334"}
+    if old_stamp_ids:
+        stamp_id, _ = document.part.get_or_add_image(str(STATIC_DIR / "images/convocations/cachet-paris-2027.png"))
+        for drawing in document.element.xpath(".//a:blip"):
+            if drawing.get(qn("r:embed")) in old_stamp_ids:
+                drawing.set(qn("r:embed"), stamp_id)
+        for old_id in old_stamp_ids:
+            document.part.drop_rel(old_id)
 
     section = document.sections[0]
     section.header_distance = Cm(.7)
