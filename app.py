@@ -40466,6 +40466,12 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "heure_formation_pratique": str(_session_get(session_obj, "practice_training_time", "") or "08h30").strip(),
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
+    if config.get("convocation_template") == "convocationaps.docx":
+        context.update(
+            aps_distance_longue=_quick_summary_period(remote_start, remote_end),
+            aps_centre_longue=_quick_summary_period(in_person_start, in_person_end),
+            aps_examen_long=_quick_summary_date(exam_date),
+        )
     if desp_paris_venue.applies(session_obj):
         context.update(desp_paris_venue.document_context(session_obj))
         context.update({"acces_" + key: value for key, value in desp_paris_venue.access_details().items()})

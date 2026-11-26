@@ -142,11 +142,48 @@ def check_training_invitation():
     print("OK: landscape training invitation PDF and editable Word", flush=True)
 
 
+def check_aps_invitation():
+    """Render the APS model with fictional data in the actual deployment image."""
+    from academy_convocations import publish
+    from academy_convocations.source import ROOT
+    from docxtpl import DocxTemplate
+    import pymupdf
+
+    template = ROOT / "templates_word/convocationaps.docx"
+    with tempfile.TemporaryDirectory(prefix="aps-parking-check-") as work:
+        editable = Path(work) / "invitation.docx"
+        pdf = editable.with_suffix(".pdf")
+        source = DocxTemplate(template)
+        source.render({
+            "nom_complet": "Camille EXEMPLE", "code_postal": "83000", "ville": "TOULON",
+            "periode_formation": "du 01/03/2027 au 15/04/2027",
+            "periode_elearning": "du 01/03/2027 au 10/03/2027",
+            "periode_presentiel": "du 11/03/2027 au 15/04/2027",
+            "aps_distance_longue": "du 1er au 10 mars 2027",
+            "aps_centre_longue": "du 11 mars au 15 avril 2027", "aps_examen_long": "16 avril 2027",
+            "date_ouverture": "01/03/2027", "date_examen": "16/04/2027", "date_jour": "01/02/2027",
+            "heure_convocation": "08h30", "heure_examen": "08h00",
+        }, autoescape=True)
+        source.save(editable)
+        publish(Document(editable), template.name, "aps", editable, pdf)
+        with pymupdf.open(pdf) as book:
+            dates = book[0].get_text()
+            require(len(book) == 7 and all(value in dates for value in
+                    ["Du 1er au 10 mars 2027", "Du 11 mars au 15 avril 2027", "Le 16 avril 2027 à 08h00"]),
+                    "Missing APS training or exam dates on the cover")
+            require(any(link.get("uri", "").endswith("/parking-puget.svg") for link in book[-1].get_links()),
+                    "Missing Puget parking plan")
+            require((ROOT / "static/images/convocations/parking-puget.svg").is_file(),
+                    "Enlarged Puget parking map missing from the image")
+    print("OK: APS cover dates, seven-page invitation and Puget parking map", flush=True)
+
+
 def main():
     check_linux_worker()
     check_images()
     check_office()
     check_training_invitation()
+    check_aps_invitation()
     print("Document converter checks passed.", flush=True)
 
 
