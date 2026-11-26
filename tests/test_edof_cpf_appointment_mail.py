@@ -1,12 +1,13 @@
 """Contrat d'envoi des accusés CPF : délai, statut, identité, sécurité et aperçu."""
 from contextlib import closing
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 import sqlite3
 import time
 
 import pytest
-from flask import Flask
+from flask import Flask, request
 
 import edof_cpf_appointment_mail as mail
 from edof_gmail import Vault, connector_key
@@ -158,7 +159,6 @@ def test_verified_edof_identity_required_for_recipient(tmp_path, monkeypatch):
 
 
 def test_email_preview_uses_cassandre_and_crm_legal_footer():
-    from pathlib import Path
     app = Flask(__name__, template_folder=str(Path(__file__).resolve().parents[1] / "templates"))
     with app.app_context():
         data = mail.message_for(row(title="Agent de prévention et de sécurité APS"),"cassie@example.test")
@@ -169,3 +169,29 @@ def test_email_preview_uses_cassandre_and_crm_legal_footer():
     assert data["booking_url"] in data["html"]
     assert "Déclaration d’activité" not in data["subject"]
     assert "cassie@example.test" == data["to"]
+
+
+def test_queued_delivery_matches_preview_without_an_http_request(setup):
+    directory, db = setup
+    candidate = row(title="Formation DESP")
+    recipient = "cassie@example.test"
+    observe(db, "owner", 1000, complete=True)
+    observe(db, "owner", 1001, candidate, complete=False)
+
+    app = Flask(__name__, template_folder=str(Path(__file__).resolve().parents[1] / "templates"))
+
+    @app.context_processor
+    def admin_navigation():
+        return {"active_endpoint": request.endpoint}
+
+    with app.test_request_context("/admin/integrale-edof"):
+        preview = mail.message_for(candidate, recipient)
+
+    send = Mock(return_value={"ok": True, "message_id": "test-cpf"})
+    legacy = SimpleNamespace(app=app, brevo_send_email=send)
+    store = SimpleNamespace(directory=directory)
+    assert mail.deliver(legacy, store, "owner", candidate, recipient, automatic=True, now=1901) == "sent"
+    assert mail.statuses(directory, ["123456"])["123456"]["status"] == "sent"
+    send.assert_called_once()
+    assert send.call_args.args == (recipient, preview["subject"], preview["html"])
+    assert send.call_args.kwargs["text_content"] == preview["text"]

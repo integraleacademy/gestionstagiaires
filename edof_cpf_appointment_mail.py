@@ -9,7 +9,7 @@ import re
 import time
 from uuid import NAMESPACE_URL, uuid5
 
-from flask import render_template
+from flask import current_app
 
 import edof_crm_details
 import edof_directory as directory
@@ -229,9 +229,10 @@ def message_for(row, email):
     title = str(row.get("title") or "votre formation").strip()[:500]
     first = str(row.get("first_name") or "").strip()[:120]
     link = booking_url(title)
-    html = render_template(
-        "emails/edof_cpf_received.html", first_name=first,
-        training_title=title, booking_url=link,
+    # Le planificateur rend ce courriel hors du contexte HTTP de l’administration.
+    template = current_app.jinja_env.get_template("emails/edof_cpf_received.html")
+    html = template.render(
+        first_name=first, training_title=title, booking_url=link,
         email_header_title="Nous avons reçu votre demande",
         email_header_subtitle="Parlons de votre projet de formation.",
         email_preheader="Votre demande est bien enregistrée. Choisissez un créneau pour en parler.",
