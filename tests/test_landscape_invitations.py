@@ -91,9 +91,15 @@ def test_published_pair_keeps_the_source_text_and_course_color(
                 *source.legal,
                 *rows,
             ]
-            assert "".join("".join(expected).split()) == "".join(
-                page.get_text().split()
-            )
+            printed = "".join(page.get_text().split())
+            if group == "aps" and i == 4:
+                # The calendar adds the names of the months and the individual days.
+                offset = 0
+                for original_field in expected:
+                    needle = "".join(original_field.split())
+                    offset = printed.index(needle, offset) + len(needle)
+            else:
+                assert "".join("".join(expected).split()) == printed
         assert "Alix & Lou EXEMPLE" in book[0].get_text()
         fill = book[1].get_drawings()[1]["fill"]
         assert (
@@ -148,9 +154,11 @@ def test_aps_cover_uses_session_phases_and_both_letters_sign_below_the_director(
     monkeypatch.setattr(app, "APS_CONVOCATION_DIR", str(tmp_path))
     with app.app.test_request_context("/"):
         editable, path = app._generate_aps_convocation_files(session, trainee)
-    assert Document(editable).element.xpath('.//w:hyperlink[@w:anchor="Page7"]')
+    word = Document(editable)
+    assert word.element.xpath('.//w:hyperlink[@w:anchor="Page8"]')
+    assert word.element.xpath('.//w:hyperlink[@w:anchor="Page4"]')
     with pymupdf.open(path) as pdf:
-        assert len(pdf) == 7
+        assert len(pdf) == 8
         cover = pdf[0].get_text()
         expected = [
             "Du 1er au 13 septembre 2027",
@@ -160,9 +168,19 @@ def test_aps_cover_uses_session_phases_and_both_letters_sign_below_the_director(
         ]
         assert all(value in cover for value in expected)
         assert "01/09/2027 à 09h15" in pdf[1].get_text()
-        assert "06/10/2027 à 08h45" in pdf[3].get_text()
-        assert any(link.get("page") in (6, "7") for link in pdf[0].get_links())
-        for page in (pdf[1], pdf[3]):
+        assert "06/10/2027 à 08h45" in pdf[4].get_text()
+        for value in (
+            "Septembre 2027",
+            "Octobre 2027",
+            "Sous réserve de modifications.",
+            "01/09/2027 à 09h15",
+            "06/10/2027 à 08h45",
+        ):
+            assert pdf[3].search_for(value)
+        assert any(link.get("page") in (7, "8") for link in pdf[0].get_links())
+        for page in (pdf[0], pdf[2]):
+            assert any(link.get("page") in (3, "4") for link in page.get_links())
+        for page in (pdf[1], pdf[4]):
             (role,) = page.search_for("Directeur général Intégrale Academy")
             seals = [
                 pymupdf.Rect(im["bbox"])
