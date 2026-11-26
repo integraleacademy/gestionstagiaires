@@ -30,7 +30,7 @@ def test_official_logo_repeats_in_the_header_of_every_invitation(template):
 
 def test_both_paris_letters_print_the_current_stamp():
     doc = Document(TEMPLATES / 'convocationdespparis_2027.docx')
-    stamp = (TEMPLATES.parent / 'static/images/convocations/cachet-paris-2027.png').read_bytes()
+    stamp = (TEMPLATES / 'cachet-paris-2027.png').read_bytes()
     drawings = doc.element.xpath('.//wp:inline[wp:docPr[contains(@descr, "Cachet Intégrale Academy Paris")]]')
     assert len(drawings) == 2
     for drawing in drawings:
