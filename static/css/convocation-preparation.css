@@ -8,7 +8,7 @@
 .conv-wait [hidden] { display: none !important; }
 .conv-wait__wrap { width: min(100%, 470px); }
 .conv-wait__brand { margin: 0 0 17px; }
-.conv-wait__brand img { display: block; width: 160px; height: 48px; object-fit: contain; object-position: left; }
+.conv-wait__brand img { display: block; width: clamp(48px, 9vh, 68px); height: auto; }
 .conv-wait__card { overflow: hidden; border: 1px solid #c4cfd6; border-radius: 24px; background: #fff; box-shadow: 0 26px 75px #030b1570; }
 .conv-wait__art { position: relative; height: clamp(115px, 19vh, 165px); overflow: hidden; display: grid; place-items: center; background: #e7f0f2; }
 .conv-wait__orbit { position: absolute; width: 130%; aspect-ratio: 1; border-radius: 50%; right: -45%; top: -235%; background: repeating-radial-gradient(circle,transparent 0 14px,#b5cbd1 15px,transparent 16px); }

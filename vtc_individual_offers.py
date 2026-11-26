@@ -240,7 +240,7 @@ def convention(host, training, trainee, session_id="", trainee_id="", *, output_
 
 def vehicle_hash(training, trainee):
     fields = {
-        "version": 4, "offer": offer(trainee),
+        "version": 5, "offer": offer(trainee),
         "identity": [trainee.get(k) for k in ("id", "first_name", "last_name", "vtc_exam_center", "vtc_practice_exam_date")],
         "exam_dates": [training.get("exam_practice_date"), training.get("exam_date")],
     }
