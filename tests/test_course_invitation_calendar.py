@@ -100,10 +100,12 @@ def test_vae_calendar_and_signature_below_name_are_present_in_word_and_pdf(
     assert word.element.xpath('.//w:hyperlink[@w:anchor="Page3"]')
     with pymupdf.open(pdf) as book:
         assert (
-            len(book) == 3
+            len(book) == 4
             and book[2].search_for("Mai 2027")
             and book[2].search_for("Juin 2027")
         )
+        assert book[3].search_for("LORS DE VOTRE VENUE AU CENTRE")
+        assert book[3].search_for("ATTITUDE & RESPECT")
         assert all(page.search_for("(VAE)") for page in book)
         role = book[1].search_for("Directeur général Intégrale Academy")[0]
         pen = next(

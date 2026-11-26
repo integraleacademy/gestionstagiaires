@@ -187,6 +187,24 @@ def use_puget_plan(source, template_name, site):
     source.puget_parking = True
 
 
+def include_training_rules(source, family):
+    """Short training invitations use the same centre rules as the full training booklets."""
+    original = next(
+        page
+        for page in puget_model().blocks
+        if page[0].text[-1] == "Règles de vie en formation"
+    )
+    blocks = list(original)
+    if family == "vae":
+        # These rules apply when the candidate actually visits the training centre.
+        blocks[0] = Block(
+            [[Cell(["LORS DE VOTRE VENUE AU CENTRE", original[0].text[-1]], [])]]
+        )
+    index = len(source.pages) - int(source.puget_parking)
+    source.blocks.insert(index, blocks)
+    source.pages.insert(index, [line for block in blocks for line in block.text])
+
+
 def add_director_signature(document):
     """Use the same director's signature and centre stamp as the signed training letters."""
     from docx.shared import Pt

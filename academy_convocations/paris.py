@@ -1,5 +1,6 @@
 """Approved DESP Paris layout. Every printed paragraph comes from its personalized source."""
 
+from .aps import documents, fitted, rules
 from .drawing import (
     Book,
     BW,
@@ -60,7 +61,8 @@ def cover(p):
         (8, 9, 111, 21.6),
         (10, 11, 219, 17.9),
     ]:
-        p.emit(label, x, y, 351, "BarB", 9.8, ORANGE)
+        p.icon({6: "calendar", 8: "laptop", 10: "pin"}[label], x, y - 2, 16, ORANGE)
+        p.emit(label, x + 25, y, 326, "BarB", 9.8, ORANGE)
         p.emit(value, x, y + 18, 351, "Cond", size, INK, size * 1.13)
         if label != 10:
             pos = y + (61 if label == 6 else 90)
@@ -78,20 +80,22 @@ def cover(p):
     p.finish()
 
 
-def columns(p, first, top, headings, w):
-    pos = L + 9
-    for i, width in enumerate(w):
-        p.emit(
-            first + i,
-            pos,
-            top,
-            width - 15,
-            "BarB" if headings else "Bar",
-            10 if headings else 11.3,
-            ORANGE if headings else INK,
-            13.3,
-        )
-        pos += width
+def letter_fields(p, first, top, *, exam=False):
+    """The four APS information cards, in the reading order of the Paris model."""
+    width = (BW - 10) / 2
+    positions = [
+        (L, top),
+        (L + width + 10, top),
+        (L, top + 57),
+        (L + width + 10, top + 57),
+    ]
+    icons = ["badge" if exam else "paper", "calendar", "clock", "pin"]
+    for i, ((x, y), icon) in enumerate(zip(positions, icons)):
+        p.rect(x, y, width, 51, p.light)
+        p.icon(icon, x + 10, y + 7, 16, p.accent)
+        p.emit(first + i, x + 34, y + 7, width - 43, "BarB", 10.2, p.accent)
+    for i, (x, y) in enumerate(positions):
+        fitted(p, first + 4 + i, x + 11, y + 25, width - 21, 24, "Cond", 14.2, p.ink)
 
 
 def letter(p):
@@ -104,10 +108,7 @@ def letter(p):
     p.emit(5, L, 150, BW, "Cond", 23)
     p.emit(6, L, 187, BW, "BarB", 12.4)
     p.emit(7, L, 212, BW, "Bar", 11.4, INK, 14.6)
-    p.rect(L, 261, BW, 83, CREAM)
-    widths = [158, 137, 83, 217]
-    columns(p, 8, 270, True, widths)
-    columns(p, 12, 292, False, widths)
+    letter_fields(p, 8, 246)
     p.emit(16, L, 367, BW, "Bar", 11.4, INK, 14.7)
     p.emit(17, L, 411, BW, "Bar", 11.4, INK, 14.7)
     authority(p, 18, 440)
@@ -153,52 +154,11 @@ def exam(p):
     p.line(L, 124, R, 124)
     p.emit(4, L, 138, BW, "BarB", 12.3)
     p.emit(5, L, 163, BW, "Bar", 12, INK, 15)
-    p.rect(L, 217, BW, 83, CREAM)
-    widths = [147, 118, 97, 233]
-    columns(p, 6, 228, True, widths)
-    columns(p, 10, 250, False, widths)
+    letter_fields(p, 6, 207, exam=True)
     p.emit(14, L, 323, BW, "BarB", 14.7, ORANGE)
     p.emit(15, L, 349, BW, "Bar", 11.6, INK, 14.7)
     p.emit(16, L, 401, BW, "Bar", 11.6, INK, 14.7)
     authority(p, 17, 438)
-    p.finish()
-
-
-def admin(p):
-    p.begin()
-    p.side("paper")
-    p.emit(2, L, 24, BW, "Cond", 21.9)
-    p.emit(3, L, 65, BW, "Bar", 11.4, INK, 14.4)
-    p.printed_link(4, L, 99, BW, p.ref.portal, 11.7)
-    p.emit(5, L, 132, BW, "Bar", 11.2, INK, 14.3)
-    p.rect(L, 203, BW, 82, CREAM)
-    p.emit(6, L + 12, 212, BW - 25, "BarB", 12.4, ORANGE, 15.1)
-    p.emit(7, L + 12, 248, BW - 25, "Bar", 11.1, INK, 14.1)
-    p.emit(8, L, 298, BW, "Bar", 11.2, INK, 14.2)
-    p.emit(9, L, 354, BW, "Bar", 11.2, INK, 14.2)
-    p.rect(L, 414, BW, 105, INK)
-    p.emit(10, L + 12, 422, BW - 24, "BarB", 11.1, EMPH, 14)
-    p.emit(11, L + 12, 460, BW - 24, "Bar", 11, WHITE, 13.6)
-    p.finish()
-
-
-def rules(p):
-    p.begin()
-    p.side("people")
-    p.emit(2, L, 22, BW, "Cond", 24.1)
-    p.emit(3, L, 61, BW, "Bar", 11.3, INK, 14.5)
-    for i, ic in enumerate(["people", "badge", "paper"]):
-        x = L + i * 201
-        w = 187
-        p.line(x, 135, x + w, 135, ORANGE)
-        p.icon(ic, x, 147, 19)
-        p.emit(4 + i * 2, x, 174, w, "BarB", 10.4, ORANGE)
-        p.emit(5 + i * 2, x, 198, w, "Bar", 10.9, INK, 14.1)
-    p.emit(10, L, 321, BW, "Cond", 20.8)
-    for i in range(4):
-        p.emit(11 + i, L, 355 + i * 19.2, BW, "Bar", 11, INK, 14)
-    p.rect(L, 445, BW, 68, INK)
-    p.emit(15, L + 12, 456, BW - 24, "BarB", 11.1, WHITE, 14.2)
     p.finish()
 
 
@@ -234,6 +194,6 @@ def make(ref, out):
     if ref.agenda:
         for months in ref.agenda.groups:
             ref.agenda.page(p, months, ref.course_label)
-    for page in [exam, admin, rules, access]:
+    for page in [exam, documents, rules, access]:
         page(p)
     p.save()

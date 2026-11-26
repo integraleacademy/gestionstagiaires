@@ -11,7 +11,7 @@ from docxtpl import DocxTemplate
 import app
 from academy_convocations import family
 from academy_convocations.drawing import PALETTES
-from academy_convocations.source import PORTAL, Source
+from academy_convocations.source import PORTAL, Source, puget_model
 
 
 @pytest.mark.parametrize(
@@ -79,6 +79,8 @@ def test_published_pair_keeps_the_source_text_and_course_color(
 
     with pymupdf.open(pdf) as book:
         added_page = {"desp": 4, "sst": 3}.get(group)
+        if group == "sst":
+            source.pages.append(puget_model().pages[-2])
         assert len(book) == len(source.pages) + int(added_page is not None)
         links = {link.get("uri") for page in book for link in page.get_links()}
         assert PORTAL in links
@@ -90,7 +92,16 @@ def test_published_pair_keeps_the_source_text_and_course_color(
                 assert page.search_for("Sous réserve de modifications.")
                 assert page.search_for("Janvier 2027")
                 continue
-            rows = next(original_pages)
+            rows = list(next(original_pages))
+            # The approved sidebar uses sentence case, independently of the source Word's capitals.
+            if i > 1 and rows[1].casefold() in {
+                "documents administratifs",
+                "règles de vie en formation",
+                "distanciel & présentiel",
+                "convocation officielle en formation",
+                "convocation officielle à l’examen",
+            }:
+                rows[1] = rows[1].capitalize()
             expected = [
                 *source.header,
                 *source.footer_contact,
