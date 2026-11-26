@@ -94,7 +94,8 @@ def _date(value):
 
 
 def _exam_details(training, trainee):
-    exam = trainee.get("vtc_practice_exam_date") or training.get("exam_practice_date") or training.get("exam_date")
+    exam = (trainee.get("vtc_practice_exam_date") or training.get("exam_practice_date")
+            or training.get("date_examen_pratique") or training.get("exam_date") or training.get("date_examen"))
     centre = CENTRES.get(str(trainee.get("vtc_exam_center") or "").strip().lower(),
                          "Lieu communiqué par la Chambre de métiers et de l'artisanat")
     return _date(exam), centre
@@ -187,6 +188,8 @@ def _examiner_document(training, trainee):
     run.underline = True
     link.append(run._r)
     portal._p.append(link)
+    from academy_convocations.source import add_director_signature
+    add_director_signature(doc)
     return doc
 
 
@@ -243,7 +246,7 @@ def vehicle_hash(training, trainee):
     fields = {
         "version": academy_convocations.VERSION, "offer": offer(trainee),
         "identity": [trainee.get(k) for k in ("id", "first_name", "last_name", "vtc_exam_center", "vtc_practice_exam_date")],
-        "exam_dates": [training.get("exam_practice_date"), training.get("exam_date")],
+        "exam_dates": _exam_details(training, trainee),
     }
     return hashlib.sha256(json.dumps(fields, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
@@ -256,8 +259,11 @@ def examiner_document(host, training, trainee, output_dir, base):
     with tempfile.TemporaryDirectory(prefix=".vtc-convocation-", dir=folder) as stage:
         editable = Path(stage) / (base + ".docx")
         printed = editable.with_suffix(".pdf")
+        from academy_convocations.agenda import iso
+        day = iso(_exam_details(training, trainee)[0])
+        rows = [dict(kind="exam", label="Examen pratique VTC", days=[day])] if day else []
         academy_convocations.publish(_examiner_document(training, trainee), "vtc-vehicule",
-                                     "vtc", editable, printed)
+                                     "vtc", editable, printed, calendar_rows=rows)
         editable.replace(folder / editable.name)
         printed.replace(folder / printed.name)
     return str(folder / (base + ".docx")), str(folder / (base + ".pdf"))

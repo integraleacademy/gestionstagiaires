@@ -43,10 +43,10 @@ def recipient(p, i, top=32):
 
 
 def authority(p, first, y):
-    p.emit(first, L, y, BW - 225, "Bar", 10.2, MUTED)
-    p.emit(first + 1, L, y + 20, BW - 225, "BarB", 12.5)
-    p.emit(first + 2, L, y + 38, BW - 225, "Bar", 10, INK)
-    p.signature(R - 201, y - 1, 135)
+    p.emit(first, L, y, BW, "Bar", 10.2, MUTED)
+    p.emit(first + 1, L, y + 15, BW, "BarB", 12.5)
+    p.emit(first + 2, L, y + 31, BW, "Bar", 10, INK)
+    p.signature(L, y + 46, 135)
 
 
 def cover(p):
@@ -66,13 +66,15 @@ def cover(p):
             pos = y + (61 if label == 6 else 90)
             p.line(x, pos, 808, pos)
     p.emit(12, x, 299, 352, "Bar", 10.6, MUTED, 13.6)
-    p.link(x, 235, 348, 98, "#p7")
+    p.link(x, 235, 348, 98, f"#p{p.total}")
     p.line(34, 359, 808, 359)
     p.emit(13, 34, 386, 439, "BarB", 10, ORANGE)
     p.emit(14, 34, 412, 455, "BarB", 15.2)
     p.line(515, 385, 515, 480)
     p.emit(15, 539, 388, 268, "BarB", 14.6)
     p.printed_link(16, 539, 416, 268, p.ref.portal, 10.4)
+    if p.ref.agenda:
+        p.ref.agenda.cover(p, 4)
     p.finish()
 
 
@@ -108,7 +110,7 @@ def letter(p):
     columns(p, 12, 292, False, widths)
     p.emit(16, L, 367, BW, "Bar", 11.4, INK, 14.7)
     p.emit(17, L, 411, BW, "Bar", 11.4, INK, 14.7)
-    authority(p, 18, 465)
+    authority(p, 18, 440)
     p.finish()
 
 
@@ -158,7 +160,7 @@ def exam(p):
     p.emit(14, L, 323, BW, "BarB", 14.7, ORANGE)
     p.emit(15, L, 349, BW, "Bar", 11.6, INK, 14.7)
     p.emit(16, L, 401, BW, "Bar", 11.6, INK, 14.7)
-    authority(p, 17, 461)
+    authority(p, 17, 438)
     p.finish()
 
 
@@ -226,6 +228,12 @@ def access(p):
 
 def make(ref, out):
     p = Book(ref, out)
-    for page in [cover, letter, calendar, exam, admin, rules, access]:
+    p.total += len(ref.agenda.groups) if ref.agenda else 0
+    for page in [cover, letter, calendar]:
+        page(p)
+    if ref.agenda:
+        for months in ref.agenda.groups:
+            ref.agenda.page(p, months, ref.course_label)
+    for page in [exam, admin, rules, access]:
         page(p)
     p.save()

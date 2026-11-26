@@ -239,6 +239,14 @@ def build_convocation(row):
         story.append(line(row["notes"]))
     story.extend([Spacer(1, 7), line("En cas de question ou d’empêchement, contactez l’équipe au "
                   "04 22 47 07 68 ou à ecole@integraleacademy.com."), Spacer(1, 6), line("L’équipe Intégrale Academy", strong)])
+    from academy_convocations.agenda import Agenda, iso
+    from academy_convocations.drawing import Book
+    from academy_convocations.source import puget_model
+    from reportlab.platypus import Flowable, KeepTogether
+    pen = puget_model().blocks[1][-1].pictures[0]
+    autograph = Image(BytesIO(pen.data), width=77, height=77 * pen.height / pen.width, hAlign="LEFT")
+    story.append(KeepTogether([line("Clément VAILLANT", strong), line("Directeur général Intégrale Academy", label),
+                                Spacer(1, 3), autograph]))
     if row.get("kind") == "DESP" and row.get("location") == desp_paris_venue.FULL_ADDRESS:
         story.extend([PageBreak(), line("Venir au centre de formation", title),
                       line(desp_paris_venue.FULL_ADDRESS, strong),
@@ -250,6 +258,28 @@ def build_convocation(row):
                       Spacer(1, 8), Paragraph('<link href="' + escape(desp_paris_venue.DIRECTIONS_URL)
                                              + '"><u>Ouvrir l’itinéraire dans Google Maps</u></link>', body)])
     story.append(Paragraph(f'<link href="{PORTAL_URL}" color="{accent}"><u>{PORTAL_URL}</u></link>', label))
+    dates = sorted({iso(item.get("date")) for item in row.get("days", [])} - {""})
+    events = [dict(kind="centre", label="Journées de préparation", days=dates)] if dates else []
+    exam_day = iso(row.get("exam_date"))
+    if exam_day:
+        events.append(dict(kind="exam", label="Examen de rattrapage", days=[exam_day], time=row.get("exam_time") or ""))
+    agenda = Agenda(events)
+
+    class CalendarSheet(Flowable):
+        def __init__(self, months):
+            super().__init__()
+            self.months, self.height = months, 460
+
+        def draw(self):
+            self.canv.saveState()
+            self.canv.resetTransforms()
+            sheet = Book(puget_model(), None, group, canvas=self.canv)
+            sheet.txt(216, 16, "CALENDRIER MENSUEL", "BarB", 9, sheet.accent)
+            agenda.body(sheet, self.months)
+            self.canv.restoreState()
+
+    for months in agenda.groups:
+        story.extend([PageBreak(), CalendarSheet(months)])
     out = BytesIO()
     def frame(canvas, doc):
         standout = "CONVOCATION " + row["id"][:12].upper()

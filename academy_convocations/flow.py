@@ -99,22 +99,29 @@ def elements(block, book, scale):
         return []
     gap = 4 * scale
     stamps = [pic for pic in block.pictures if body_picture(pic)]
-    if len(stamps) >= 2 and any("irecteur" in line for line in block.text):
+    if stamps and any("irecteur" in line for line in block.text):
+        if len(stamps) == 1 and book.ref.venue_stamp:
+            stamps.append(book.ref.venue_stamp)
         writer = [
             par(line, book, 11.8 * scale, "BarB" if i == 0 else "Bar")
             for i, line in enumerate(block.text)
         ]
-        widths = [BW - 211, 62, 149]
+        images = [picture(stamps[0], 77, 44)]
+        if len(stamps) > 1:
+            images.append(picture(stamps[1], 137, 49))
         signature = Table(
-            [[writer, picture(stamps[0], 53, 37), picture(stamps[1], 139, 53)]],
-            colWidths=widths,
+            [[writer] + [""] * (len(images) - 1), images],
+            colWidths=[90, BW - 90] if len(images) > 1 else [BW],
             hAlign="LEFT",
         )
         signature.setStyle(
             TableStyle(
                 [
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("SPAN", (0, 0), (-1, 0)),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+                    ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
                 ]
             )
         )
@@ -292,7 +299,7 @@ def fitted(p, x, y, w, h, text, font, size, color):
     flow.drawOn(p.c, x, p.H - y - ht)
 
 
-def cover(p, blocks):
+def cover(p, blocks, calendar_number=None):
     p.begin(True, items=[], outline="Convocation")
     hero = blocks[0].text
     if len(hero) < 3:
@@ -331,7 +338,13 @@ def cover(p, blocks):
     step = 310 / max(1, len(top))
     for i, group in enumerate(top):
         y = 30 + i * step
-        fitted(p, 456, y, 352, 32, group[0], "BarB", 10.1, p.accent)
+        icon = icon_for(group[0])
+        if "formation" in group[0].lower() or "période" in group[0].lower():
+            icon = "calendar"
+        if "horaire" in group[0].lower():
+            icon = "clock"
+        p.icon(icon, 456, y + 1, 18, p.accent)
+        fitted(p, 482, y, 326, 32, group[0], "BarB", 10.1, p.accent)
         if len(group) > 1:
             fitted(
                 p, 456, y + 24, 352, step - 31, "\n".join(group[1:]), "Cond", 22, p.ink
@@ -351,12 +364,14 @@ def cover(p, blocks):
                 x,
                 420,
                 w,
-                76,
+                49,
                 "\n".join(group[1:]),
                 "BarB",
                 10.6 if url_group else 14,
                 p.ink,
             )
+    if calendar_number:
+        p.ref.agenda.cover(p, calendar_number)
     p.c.showPage()
     return True
 
@@ -364,12 +379,25 @@ def cover(p, blocks):
 def render(ref, out, family):
     p = Book(ref, out, family)
     standard = len(ref.blocks[0][0].text) >= 3 and len(ref.blocks[0]) >= 4
-    sections = ref.blocks[1:] if standard else ref.blocks
-    plans = [entry for section in sections for entry in interior(section, p)]
-    p.total = len(plans) + int(standard)
+    sections = list(enumerate(ref.blocks))[int(standard) :]
+    if ref.puget_parking:
+        sections = sections[:-1]
+    after_section = 2 if family == "desp" and standard else int(standard)
+    before, after = [], []
+    for i, section in sections:
+        (before if i <= after_section else after).extend(interior(section, p))
+    plans = before + after
+    agenda_pages = ref.agenda.groups if ref.agenda else []
+    p.total = len(plans) + int(standard) + len(agenda_pages) + int(ref.puget_parking)
     if standard:
-        cover(p, ref.blocks[0])
-    for titles, flow in plans:
+        cover(p, ref.blocks[0], len(before) + 2 if agenda_pages else None)
+    for index in range(len(plans) + 1):
+        if index == len(before):
+            for months in agenda_pages:
+                ref.agenda.page(p, months, ref.course_label)
+        if index == len(plans):
+            break
+        titles, flow = plans[index]
         p.begin(items=titles, outline=titles[-1] or "Convocation")
         p.side(icon_for(titles[-1]))
         top = 29
@@ -378,4 +406,8 @@ def render(ref, out, family):
             item.drawOn(p.c, L, p.H - top - h)
             top += h
         p.finish()
+    if ref.puget_parking:
+        from .aps import parking
+
+        parking(p, ref.pages[-1])
     p.save()

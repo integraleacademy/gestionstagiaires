@@ -40452,6 +40452,8 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
                                            or session_obj.get("centre") or session_obj.get("center") or "").strip(),
                        convocation_examen=fr_date(_session_get(session_obj, "exam_date", "")))
     context["convocation_famille"] = academy_convocations.family(_automation_training_text(session_obj))
+    from academy_convocations.agenda import entries
+    context["calendrier_session"] = json.dumps(entries(session_obj, trainee, context, config.get("slug") or ""), ensure_ascii=False)
     return context
 
 
@@ -40578,7 +40580,8 @@ def _render_aps_convocation_pair(template_path: str, context: Dict[str, Any], ba
         if Path(template_path).resolve().parent == Path(app.root_path, "templates_word").resolve():
             from docx import Document
             academy_convocations.publish(Document(staged_docx), template_name, context["convocation_famille"],
-                                         staged_docx, staged_pdf)
+                                         staged_docx, staged_pdf, calendar_rows=json.loads(context["calendrier_session"]),
+                                         site=context.get("convocation_site", ""))
         else:
             command = [_find_libreoffice_binary(), "-env:UserInstallation=" + Path(staging, "profile").as_uri(),
                        "--headless", "--convert-to", "pdf", "--outdir", staging, staged_docx]

@@ -78,12 +78,19 @@ def test_published_pair_keeps_the_source_text_and_course_color(
     source = Source(Document(original))
 
     with pymupdf.open(pdf) as book:
-        assert len(book) == len(source.pages)
+        added_page = {"desp": 4, "sst": 3}.get(group)
+        assert len(book) == len(source.pages) + int(added_page is not None)
         links = {link.get("uri") for page in book for link in page.get_links()}
         assert PORTAL in links
-        for i, (page, rows) in enumerate(zip(book, source.pages), 1):
+        original_pages = iter(source.pages)
+        for i, page in enumerate(book, 1):
             assert page.rect.width > page.rect.height
             assert any(im[2:4] == (2048, 2048) for im in page.get_images())
+            if i == added_page:
+                assert page.search_for("Sous réserve de modifications.")
+                assert page.search_for("Janvier 2027")
+                continue
+            rows = next(original_pages)
             expected = [
                 *source.header,
                 *source.footer_contact,
@@ -92,7 +99,7 @@ def test_published_pair_keeps_the_source_text_and_course_color(
                 *rows,
             ]
             printed = "".join(page.get_text().split())
-            if group == "aps" and i == 4:
+            if (group == "aps" and i == 4) or (added_page and i == 1):
                 # The calendar adds the names of the months and the individual days.
                 offset = 0
                 for original_field in expected:
@@ -107,7 +114,7 @@ def test_published_pair_keeps_the_source_text_and_course_color(
             == PALETTES[group][0][1:].lower()
         )
         if group == "desp":
-            assert len(book) == 7
+            assert len(book) == 8
             assert any(link and "google.com/maps/dir/" in link for link in links)
             assert "Poissonnière" in book[-1].get_text()
     word = Document(docx)
