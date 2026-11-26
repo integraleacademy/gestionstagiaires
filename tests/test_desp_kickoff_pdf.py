@@ -13,13 +13,14 @@ import pytest
 import afc_schedule
 import desp_kickoff as kickoff
 import desp_calendar
+import desp_paris_venue
 
 ROOT = Path(__file__).resolve().parents[1]
 # Exercise the app's actual course/site routing without booting unrelated services.
 tree = ast.parse((ROOT/'app.py').read_text())
 config_nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef)
                 and n.name in {'_automation_training_text', '_automation_document_config'}]
-config_globals = dict(Dict=Dict, Any=Any, afc_schedule=afc_schedule,
+config_globals = dict(Dict=Dict, Any=Any, afc_schedule=afc_schedule, desp_paris_venue=desp_paris_venue,
                       _session_get=lambda obj, key, default='': obj.get(key, default))
 exec(compile(ast.Module(body=config_nodes, type_ignores=[]), str(ROOT/'app.py'), 'exec'), config_globals)
 
@@ -156,7 +157,8 @@ def test_all_dynamic_dates_and_correct_site_update_without_mutations(case):
     assert '28 mars 2025' in document[2].get_text() and '28 mars 2027' in document[2].get_text()
     assert 'Votre accès au e-learning est ouvert.' in document[33].get_text()
     if city == 'paris':
-        assert '53 rue des' in document[17].get_text() and '75010 Paris' in document[17].get_text()
+        assert '34 rue Poissonnière' in document[17].get_text() and 'Grand Rex' in document[17].get_text()
+        assert 'Vinaigriers' not in text
     else:
         assert 'PUGET-SUR-ARGENS' in document[17].get_text()
     training['exam_date'] = '2027-02-20'

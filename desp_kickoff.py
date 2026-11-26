@@ -14,9 +14,10 @@ from zoneinfo import ZoneInfo
 from flask import abort, redirect, request, send_file, url_for
 import aps_kickoff as shared
 import desp_calendar
+import desp_paris_venue as paris_venue
 
 ASSETS = Path(__file__).with_name('desp_kickoff_assets')
-VERSION = '20261024-3-enriched'
+VERSION = '20261126-paris-venue'
 DATE_FIELDS = ('date_start', 'date_end', 'dirigeant_remote_start', 'dirigeant_remote_end',
                'dirigeant_in_person_start', 'dirigeant_in_person_end', 'exam_date')
 CITIES = {'paris': 'Paris', 'puget': 'Puget-sur-Argens'}
@@ -102,6 +103,33 @@ def _block(page, spec, text):
     shared._text(page, '\n'.join(lines), x, y, size, spec['color'], spec['bold'])
 
 
+def _paris_access_slide(doc, dates):
+    """Replace the former venue slide, including its room photograph."""
+    import pymupdf as fitz
+    index = 17
+    bounds = doc[index].rect
+    doc.delete_page(index)
+    page = doc.new_page(pno=index, width=bounds.width, height=bounds.height)
+    page.draw_rect(bounds, color=None, fill=shared._rgb(desp_calendar.BACKGROUND))
+    def label(text, x, y, size, *, color=desp_calendar.NAVY, bold=False):
+        shared._text(page, text, x, y, size, color, bold)
+    label('Le présentiel à Paris', 44, 75, 34, bold=True)
+    label('Du ' + shared.period(dates['dirigeant_in_person_start'], dates['dirigeant_in_person_end']),
+          46, 115, 18, color=desp_calendar.MUTED)
+    label(paris_venue.NAME, 46, 183, 26, bold=True)
+    label(paris_venue.STREET + '\n' + paris_venue.CITY, 46, 226, 23, bold=True)
+    label(paris_venue.ENTRANCE + '\n' + paris_venue.LANDMARK, 46, 296, 18)
+    label('Métro Bonne Nouvelle', 46, 371, 19, color=desp_calendar.GREEN, bold=True)
+    label('Lignes 8 et 9 · Sortie 1\nRue du Sentier', 46, 400, 16)
+    page.insert_image(fitz.Rect(375, 146, 922, 440), filename=str(paris_venue.MAP_PATH))
+    page.insert_link({'kind': fitz.LINK_URI, 'from': fitz.Rect(375, 146, 922, 440),
+                      'uri': paris_venue.DIRECTIONS_URL})
+    label('70 h au centre de formation. Retrouvez les jours et horaires sur votre convocation.',
+          46, 477, 15)
+    label('INTÉGRALE ACADEMY', 44, 518, 10, bold=True)
+    label('18', 900, 518, 10, bold=True)
+
+
 @lru_cache(maxsize=8)
 def _build_pdf(key):
     import pymupdf as fitz
@@ -133,6 +161,8 @@ def _build_pdf(key):
     with fitz.open(ASSETS/(payload['location']+'.pdf')) as doc:
         for spec in json.loads((ASSETS/(payload['location']+'.json')).read_text()):
             _block(doc[spec['page']-1], spec, values[(spec.get('source_page', spec['page']), spec['name'])])
+        if payload['poissonniere']:
+            _paris_access_slide(doc, dates)
         desp_calendar.draw_pdf(doc[4], dates, city)
         doc.set_metadata({'title': f'Réunion de lancement DESP {city} — '+french(start),
                           'author': 'Intégrale Academy', 'subject': 'Session du '+period(start, end)})
@@ -145,7 +175,7 @@ def pdf(services, training):
     if not city:
         raise ValueError('Cette session ne correspond pas à une formation initiale DESP Paris ou Puget.')
     dates = schedule(services, training)
-    payload = dict(version=VERSION, location=city, dates={k: v.isoformat() for k, v in dates.items()})
+    payload = dict(version=VERSION, location=city, poissonniere=paris_venue.applies(training), dates={k: v.isoformat() for k, v in dates.items()})
     # APS and DESP share one lock because PyMuPDF is not thread-safe.
     with shared._PDF_LOCK:
         return _build_pdf(json.dumps(payload, sort_keys=True, ensure_ascii=False))

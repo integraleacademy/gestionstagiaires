@@ -20,6 +20,8 @@ import threading
 import time
 import unicodedata
 import uuid
+
+import desp_paris_venue
 from collections import ChainMap
 from io import BytesIO
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -162,7 +164,8 @@ def candidates(host, data, source, kind):
             continue
         result.append({"id": target["id"], "name": host._session_get(target, "name", "") or kind,
                        "exam_date": value, "date_label": date_label(value),
-                       "preparation_days": preparation_days(host, target, kind)})
+                       "preparation_days": preparation_days(host, target, kind),
+                       "location": desp_paris_venue.FULL_ADDRESS if desp_paris_venue.applies(target) else ""})
     return sorted(result, key=lambda row: (row["exam_date"] or "9999", row["name"]))
 
 
@@ -354,6 +357,8 @@ def validate(host, data, source, trainee, payload):
               "day_cents": cents(payload.get("day_price") or "0") if days_offered or no_days else cents(payload.get("day_price"), "Tarif journalier"),
               "exam_offered": exam_offered, "days_offered": days_offered,
               "price_reference": prices(host, source, trainee, kind)}
+    if desp_paris_venue.applies(target) and desp_paris_venue.old_or_default_address(result["location"]):
+        result["location"] = desp_paris_venue.FULL_ADDRESS
     if not result["location"]:
         raise RetakeError("Précisez le lieu de l’examen et des journées de préparation.")
     if result["exam_time"] and not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", result["exam_time"]):

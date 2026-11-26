@@ -8,6 +8,8 @@ import hashlib
 import json
 import math
 from pathlib import Path
+
+from desp_paris_venue import STREET as PARIS_TRAINING_STREET
 from copy import deepcopy
 
 from docx import Document
@@ -345,6 +347,8 @@ def _header_footer(document, reference, kind):
         paris = "84089988400034" in re.sub(r"\D", "", old_footer)
         siret = "840 899 884 00034" if paris else "840 899 884 00026"
         address = "142 rue de Rivoli · 75001 Paris" if paris else "54 chemin du Carreou · 83480 Puget-sur-Argens"
+        if paris and any(PARIS_TRAINING_STREET in p.text for p in document.paragraphs):
+            address = "Adresse administrative · " + address
         extra_identity = "RCS Fréjus · UAI 0831774C" if "UAI 0831774C" in old_footer else ""
         section.page_width, section.page_height = Cm(21), Cm(29.7)
         section.left_margin = section.right_margin = Cm(1.8)

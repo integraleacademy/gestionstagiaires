@@ -3,6 +3,8 @@ from html import escape
 from io import BytesIO
 from pathlib import Path
 
+import desp_paris_venue
+
 from exam_retakes import date_label, discount_label, financial_totals, line_items, money
 from convention_design import REGISTRATION_LINES
 
@@ -216,6 +218,17 @@ def build_convocation(row):
         story.append(line(row["notes"]))
     story.extend([Spacer(1, 7), line("En cas de question ou d’empêchement, contactez l’équipe au "
                   "04 22 47 07 68 ou à ecole@integraleacademy.com."), Spacer(1, 6), line("L’équipe Intégrale Academy", strong)])
+    if row.get("kind") == "DESP" and row.get("location") == desp_paris_venue.FULL_ADDRESS:
+        from reportlab.platypus import Image, PageBreak
+        story.extend([PageBreak(), line("Venir au centre de formation", title),
+                      line(desp_paris_venue.FULL_ADDRESS, strong), line(desp_paris_venue.ENTRANCE),
+                      Spacer(1, 12), Image(str(desp_paris_venue.MAP_PATH), width=480, height=255),
+                      Spacer(1, 12), line(desp_paris_venue.PRIMARY_METRO, heading),
+                      line(desp_paris_venue.WALK), line("Autres accès", heading),
+                      line(desp_paris_venue.OTHER_METROS), line(desp_paris_venue.SENTIER),
+                      line("Bus " + desp_paris_venue.BUS), line(desp_paris_venue.PARKING),
+                      Spacer(1, 8), Paragraph('<link href="' + escape(desp_paris_venue.DIRECTIONS_URL)
+                                             + '"><u>Ouvrir l’itinéraire dans Google Maps</u></link>', body)])
     out = BytesIO()
     frame = retake_page_frame(font, "CONVOCATION", row["id"][:12].upper())
     SimpleDocTemplate(out, pagesize=A4, rightMargin=48, leftMargin=48, topMargin=112, bottomMargin=52,
