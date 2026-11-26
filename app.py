@@ -17958,7 +17958,7 @@ def admin_sessions():
                    if ssiap_pathways.level_one(s) or ssiap_pathways.enabled(s) else {}),
             })
             if status_key == "ended":
-                out_sessions.append({"id": s.get("id"), "deferred": True})
+                out_sessions.append({"id": s.get("id"), "status_key": status_key, "deferred": True})
                 continue
 
         public_logged_in_total = sum(1 for t in trainees if t.get("public_has_logged_in"))
@@ -18061,6 +18061,10 @@ def admin_sessions():
             "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
             "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
+
+    if not ended_cards_only:
+        status_order = {"ongoing": 0, "upcoming": 1, "ended": 2}
+        out_sessions.sort(key=lambda card: status_order[card["status_key"]])
 
     _log_memory_stage("ADMIN_SESSIONS_BEFORE_RENDER", admin_sessions_started_at, request.path)
     prepared_at = time.monotonic()

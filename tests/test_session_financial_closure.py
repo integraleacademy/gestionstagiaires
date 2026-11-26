@@ -46,8 +46,9 @@ def test_only_ended_cards_have_financial_border_and_link_to_same_report(monkeypa
                 'date_start': (today + datetime.timedelta(days=start_delta)).isoformat(),
                 'date_end': (today + datetime.timedelta(days=end_delta)).isoformat(),
                 'trainees': [{'id': 'T-' + identifier, 'other_amount': amount}]}
-    data = {'sessions': [session('CLOSED', -1, 5), session('OPEN', -2, 5.01),
-                         session('ONGOING', 0, 0), session('FUTURE', 30, 100, 10)],
+    data = {'sessions': [session('CLOSED', -1, 5), session('FUTURE', 30, 100, 10),
+                         session('ONGOING', 0, 0), session('OPEN', -2, 5.01),
+                         session('STARTS-TODAY', 7, 0, 0)],
             'billing_lines': []}
     monkeypatch.setattr(gestion_app, 'load_data', lambda **kwargs: data)
     monkeypatch.setattr(gestion_app, '_load_wedof_webhooks', lambda: [])
@@ -62,10 +63,11 @@ def test_only_ended_cards_have_financial_border_and_link_to_same_report(monkeypa
     response = client.get('/admin/sessions')
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert 'data-ended-session="CLOSED"' in html and 'data-ended-session="OPEN"' in html
+    card_ids = re.findall(r'<(?:article\b[^>]* data-session-id|template data-ended-session)="([^"]+)"', html)
+    assert card_ids == ['ONGOING', 'STARTS-TODAY', 'FUTURE', 'CLOSED', 'OPEN']
     assert 'data-edit-session="CLOSED"' not in html
     choices = json.loads(re.search(r'const availableSessionsForCreate = (.*);', html).group(1))
-    assert {item["id"] for item in choices} == {"CLOSED", "OPEN", "ONGOING", "FUTURE"}
+    assert {item["id"] for item in choices} == {"CLOSED", "OPEN", "ONGOING", "FUTURE", "STARTS-TODAY"}
     assert all("financial_overview" not in item for item in choices)
     reader.assert_not_called()
     history = client.get('/admin/sessions/ended-cards')
