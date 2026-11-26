@@ -46,6 +46,7 @@ RUN python scripts/build_edof_crm_cassandre.py
 # Reject invalid Python sources before Render tries to start this image.
 RUN python -m compileall -q app.py crm_app.py
 
+COPY static/fonts/convocations/ /usr/local/share/fonts/academy-convocations/
 COPY fontconfig/99-msoffice-substitutions.conf /etc/fonts/conf.d/99-msoffice-substitutions.conf
 RUN fc-cache -f && fc-match -f '%{family}\n' Calibri | head -n 1 | grep -q Carlito
 

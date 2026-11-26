@@ -60,6 +60,7 @@ import qonto_webhook_inbox
 import sqlite3
 import convocation_preview
 import training_convocations
+import academy_convocations
 import convocation_jobs
 import cnaps_read_jobs
 import bts_cnaps_tracking_api as cnaps_tracking_source
@@ -9473,6 +9474,8 @@ def _trainee_start_date(session_obj, trainee):
 
 
 def _ssiap_document_template(session_obj, trainee, kind, fallback):
+    if kind == "convocation" and _automation_document_config(session_obj).get("convocation_template") == "convocationformation.docx":
+        return fallback(session_obj)
     path = ssiap_pathways.resolve(session_obj, trainee, strict=True)
     if path is None:
         return fallback(session_obj)
@@ -36163,7 +36166,8 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
                 "convention_template": "conventionafc.docx", "convocation_template": "convocationafc.docx",
                 "entry_template": "attestationentreeafc.docx", "end_template": "attestationfinafc.docx"}
     if "VAE" in text:
-        return {"enabled": True, "slug": "vae", "label": "VAE", "convention_template": "conventionvae.docx"}
+        return {"enabled": True, "slug": "vae", "label": "VAE", "convention_template": "conventionvae.docx",
+                "convocation_template": "convocationformation.docx", "manual_invitation": True}
     if "A3P" in text:
         return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx", "end_template": "attestationfina3p.docx", "convocation_template": "convocationa3p.docx"}
     if "VTC" in text:
@@ -36175,9 +36179,15 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
             return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": convocation}
         return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
-        return {"enabled": True, "slug": "ssiap", "label": "agent de sécurité incendie SSIAP 1", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
+        invitation = "convocationformation.docx" if re.search(r"SSIAP\s*[- ]?[23]\b", text) else "convocationssiap.docx"
+        return {"enabled": True, "slug": "ssiap", "label": "agent de sécurité incendie SSIAP 1", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": invitation}
     if text.startswith("APS") or " APS" in text:
-        return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": "convocationaps.docx"}
+        invitation = "convocationformation.docx" if academy_convocations.family(text) == "mac_aps" else "convocationaps.docx"
+        return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": invitation}
+    if _session_get(session_obj, "training_type", ""):
+        return {"enabled": False, "convocation_only": True, "manual_invitation": True,
+                "slug": academy_convocations.family(text), "label": _session_get(session_obj, "training_type", ""),
+                "convocation_template": "convocationformation.docx"}
     return {"enabled": False}
 
 
@@ -36195,8 +36205,9 @@ def _can_send_convocation_without_signed_convention(session_obj: Dict[str, Any])
     yet, because the convocation process is operationally independent from the
     convention workflow for these sessions.
     """
-    slug = str(_automation_document_config(session_obj).get("slug") or "")
-    return slug.startswith("desp_") or slug in {"ssiap", "afc"}
+    config = _automation_document_config(session_obj)
+    slug = str(config.get("slug") or "")
+    return config.get("convocation_only", False) or slug.startswith("desp_") or slug in {"ssiap", "afc"}
 
 
 def _automation_partner_module_enabled() -> bool:
@@ -36216,6 +36227,11 @@ def _automation_is_enabled(
         and not _trainee_registration_is_cancelled(trainee)
         and not afc_schedule.has_withdrawn(trainee)
     )
+
+
+def _invitation_is_enabled(session_obj, trainee):
+    return (_is_aps_session(session_obj) and _automation_partner_module_enabled()
+            and not _trainee_registration_is_cancelled(trainee) and not afc_schedule.has_withdrawn(trainee))
 
 
 def _cancelled_registration_automation_response():
@@ -39333,7 +39349,7 @@ def _send_scheduled_convocation_after_convention_signed_in_context(session_id: s
 
 def _convention_triggers_convocation(session_obj: Dict[str, Any]) -> bool:
     config = _automation_document_config(session_obj)
-    return bool(config.get("convocation_template")) and config.get("slug") != "vtc"
+    return bool(config.get("convocation_template")) and not config.get("manual_invitation") and config.get("slug") != "vtc"
 
 
 def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> None:
@@ -40375,7 +40391,8 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
     ]
-    if not is_dirigeant and str(config.get("slug") or "") != "vtc" and not ssiap_pathways.short_course(trainee):
+    if (not is_dirigeant and config.get("convocation_template") != "convocationformation.docx"
+            and str(config.get("slug") or "") != "vtc" and not ssiap_pathways.short_course(trainee)):
         required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
     for value, message in required:
         if not str(value or "").strip():
@@ -40460,6 +40477,13 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
                        mention_groupe_pratique=f" · Groupe {slot['group']}" if slot["group"] else "")
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
+    if config.get("convocation_template") == "convocationformation.docx":
+        title = str(_session_get(session_obj, "training_type", "") or training_name).strip()
+        context.update(convocation_intitule=title, convocation_session_complement=training_name if title.casefold() != training_name.casefold() else "",
+                       convocation_site=str(session_obj.get("training_location") or session_obj.get("crm_center")
+                                           or session_obj.get("centre") or session_obj.get("center") or "").strip(),
+                       convocation_examen=fr_date(_session_get(session_obj, "exam_date", "")))
+    context["convocation_famille"] = academy_convocations.family(_automation_training_text(session_obj))
     return context
 
 
@@ -40517,7 +40541,7 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
     app.logger.info("[CONVOCATION APS] app dir: %s", app_dir)
     os.makedirs(os.path.dirname(output_docx_path), exist_ok=True)
     doc = DocxTemplate(template_path)
-    doc.render(context)
+    doc.render(context, autoescape=True)
     doc.save(output_docx_path)
 
 
@@ -40582,12 +40606,18 @@ def _render_aps_convocation_pair(template_path: str, context: Dict[str, Any], ba
         _restore_yousign_smart_anchors_in_docx(staged_docx, anchor_replacements)
         if not os.path.isfile(staged_docx) or os.path.getsize(staged_docx) <= 0:
             raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
-        command = [_find_libreoffice_binary(), "-env:UserInstallation=" + Path(staging, "profile").as_uri(),
-                   "--headless", "--convert-to", "pdf", "--outdir", staging, staged_docx]
-        try:
-            subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
-        except subprocess.CalledProcessError as exc:
-            raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+        template_name = os.path.basename(template_path)
+        if Path(template_path).resolve().parent == Path(app.root_path, "templates_word").resolve():
+            from docx import Document
+            academy_convocations.publish(Document(staged_docx), template_name, context["convocation_famille"],
+                                         staged_docx, staged_pdf)
+        else:
+            command = [_find_libreoffice_binary(), "-env:UserInstallation=" + Path(staging, "profile").as_uri(),
+                       "--headless", "--convert-to", "pdf", "--outdir", staging, staged_docx]
+            try:
+                subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
         if not os.path.isfile(staged_pdf) or os.path.getsize(staged_pdf) <= 0:
             raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
         os.replace(staged_docx, final_docx_path)
@@ -41074,7 +41104,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
         trainee["convocation_auto_scheduled_at"] = ""
         trainee["convocation_auto_last_error"] = AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE
         return False
-    if str(_automation_document_config(session_obj).get("slug") or "") == "vtc":
+    if not _convention_triggers_convocation(session_obj):
         # En VTC, seule la réussite à la théorie déclenche la convocation.
         return False
     # This function also runs from ``threading.Timer`` and catch-up jobs, where
@@ -41263,8 +41293,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             convention_signed_step,
             {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not theory_succeeded else "pending")},
         ]
-    elif is_vae_automation:
-        timeline = [convention_sent_step, convention_signed_step]
+    elif is_vae_automation or config.get("convocation_only"):
+        timeline = [convention_sent_step, convention_signed_step] if is_vae_automation else []
+        timeline.append({"label": "Convocation", "state": "complete" if convocation_status == "sent" else "pending"})
     else:
         timeline = [
             convention_sent_step,
@@ -41283,10 +41314,12 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         global_status = "blocked" if has_generated_convention or has_signature_request else "action_required"
     else:
         global_status = "action_required"
-    if is_vae_automation:
-        ready_documents = int(convention_sent) + int(convention_signed)
-    else:
-        ready_documents = int(convention_sent) + int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
+    has_convention = bool(config.get("convention_template"))
+    ready_documents = (int(has_convention) * (int(convention_sent) + int(convention_signed))
+                       + int(is_aps_automation and convocation_status == "sent")
+                       + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent))
+    if config.get("convocation_only"):
+        global_status = "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "action_required")
 
     convention_labels = {
         "not_generated": ("Non générée", "file", "pending", "pending", "Générer la convention"),
@@ -41311,11 +41344,11 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convocation_labels["not_generated"] = ("En attente de la théorie", "hourglass", "waiting", "pending")
     v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
 
-    total_documents = 2 if is_vae_automation else 2 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
+    total_documents = 2 * int(has_convention) + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
     planned_automations = []
-    if not has_generated_convention:
+    if has_convention and not has_generated_convention:
         planned_automations.append("Convention")
     if is_aps_automation and convocation_status not in {"sent", "generated"}:
         planned_automations.append("Convocation")
@@ -41326,6 +41359,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
 
     return {
         "has_convocation": is_aps_automation,
+        "has_convention": has_convention,
         "has_entry_attestation": has_entry_attestation,
         "has_end_attestation": has_end_attestation,
         "has_a3p_driver_attestation": _a3p_has_driver_attestation(session_obj),
@@ -41572,8 +41606,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
         company_convention_available=_automation_document_config(s).get("slug") in company_convention.COURSES,
-        automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
-        automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
+        automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if (_automation_document_config(s).get("enabled") or _automation_document_config(s).get("convocation_only")) else None,
+        automation_module_locked=(bool(_automation_document_config(s).get("enabled")) or _is_aps_session(s)) and not _automation_partner_module_enabled(),
         automation_disabled_by_cancellation=t["registration_cancelled"],
         financing_module_locked=not _financing_partner_module_enabled(),
         native_cpf_search=native_cpf_search,
@@ -52926,6 +52960,8 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
         abort(404)
     if _trainee_registration_is_cancelled(t):
         return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
+    if _automation_document_config(s).get("manual_invitation") and not _invitation_is_enabled(s, t):
+        abort(403)
     try:
         files = _generate_aps_convocation_files(s, t, session_id, trainee_id, cached_only=convocation_preview.browser_request())
         if files is None:
@@ -53137,9 +53173,10 @@ def admin_trainee_automation_status(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if _trainee_registration_is_cancelled(t):
         return _cancelled_registration_automation_response()
-    if not _automation_is_enabled(s, t):
+    if not (_automation_is_enabled(s, t) or _invitation_is_enabled(s, t)):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
-    _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
+    if _automation_document_config(s).get("convention_template"):
+        _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     return jsonify({"ok": True, "automation_status": _build_trainee_automation_status(s, t, session_id, trainee_id)})
 
 
@@ -53163,7 +53200,7 @@ def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if _trainee_registration_is_cancelled(t):
         return _cancelled_registration_automation_response()
-    if not _automation_is_enabled(s, t):
+    if not _invitation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
@@ -53202,7 +53239,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if _trainee_registration_is_cancelled(t):
         return _cancelled_registration_automation_response()
-    if not _automation_is_enabled(s, t):
+    if not _invitation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
@@ -53231,7 +53268,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             current_s, _, current_t = _find_session_trainee(current_data, session_id, trainee_id)
             if not current_t or _trainee_registration_is_cancelled(current_t):
                 return _cancelled_registration_automation_response()
-            if not _automation_is_enabled(current_s, current_t):
+            if not _invitation_is_enabled(current_s, current_t):
                 return jsonify(ok=False, error="module_locked", module="automations"), 403
             if (request.get_json(silent=True) or {}).get("skip_if_already_sent") and current_t.get("convocation_aps_sent_at"):
                 return jsonify(ok=True, skipped=True, status="already_sent")

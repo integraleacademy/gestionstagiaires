@@ -19,7 +19,7 @@ from ssiap_exam_pdf import (
     signature_assets,
 )
 
-STYLE_VERSION = "ssiap-2026-convocations-v2"
+STYLE_VERSION = "ssiap-2027-convocations-paysage-b"
 CONTACT = {"contact_email": "ecole@integraleacademy.com", "contact_phone": "04 22 47 07 68"}
 ADDRESS = "54 chemin du Carreou · 83480 Puget-sur-Argens (Var, 83)"
 PROFILES = {
@@ -187,32 +187,61 @@ def _footer(c, training, number, total):
 
 
 def _convocation(c, training, profile, context, root, assets, exam=False):
-    _header(c, "Convocation officielle", "À L’EXAMEN" if exam else "EN FORMATION", root)
-    recipient = " ".join(filter(None, [context["code_postal"], context["ville"]]))
-    _candidate(c, context, recipient)
-    paragraph(c, "Nous avons le plaisir de vous convoquer à l’examen final :" if exam else
-              "Nous avons le plaisir de vous confirmer votre inscription en formation :",
-              M, 536, size=10, leading=15)
-    paragraph(c, f"Titre à Finalité Professionnelle (TFP)\n{profile['title']} ({training})",
-              M, 507, size=11, bold=True, leading=17)
-    paragraph(c, "Session du " + context["periode_formation"], M, 460, size=9.5, color=MUTED)
+    from academy_convocations.drawing import PALETTES, standalone_panel
+    from reportlab.lib.pagesizes import A4, landscape
+    from xml.sax.saxutils import escape
+    from reportlab.platypus import Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+
+    width, height = landscape(A4)
+    c.setPageSize((width, height))
+    group = training.lower()
+    accent, light, _, _ = PALETTES[group]
+    standalone_panel(c, group, os.path.join(root, "static", "logo-integrale.png"),
+                     ["INTÉGRALE ACADEMY", "Intégrale Sécurité Formations",
+                      "54 chemin du Carreou · 83480 Puget-sur-Argens"],
+                     "Convocation officielle", "À L’EXAMEN" if exam else "EN FORMATION")
+
+    def write(text, top, font="Bar", size=11, color="#282320", x=216, space=590):
+        style = ParagraphStyle("exam-invitation", fontName=font, fontSize=size, leading=size*1.24,
+                               textColor=colors.HexColor(color))
+        line = Paragraph(escape(text).replace("\n","<br/>"), style)
+        _, ht = line.wrap(space, 1000)
+        line.drawOn(c, x, height-top-ht)
+        return top+ht
+
+    y = write(context["nom_complet"], 26, "Cond", 23)
+    y = write(" ".join(filter(None, [context["code_postal"], context["ville"]])), y+4, size=10)
+    y = write("Nous avons le plaisir de vous convoquer à l’examen final :" if exam else
+              "Nous avons le plaisir de vous confirmer votre inscription en formation :", y+20)
+    y = write(f"Titre à Finalité Professionnelle (TFP)\n{profile['title']} ({training})", y+8, "BarB", 14)
+    y = write("Session du " + context["periode_formation"], y+8)
     rows = [("Date et heure", context["date_examen"] + " à 08h00"), ("Horaires de l’examen", "De 08h00 à 18h00")] if exam else [
         ("Début de formation", context["date_debut_formation"] + " à 08h30"),
         ("Durée de formation", f"{profile['hours']} heures")]
-    _details(c, rows + [("Lieu", "Intégrale Academy\n" + ADDRESS)], 434)
+    for label,value in rows + [("Lieu", "Intégrale Academy\n" + ADDRESS)]:
+        y+=6
+        c.setFillColor(colors.HexColor(light))
+        c.rect(216,height-y-(42 if "\n" in value else 29),590,42 if "\n" in value else 29,fill=1,stroke=0)
+        write(label,y+5,"BarB",10,accent,x=228,space=160)
+        y=write(value,y+5,"BarB",11,x=400,space=390)+7
     if exam:
         note = ("Merci de vous présenter à l’examen en costume et cravate : chemise blanche, "
                 "veste noire, pantalon noir, chaussures noires et cravate noire.")
     else:
         note = ("En cas d’indisponibilité ou de renoncement, merci de nous prévenir au "
                 + CONTACT["contact_phone"] + " ou par e-mail à " + CONTACT["contact_email"] + ".")
-    paragraph(c, note, M, 295, size=9.5, leading=14)
-    paragraph(c, "Nous vous prions d’agréer l’expression de nos salutations distinguées.",
-              M, 250, size=9)
-    paragraph(c, PORTAL_URL, M, 22, WIDTH * .65, 7.5, TEAL)
-    c.linkURL(PORTAL_URL, (M, 10, M + pdfmetrics.stringWidth(PORTAL_URL, BOLD, 7.5), 25), relative=0)
-    _signature(c, context["date_15_jours_avant_examen"] if exam else
-               context["date_un_mois_avant_debut_formation"], assets)
+    y=write(note,y+18)
+    y=write("Nous vous prions d’agréer l’expression de nos salutations distinguées.",y+10)
+    date=context["date_15_jours_avant_examen"] if exam else context["date_un_mois_avant_debut_formation"]
+    y=write("Fait à Puget-sur-Argens, le " + date,y+15,size=10)
+    write("Clément VAILLANT",y+8,"BarB",12)
+    write("Directeur général Intégrale Academy",y+27,size=10)
+    for key,x,w in [("signature",600,58),("stamp",669,135)]:
+        c.drawImage(ImageReader(io.BytesIO(assets[key])),x,height-y-43,w,43,
+                    preserveAspectRatio=True,anchor="c",mask="auto")
+    write(PORTAL_URL,538,"BarB",9,accent,x=216)
+    c.linkURL(PORTAL_URL,(216,height-552,216+pdfmetrics.stringWidth(PORTAL_URL,"BarB",9),height-536))
 
 
 def _attestation(c, training, profile, context, root, assets, epi=False):
@@ -292,9 +321,15 @@ def dossier(training, trainee, context, root, photo_path="", *, draft=False):
     c.showPage()
     for number, exam in [(2, False), (3, True)]:
         _convocation(c, training, profile, context, root, assets, exam)
-        _footer(c, training, number, profile["pages"])
+        c.saveState()
+        c.translate(48,-23)
+        c.scale(.85,.76)
+        official_identity(c, CONTACT)
+        c.restoreState()
+        paragraph(c,f"DOSSIER EXAMEN {training} · {number} / {profile['pages']}",620,24,183,7,color=MUTED,alignment=2)
         mark_draft()
         c.showPage()
+    c.setPageSize((W,H))
     for number, epi in [(4, True), (5, False)]:
         _attestation(c, training, profile, context, root, assets, epi)
         _footer(c, training, number, profile["pages"])
