@@ -25,6 +25,7 @@ DIRECTIONS_URL = "https://www.google.com/maps/dir/?api=1&destination=34+rue+Pois
 MAP_FILE = "images/desp-paris-acces.png"
 STATIC_DIR = Path(__file__).with_name("static")
 MAP_PATH = STATIC_DIR / MAP_FILE
+STAMP_PATH = Path(__file__).with_name("templates_word") / "cachet-paris-2027.png"
 
 
 def is_paris(training):
@@ -84,7 +85,7 @@ def set_training_header(document):
     old_stamp_ids = {rel.rId for rel in document.part.rels.values()
                      if rel.reltype == RT.IMAGE and rel.target_part.sha1 == "84d667d465d36414a241fe0c96aa8ebb14ee1334"}
     if old_stamp_ids:
-        stamp_id, _ = document.part.get_or_add_image(str(STATIC_DIR / "images/convocations/cachet-paris-2027.png"))
+        stamp_id, _ = document.part.get_or_add_image(str(STAMP_PATH))
         for drawing in document.element.xpath(".//a:blip"):
             if drawing.get(qn("r:embed")) in old_stamp_ids:
                 drawing.set(qn("r:embed"), stamp_id)

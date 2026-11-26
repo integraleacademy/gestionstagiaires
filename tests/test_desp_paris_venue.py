@@ -67,7 +67,7 @@ def test_contract_company_and_attestations_use_the_same_venue(tmp_path, start, e
         if start.startswith("2027") and index in (1, 2):
             assert venue.STREET in "".join(Document(output).sections[0].header._element.itertext())
         if index in (1, 2):
-            stamp = (venue.STATIC_DIR / 'images/convocations/cachet-paris-2027.png').read_bytes()
+            stamp = venue.STAMP_PATH.read_bytes()
             with ZipFile(output) as package:
                 media = [package.read(path) for path in package.namelist() if path.startswith('word/media/')]
                 assert (stamp in media) == start.startswith('2027')
