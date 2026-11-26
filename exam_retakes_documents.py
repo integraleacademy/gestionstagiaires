@@ -27,11 +27,19 @@ def retake_page_frame(font, document_label, ref, heading="VOTRE RATTRAPAGE"):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.utils import ImageReader
-    logo = ImageReader(str(Path(__file__).parent / 'static' / 'parcours-alternance' / 'logo.png'))
+    static = Path(__file__).parent / 'static'
+    if document_label == 'CONVOCATION':
+        logo_path = static / 'logo-integrale.png'
+        logo_width, logo_height, logo_bottom = 55, 55, 77.5
+    else:
+        logo_path = static / 'parcours-alternance' / 'logo.png'
+        logo_width, logo_height, logo_bottom = 215, 64, 86
+    logo = ImageReader(str(logo_path))
     navy, gold, muted = (colors.HexColor(v) for v in ('#14283F', '#F3C65F', '#596A7D'))
     def frame(canvas,doc):
         canvas.saveState();canvas.setFillColor(navy);canvas.rect(0,A4[1]-100,A4[0],100,stroke=0,fill=1)
-        canvas.drawImage(logo,48,A4[1]-86,width=215,height=64,mask='auto',preserveAspectRatio=True)
+        canvas.drawImage(logo, 48, A4[1] - logo_bottom, width=logo_width, height=logo_height,
+                         mask='auto', preserveAspectRatio=True)
         canvas.setFillColor(gold);canvas.setFont(font+'-Bold',9);canvas.drawRightString(547,A4[1]-42,heading)
         canvas.setFillColor(colors.white);canvas.setFont(font,8);canvas.drawRightString(547,A4[1]-61,document_label+' '+ref)
         canvas.setFillColor(gold);canvas.rect(0,A4[1]-103,A4[0],3,stroke=0,fill=1)

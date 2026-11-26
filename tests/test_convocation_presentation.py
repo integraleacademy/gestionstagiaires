@@ -23,9 +23,13 @@ def test_official_logo_repeats_in_the_header_of_every_invitation(template):
         assert not section.different_first_page_header_footer
         header = section.header
         drawing, = header._element.xpath('.//wp:inline[wp:docPr[@descr="Logo officiel Intégrale Academy"]]')
-        assert int(drawing.xpath('./wp:extent')[0].get('cx')) >= Cm(4)
+        extent = drawing.xpath('./wp:extent')[0]
+        width, height = int(extent.get('cx')), int(extent.get('cy'))
+        assert Cm(1.5) <= width == height <= Cm(2)
         reference = drawing.xpath('.//a:blip')[0].get(qn('r:embed'))
-        assert header.part.related_parts[reference].content_type == 'image/png'
+        asset = header.part.related_parts[reference]
+        assert asset.content_type == 'image/png'
+        assert asset.blob == (TEMPLATES.parent / 'static' / 'logo-integrale.png').read_bytes()
 
 
 def test_both_paris_letters_print_the_current_stamp():
