@@ -58,16 +58,39 @@ def summary(services, training):
     level = None
     for examination in all_exams([training]):
         settings = exam.settings(examination)
-        roster = _members(services, examination, settings)
+        local = _members(services, examination, settings)
+        snapshot = exam.platform_roster(examination) if afc else None
+        roster = _planning_members(examination, snapshot, local) if snapshot is not None else local
         if afc:
             label = settings['level']
             for member in roster:
                 member['exam_label'] = label
-            exams.append({'label': label, 'date': settings.get('date'), 'members': roster})
+            exams.append({'label': label, 'date': snapshot['date'] if snapshot is not None else settings.get('date'),
+                          'members': roster, 'from_planning': snapshot is not None})
         else:
             level = settings['level']
         members.extend(roster)
     return {'members': members, 'exams': exams, 'level': level}
+
+
+def _planning_members(training, snapshot, local):
+    links = exam.state(training).get('platform_confirmations', {})
+    by_id = {m['id']: m for m in local}
+    statuses = {'waiting': ('scheduled', 'En attente de réponse'), 'absent': ('failed', 'Absence confirmée'),
+                'to_invite': ('not_sent', 'À inviter')}
+    result = []
+    for person in snapshot['members']:
+        confirmed = person['status'] == 'present'
+        member = by_id.get(links.get(snapshot['source_id'] + '/' + person['id']), {}) if confirmed else {}
+        # Only actual mail activity or a scheduled reminder is additional information
+        # on this card. Planning owns invitations to participate and their answers.
+        badges = [b for b in member.get('badges', []) if b['state'] not in ('not_sent', 'incomplete')]
+        if not confirmed:
+            state, label = statuses[person['status']]
+            badges = [{'state': state, 'icon': '', 'label': label, 'detail': label}]
+        result.append({'name': person['name'], 'confirmed': confirmed, 'president': member.get('president', False),
+                       'email_missing': member.get('email_missing', False), 'badges': badges})
+    return result
 
 
 def _members(services, training, config):
@@ -79,6 +102,7 @@ def _members(services, training, config):
     for member in config['jury']:
         receipts = exam.mail_status(training, member)
         members.append({
+            'id': member['id'],
             'name': ' '.join(str(member.get(key) or '').strip() for key in ('first_name', 'last_name')).strip(),
             'president': member.get('role') == 'president',
             'confirmed': member['id'] in confirmed,

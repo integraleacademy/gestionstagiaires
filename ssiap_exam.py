@@ -57,7 +57,24 @@ def state(training):
     return value if isinstance(value, dict) else {}
 
 
-def settings(training):
+def platform_roster(training):
+    roster = state(training).get("platform_roster")
+    if (afc_schedule.enabled(training) and roster
+            and roster["source_id"] == training.get("platform_catalogue", {}).get("id")):
+        return roster
+    return None
+
+
+def inactive_jury_ids(training):
+    roster = platform_roster(training)
+    if roster is None:
+        return set()
+    links = state(training).get("platform_confirmations", {})
+    active = {links.get(roster["source_id"] + "/" + m["id"]) for m in roster["members"] if m["status"] == "present"}
+    return set(links.values()) - active
+
+
+def settings(training, *, include_inactive_jury=False):
     level = security_exam_jury.level(training)
     if level:
         defaults = {**DEFAULTS, "approval": ""}
@@ -68,15 +85,17 @@ def settings(training):
         if (desp_paris_venue.applies(training)
                 and desp_paris_venue.old_or_default_address(config.get("address"))):
             config.update(location=desp_paris_venue.NAME, address=desp_paris_venue.ADDRESS)
-        return config
-    # An AFC's generic exam_date belongs to APS, not necessarily to SSIAP.
-    afc = afc_schedule.enabled(training) or "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
-    date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""
-    match = re.search(r"SSIAP\s*([123])", str(training.get("training_type") or ""), re.I)
-    config = {**DEFAULTS, "date": date, "exam_number": str(training.get("ssiap_exam_number") or ""), "level": "SSIAP " + (match.group(1) if match else "1"),
-              **state(training).get("config", {})}
-    if afc_schedule.enabled(training):
-        config.update(date=date, level="SSIAP 1")
+    else:
+        # An AFC's generic exam_date belongs to APS, not necessarily to SSIAP.
+        afc = afc_schedule.enabled(training) or "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
+        date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""
+        match = re.search(r"SSIAP\s*([123])", str(training.get("training_type") or ""), re.I)
+        config = {**DEFAULTS, "date": date, "exam_number": str(training.get("ssiap_exam_number") or ""), "level": "SSIAP " + (match.group(1) if match else "1"),
+                  **state(training).get("config", {})}
+        if afc_schedule.enabled(training):
+            config.update(date=date, level="SSIAP 1")
+    if not include_inactive_jury and (inactive := inactive_jury_ids(training)):
+        config["jury"] = [m for m in config["jury"] if m["id"] not in inactive]
     return config
 
 
@@ -466,6 +485,9 @@ def register(app, services):
                     members = current["config"]["jury"]
                     name_edits = queue_name_edits(training, current, previous, members)
                     remember_jury(data, members, services._now_iso(), previous)
+                    # Keep the original ID, role and receipts if a withdrawn juror is later reconfirmed.
+                    inactive = inactive_jury_ids(training) - {member["id"] for member in members}
+                    members.extend(m for m in state(training).get("config", {}).get("jury", []) if m["id"] in inactive)
                     if security_exam_jury.level(training):
                         security_exam_jury.sync_date(training, current["config"]["date"])
                     elif afc_schedule.enabled(training):

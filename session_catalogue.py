@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import ijson
 import requests
 from flask import abort, jsonify, request
+import platform_jury
 
 SOURCE = "https://plateformegestion.onrender.com/api/integrations/session-catalogue"
 TYPES = {"aps": "APS", "a3p-apr": "A3P", "ssiap-1": "SSIAP 1", "ssiap-2": "SSIAP 2",
@@ -191,7 +192,7 @@ def archive(host, training, state):
         state["archived_by_catalogue"] = True
 
 
-def reconcile(host, data, rows, present_ids=None):
+def reconcile(host, data, rows, present_ids=None, afc_juries=None):
     trainings = data.setdefault("sessions", [])
     candidates = [(s, local_identity(host, s)) for s in trainings if not s.get("catalogue_mask") and own(host, s)]
     masks = {s[STATE]["id"]: s for s in trainings if s.get("catalogue_mask")}
@@ -313,6 +314,12 @@ def reconcile(host, data, rows, present_ids=None):
     if data.get("session_catalogue_conflicts", []) != conflicts:
         data["session_catalogue_conflicts"] = conflicts
         changed = True
+    if isinstance(afc_juries, dict):
+        for training, _ in candidates:
+            sid = training.get(STATE, {}).get("id")
+            if sid in afc_juries and host.afc_schedule.enabled(training):
+                if platform_jury.apply_afc_rosters(training, sid, afc_juries[sid]):
+                    changed = True
     if not changed:
         raise NoChange(len(conflicts))
     return {"conflicts": len(conflicts)}
@@ -393,6 +400,9 @@ def start_worker(host):
         while not stop.is_set():
             try:
                 headers = {"Authorization": "Bearer " + token, "If-None-Match": etag}
+                jury_key = platform_jury.integration_key()
+                if jury_key:
+                    headers["X-Jury-Sync-Token"] = jury_key
                 reply = requests.get(SOURCE, headers=headers, timeout=(3, 15), allow_redirects=False)
                 if reply.status_code != 304:
                     reply.raise_for_status()
@@ -405,7 +415,7 @@ def start_worker(host):
                     with host.app.app_context():
                         try:
                             def apply(current):
-                                stats = reconcile(host, current, rows, present_ids)
+                                stats = reconcile(host, current, rows, present_ids, payload.get("afc_juries"))
                                 linked = [s for s in current["sessions"] if s.get(STATE) and not s.get("catalogue_mask")]
                                 stats["withdrawn"] = sum(withdrawn(s) and bool(s.get("archived")) for s in linked)
                                 stats["names"] = sum(bool(s[STATE]["source"].get("name")) and
