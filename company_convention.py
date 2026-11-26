@@ -72,7 +72,9 @@ def build_document(template, company, values):
             body.remove(p._p)
         elif "(voir article 10)" in value:
             _write(p, value.replace(" (voir article 10)", ""))
-        elif value.startswith("Lieu de la formation") and values['lieu_formation'] not in ("", "À préciser"):
+        elif (value.startswith("Lieu de la formation") and not ("{{ lieu_presentiel_paris }}" in value
+                  and values.get("lieu_presentiel_paris") == values.get("lieu_formation"))
+              and values['lieu_formation'] not in ("", "À préciser")):
             _write(p, "Lieu de la formation : " + values['lieu_formation'])
 
     add(first_article, "Article 7 – Participation et suivi de l’exécution")

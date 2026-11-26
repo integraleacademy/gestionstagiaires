@@ -51,6 +51,12 @@
     const current = state.defaults.find(d => d.kind === field('kind').value);
     const chosen = current?.sessions.find(s => s.id === field('target_session').value);
     field('exam_date').value = chosen?.exam_date || '';
+    const locationInput = field('location');
+    const suggestedLocation = chosen?.location || state.location || '';
+    if (!locationInput.value || locationInput.value === locationInput.dataset.suggestion) {
+      locationInput.value = suggestedLocation;
+    }
+    locationInput.dataset.suggestion = suggestedLocation;
     days.replaceChildren();
     (chosen?.preparation_days?.length ? chosen.preparation_days : [{},{}]).forEach(addDay);
     calc();
@@ -79,7 +85,7 @@
     say(record ? 'Modifiez les informations puis enregistrez pour actualiser le PDF de la convention.' : '');
     field('kind').innerHTML = state.defaults.map(d => `<option value="${esc(d.kind)}">${esc(d.label)}</option>`).join('');
     if (record) field('kind').value = record.kind;
-    defaults();field('location').value = state.location || '';
+    defaults();
     if (record) {
       if (![...field('target_session').options].some(o => o.value === record.target_session)) field('target_session').add(new Option(record.target_name,record.target_session));
       for (const key of ['target_session','exam_date','exam_time','location','exam_price','day_price','notes']) field(key).value = record[key] || '';

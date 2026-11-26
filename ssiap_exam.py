@@ -11,6 +11,7 @@ import os
 import re
 import secrets
 from zoneinfo import ZoneInfo
+import desp_paris_venue
 import security_exam_jury
 import afc_schedule
 import exam_retakes
@@ -62,8 +63,12 @@ def settings(training):
         defaults = {**DEFAULTS, "approval": ""}
         if 'PARIS' in f"{training.get('training_type', '')} {training.get('name', '')}".upper():
             defaults.update(location="Intégrale Academy – Paris", address="")
-        return {**defaults, **state(training).get("config", {}),
-                "level": level, "date": security_exam_jury.exam_date(training)}
+        config = {**defaults, **state(training).get("config", {}),
+                  "level": level, "date": security_exam_jury.exam_date(training)}
+        if (desp_paris_venue.applies(training)
+                and desp_paris_venue.old_or_default_address(config.get("address"))):
+            config.update(location=desp_paris_venue.NAME, address=desp_paris_venue.ADDRESS)
+        return config
     # An AFC's generic exam_date belongs to APS, not necessarily to SSIAP.
     afc = afc_schedule.enabled(training) or "AFC" in (str(training.get("training_type") or "") + " " + str(training.get("name") or "")).upper()
     date = training.get("ssiap_exam_date") or ("" if afc else training.get("exam_date")) or ""

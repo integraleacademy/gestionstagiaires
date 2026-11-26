@@ -1,3 +1,4 @@
+from campus import INTEGRALE_PARTNER_ID
 from campus.links import origin as campus_origin
 from campus.identity import (
     _birth_to_ddmmyyyy, _norm_lastname, _public_trainee_birth_dates,
@@ -50,6 +51,7 @@ import afc_schedule
 import uv_questionnaires
 import aps_kickoff
 import desp_kickoff
+import desp_paris_venue
 import desp_jury_projects
 import desp_scotia
 import a3p_documents
@@ -3913,7 +3915,6 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 _log_memory_stage("AFTER_STORAGE_CONFIGURATION", _APP_IMPORT_STARTED_AT, "-")
 
 PARTNER_STORAGE_CATEGORIES = {"stagiaires", "contrats", "conventions", "signatures", "factures", "logos", "documents"}
-INTEGRALE_PARTNER_ID = "11111111-1111-4111-8111-111111111111"
 PARTNER_STATUSES = {"active", "trial", "suspended", "archived"}
 PLATFORM_ROLES = {"super_admin", "partner_admin", "admin", "viewer"}
 PARTNER_ACCOUNT_ROLES = {"partner_admin", "viewer"}
@@ -35087,6 +35088,7 @@ def public_trainee_space(token):
         public_qcus=public_qcus,
         aps_kickoff=aps_kickoff.view(sys.modules[__name__], s, t),
         desp_kickoff=desp_kickoff.view(sys.modules[__name__], s, t),
+        desp_paris_access=desp_paris_venue.access_details() if desp_paris_venue.applies(s) else None,
         uv_questionnaires=uv_questionnaires.view(sys.modules[__name__], s, t),
         ssiap_success=ssiap_success_certificate.document_fields(sys.modules[__name__], s, t, data=data),
         a3p_attestations=a3p_documents.view(sys.modules[__name__], s, t, token),
@@ -36015,8 +36017,10 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     if "VTC" in text:
         return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "convocation_template": "convocationvtc.docx", "entry_template": ""}
     if "DIRIGEANT" in text or "DESP" in text:
-        if "PARIS" in text:
-            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
+        if desp_paris_venue.is_paris(session_obj):
+            convocation = ("convocationdespparis_2027.docx" if desp_paris_venue.applies(session_obj)
+                           else "convocationdespparis.docx")
+            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": convocation}
         return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
         return {"enabled": True, "slug": "ssiap", "label": "agent de sécurité incendie SSIAP 1", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
@@ -39967,6 +39971,8 @@ def _build_aps_entry_attestation_context(session_obj: Dict[str, Any], trainee: D
         "date_debut_formation": fr_date(date_start),
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    if _automation_document_config(session_obj).get("slug") == "desp_paris":
+        context.update(desp_paris_venue.document_context(session_obj))
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date))
     return context
@@ -39984,7 +39990,8 @@ def _generate_aps_entry_attestation_files(session_obj: Dict[str, Any], trainee: 
     final_docx_path = os.path.join(APS_ENTRY_ATTESTATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_ENTRY_ATTESTATION_DIR, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
-    _replace_docx_xml_placeholders(final_docx_path, _build_aps_entry_attestation_context(session_obj, trainee))
+    _replace_docx_xml_placeholders(final_docx_path, _build_aps_entry_attestation_context(session_obj, trainee),
+                                   training_header=True)
     _assert_docx_has_no_unresolved_variables(final_docx_path)
     lo_binary = _find_libreoffice_binary()
     if os.path.exists(final_pdf_path):
@@ -40038,6 +40045,8 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
         "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    if _automation_document_config(session_obj).get("slug") == "desp_paris":
+        context.update(desp_paris_venue.document_context(session_obj))
     context.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date))
     if ssiap_pathways.short_course(trainee):
@@ -40058,7 +40067,8 @@ def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Di
     final_docx_path = os.path.join(output_dir, base + ".docx")
     final_pdf_path = os.path.join(output_dir, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
-    _replace_docx_xml_placeholders(final_docx_path, _build_aps_end_attestation_context(session_obj, trainee, preview=preview_dir is not None))
+    _replace_docx_xml_placeholders(final_docx_path, _build_aps_end_attestation_context(session_obj, trainee, preview=preview_dir is not None),
+                                   training_header=True)
     _assert_docx_has_no_unresolved_variables(final_docx_path)
     lo_binary = _find_libreoffice_binary()
     if os.path.exists(final_pdf_path):
@@ -40289,6 +40299,9 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "heure_formation_pratique": str(_session_get(session_obj, "practice_training_time", "") or "08h30").strip(),
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
+    if desp_paris_venue.applies(session_obj):
+        context.update(desp_paris_venue.document_context(session_obj))
+        context.update({"acces_" + key: value for key, value in desp_paris_venue.access_details().items()})
     if config.get("slug") == "vtc":
         slot = _vtc_practice_appointment(session_obj, trainee, for_convocation=True)
         context.update(date_formation_pratique=fr_date(slot["date"]), date_formation_pratique_vtc=fr_date(slot["date"]),
@@ -40709,6 +40722,8 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "ville_edition": "Puget-sur-Argens",
         "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    if _automation_document_config(session_obj).get("slug") == "desp_paris":
+        replacements.update(desp_paris_venue.document_context(session_obj))
     replacements.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
     replacements.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
     return {key: str(replacements.get(key) or "") for key in replacements}
@@ -40722,7 +40737,7 @@ def _sha256_file(path: str) -> str:
     return digest.hexdigest()
 
 
-def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str]) -> None:
+def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str], *, training_header=False) -> None:
     """Replace only known APS convention variables written as ``{{ name }}``.
 
     No legacy placeholder syntax and no fixed literal text is matched.  A token
@@ -40731,6 +40746,8 @@ def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str])
     works even when Microsoft Word splits one placeholder across several runs.
     """
     document = Document(docx_path)
+    if training_header and replacements.get("lieu_presentiel_paris") == desp_paris_venue.FULL_ADDRESS:
+        desp_paris_venue.set_training_header(document)
     containers: List[Any] = [document]
     for section in document.sections:
         containers.extend([section.header, section.footer, section.first_page_header, section.first_page_footer, section.even_page_header, section.even_page_footer])
@@ -40864,6 +40881,8 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
         if period_label
         else ""
     )
+    if desp_paris_venue.applies(session_obj):
+        session_line += f"<p><strong>Présentiel et examen</strong><br>{desp_paris_venue.FULL_ADDRESS}</p>"
     if pathway:
         details = ssiap_pathways.document_context(session_obj, trainee, fr_date)["detail_parcours"]
         session_line += "<p>" + html.escape(details).replace("\n", "<br>") + "</p>"
