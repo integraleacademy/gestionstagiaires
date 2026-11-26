@@ -72,7 +72,9 @@ class Book:
         register_fonts()
         self.ref = ref
         self.W, self.H = landscape(A4)
-        self.c = canvas or Canvas(str(out), pagesize=(self.W, self.H), pageCompression=1)
+        self.c = canvas or Canvas(
+            str(out), pagesize=(self.W, self.H), pageCompression=1
+        )
         if canvas is None:
             self.c.setTitle("Convocation · Intégrale Academy")
             self.c.setAuthor("Intégrale Academy")
@@ -222,6 +224,21 @@ class Book:
         if items is None:
             items = self.ref.pages[self.source_page]
             self.source_page += 1
+        if (
+            not cover
+            and len(items) >= 2
+            and items[1].casefold()
+            in {
+                "convocation officielle en formation",
+                "convocation officielle à l’examen",
+                "convocation officielle formation pratique",
+                "règles de vie en formation",
+                "documents administratifs",
+                "distanciel & présentiel",
+                "calendrier des examens",
+            }
+        ):
+            items = [items[0], items[1].capitalize(), *items[2:]]
         self.items = items
         self.next = 0
         self.rect(0, 0, self.W, self.H, WHITE)
@@ -251,6 +268,39 @@ class Book:
 
     def icon(self, key, x, y, size, col=ORANGE):
         shapes = {
+            "bed": [
+                [(2, 5), (2, 21)],
+                [(22, 5), (22, 21)],
+                [(2, 10), (22, 10)],
+                [(2, 17), (22, 17)],
+                [(4, 8), (8, 8)],
+                [(4, 15), (8, 15)],
+                [(16, 10), (16, 21)],
+                [(19, 10), (19, 21)],
+                [(16, 14), (19, 14)],
+            ],
+            "kitchen": [
+                [(3, 8), (21, 8), (21, 21), (3, 21), (3, 8)],
+                [(6, 5), (10, 5)],
+                [(15, 5), (19, 5)],
+                [(6, 12), (18, 12), (18, 18), (6, 18), (6, 12)],
+            ],
+            "bag": [
+                [(3, 7), (21, 7), (21, 21), (3, 21), (3, 7)],
+                [(8, 7), (8, 3), (16, 3), (16, 7)],
+                [(7, 12), (17, 12)],
+            ],
+            "roll": [
+                [(8, 4), (16, 4), (19, 7), (19, 15), (16, 18), (9, 18)],
+                [(6, 8), (6, 21), (15, 21), (15, 8)],
+                [(8, 14), (12, 14)],
+            ],
+            "clean": [
+                [(13, 2), (13, 11)],
+                [(8, 11), (17, 11), (21, 21), (4, 21), (8, 11)],
+                [(10, 15), (8, 20)],
+                [(14, 15), (15, 20)],
+            ],
             "calendar": [
                 [(3, 5), (21, 5), (21, 21), (3, 21), (3, 5)],
                 [(3, 10), (21, 10)],
@@ -374,7 +424,9 @@ class Book:
         self.c.save()
 
 
-def standalone_panel(canvas, family, logo, brand_lines, kicker, title, *, quality_box=(33, 12, 770)):
+def standalone_panel(
+    canvas, family, logo, brand_lines, kicker, title, *, quality_box=(33, 12, 770)
+):
     """Sidebar used by standalone exam invitations, including dossier inserts."""
     register_fonts()
     color, _, _, bright = PALETTES.get(family, PALETTES["other"])

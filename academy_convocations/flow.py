@@ -1,5 +1,6 @@
 """Lay out the course's existing paragraphs, tables, seals and access plans in format B."""
 
+from functools import partial
 from io import BytesIO
 from xml.sax.saxutils import escape
 from reportlab.lib import colors
@@ -7,6 +8,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle
 from .drawing import Book, BW, L, HAIR, INK, WHITE
 from .source import Block, Cell
+from . import accommodation, aps, letters
 
 
 def icon_for(title):
@@ -14,12 +16,13 @@ def icon_for(title):
     for word, icon in [
         ("examen", "badge"),
         ("plan", "train"),
-        ("centre de formation", "train"),
-        ("parking", "train"),
+        ("centre de formation", "building"),
+        ("parking", "parking"),
         ("modalit", "calendar"),
         ("calendrier", "calendar"),
         ("règles", "people"),
-        ("hébergement", "people"),
+        ("hébergement", "bed"),
+        ("formation", "building"),
         ("véhicule", "badge"),
     ]:
         if word in key:
@@ -274,7 +277,22 @@ def paginate(story, available):
 
 
 def interior(section, book):
+    items = [text for block in section for text in block.text]
+    designs = {
+        "règles de vie en formation": aps.rules,
+        "documents administratifs": aps.documents,
+        "hébergement sur place": accommodation.stay,
+        "règles à respecter": accommodation.house_rules,
+        "services sur place & à proximité": accommodation.services,
+        "à prévoir pour votre formation": accommodation.packing,
+    }
+    if len(items) >= 2 and (design := designs.get(items[1].casefold())):
+        return [partial(design, items=items)]
     titleblock = section[0]
+    if len(titleblock.text) == 1 and len(section) > 1 and len(section[1].text) == 1:
+        # Some models keep their kicker and title in two separate Word paragraphs.
+        titleblock = Block([[Cell(titleblock.text + section[1].text, [])]])
+        section = [titleblock, *section[2:]]
     titles = titleblock.text[:2]
     if not titles:
         titles = [""]
@@ -284,11 +302,32 @@ def interior(section, book):
     remainder = titleblock.text[len([x for x in titles if x]) :]
     if remainder:
         blocks = [Block([[Cell(remainder, [])]]), *blocks]
+    if "convocation officielle" in titles[1].casefold():
+        signed = letters.plan(book, titles, blocks)
+        if signed:
+            return [signed]
     for scale in (1.05, 1, 0.94, 0.88, 0.82):
         flow = form_flow(blocks, book, scale)
         if height(flow) <= 489:
             break
-    return [(titles, flowpage) for flowpage in paginate(flow, 489)] or [(titles, [])]
+    return [
+        partial(draw_flow, titles=titles, story=page)
+        for page in (paginate(flow, 489) or [[]])
+    ]
+
+
+def draw_flow(p, titles, story):
+    p.begin(items=titles, outline=titles[-1] or "Convocation")
+    p.side(icon_for(titles[-1]))
+    draw_story(p, story, 29)
+    p.finish()
+
+
+def draw_story(p, story, top):
+    for item in story:
+        _, h = item.wrap(BW, 10000)
+        item.drawOn(p.c, L, p.H - top - h)
+        top += h
 
 
 def fitted(p, x, y, w, h, text, font, size, color):
@@ -397,15 +436,7 @@ def render(ref, out, family):
                 ref.agenda.page(p, months, ref.course_label)
         if index == len(plans):
             break
-        titles, flow = plans[index]
-        p.begin(items=titles, outline=titles[-1] or "Convocation")
-        p.side(icon_for(titles[-1]))
-        top = 29
-        for item in flow:
-            _, h = item.wrap(BW, 10000)
-            item.drawOn(p.c, L, p.H - top - h)
-            top += h
-        p.finish()
+        plans[index](p)
     if ref.puget_parking:
         from .aps import parking
 

@@ -185,50 +185,77 @@ def schedule(p):
     p.finish()
 
 
-def documents(p):
-    p.begin()
+def documents(p, items=None):
+    p.begin(items=items, outline="Documents administratifs")
     p.side("paper")
-    p.emit(2, L, 27, BW, "Bar", 12, TEXT, 15)
-    p.rect(L, 75, BW, 62, WASH)
-    p.icon("paper", L + 14, 93, 24, BLUE)
-    p.emit(3, L + 53, 82, BW - 65, "Cond", 18, TEXT)
-    p.printed_link(4, L + 53, 109, BW - 65, p.ref.portal, 11.2)
-    p.emit(5, L, 151, BW, "Bar", 11.5, TEXT, 14.4)
+    wash = WASH if p.accent == BLUE else p.light
+    if p.items[3].startswith("L’ensemble"):
+        # The Paris source includes its own heading and introduction before the portal.
+        p.emit(2, L, 12, BW, "Cond", 20, TEXT)
+        p.emit(3, L, 42, BW, "Bar", 11.4, TEXT, 14)
+        p.rect(L, 86, BW, 50, wash)
+        p.icon("paper", L + 14, 98, 24, p.accent)
+        p.printed_link(4, L + 53, 103, BW - 65, p.ref.portal, 11.2)
+    else:
+        p.emit(2, L, 27, BW, "Bar", 12, TEXT, 15)
+        p.rect(L, 75, BW, 62, wash)
+        p.icon("paper", L + 14, 93, 24, p.accent)
+        p.emit(3, L + 53, 82, BW - 65, "Cond", 18, TEXT)
+        p.printed_link(4, L + 53, 109, BW - 65, p.ref.portal, 11.2)
+    dense = len(split_lines(p.items[5], "Bar", 11.5, BW)) > 4
+    p.emit(
+        5,
+        L,
+        147 if dense else 151,
+        BW,
+        "Bar",
+        11 if dense else 11.5,
+        TEXT,
+        13 if dense else 14.4,
+    )
     p.rect(L, 219, BW, 79, NAVY)
     p.icon("clock", L + 12, 238, 25, p.bright)
     p.emit(6, L + 51, 228, BW - 63, "BarB", 12, WHITE, 14)
     p.emit(7, L + 51, 262, BW - 63, "Bar", 10.8, WHITE, 13)
     p.emit(8, L, 311, BW, "Bar", 11.3, TEXT, 14.2)
-    p.icon("mail", L, 376, 22, BLUE)
+    p.icon("mail", L, 376, 22, p.accent)
     p.emit(9, L + 35, 364, BW - 35, "Bar", 11.4, TEXT, 14.2)
-    p.rect(L, 417, BW, 112, WASH)
+    p.rect(L, 417, BW, 112, wash)
     p.emit(10, L + 14, 427, BW - 28, "BarB", 11.1, TEXT, 13.7)
     p.emit(11, L + 14, 469, BW - 28, "Bar", 10.9, TEXT, 13.4)
     p.finish()
 
 
-def rules(p):
-    p.begin()
+def rules(p, items=None):
+    p.begin(items=items, outline="Règles de vie en formation")
     p.side("people")
-    p.emit(2, L, 25, BW, "Bar", 12, TEXT, 14.8)
+    if p.items[2].startswith("Comportement attendu"):
+        p.emit(2, L, 9, BW, "Cond", 19, TEXT)
+        p.emit(3, L, 39, BW, "Bar", 11.4, TEXT, 14)
+    else:
+        p.emit(2, L, 25, BW, "Bar", 12, TEXT, 14.8)
     col = (BW - 30) / 2
-    for index, x, y, icon in [
-        (3, L, 103, "people"),
-        (5, L + col + 30, 103, "shirt"),
-        (7, L, 243, "building"),
-        (9, L + col + 30, 243, "list"),
+    for x, y, icon in [
+        (L, 103, "people"),
+        (L + col + 30, 103, "shirt"),
+        (L, 243, "building"),
+        (L + col + 30, 243, "list"),
     ]:
         p.line(x, y - 10, x + col, y - 10, RULE, 0.9)
-        p.icon(icon, x, y, 19, BLUE)
-        p.emit(index, x + 29, y + 1, col - 29, "BarB", 11.6, BLUE)
-        if index == 9:
+        p.icon(icon, x, y, 19, p.accent)
+        p.emit(p.next, x + 29, y + 1, col - 29, "BarB", 11.6, p.accent)
+        if icon == "list":
             next_y = y + 31
-            for i in range(10, 14):
-                next_y = p.emit(i, x, next_y, col, "Bar", 10.9, TEXT, 13.5) + 6
+            while p.next < len(p.items) - 1:
+                next_y = p.emit(p.next, x, next_y, col, "Bar", 10.9, TEXT, 13.5) + 6
         else:
-            p.emit(index + 1, x, y + 31, col, "Bar", 11.3, TEXT, 14.1)
+            size, leading = 11.3, 14.1
+            while len(split_lines(p.items[p.next], "Bar", size, col)) * leading > 90:
+                size -= 0.25
+                leading -= 0.3
+            p.emit(p.next, x, y + 31, col, "Bar", size, TEXT, leading)
     p.rect(L, 448, BW, 80, NAVY)
-    p.emit(14, L + 14, 460, BW - 28, "BarB", 11.2, WHITE, 14.2)
+    p.emit(p.next, L + 14, 460, BW - 28, "BarB", 11.2, WHITE, 14.2)
     p.finish()
 
 

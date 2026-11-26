@@ -131,11 +131,13 @@ def check_training_invitation():
         publish(Document(editable), template.name, "sst", editable, pdf,
                 calendar_rows=[{"kind": "period", "label": "Période de formation", "start": "2027-01-04", "end": "2027-01-05"}])
         with pymupdf.open(pdf) as book:
-            require(len(book) == 3 and all(page.rect.width > page.rect.height for page in book),
+            require(len(book) == 4 and all(page.rect.width > page.rect.height for page in book),
                     "Incorrect training invitation page layout")
             require(all("Camille EXEMPLE" in book[i].get_text() for i in (0, 1)), "Lost recipient")
             require(book[2].search_for("Janvier 2027") and all(page.search_for("(VAE)") for page in book),
                     "Missing monthly calendar or Qualiopi VAE category")
+            require(book[3].search_for("ATTITUDE & RESPECT") and not book[2].search_for("planning individuel"),
+                    "Missing APS rules page or obsolete calendar note")
             require(book[1].search_for("Clément VAILLANT") and any(im[2:4] == (283, 158) for im in book[1].get_images()),
                     "Missing director signature")
             require(any(link.get("uri") == PORTAL for page in book for link in page.get_links()),
@@ -188,12 +190,40 @@ def check_aps_invitation():
     print("OK: APS monthly calendar, cover dates and Puget parking map", flush=True)
 
 
+def check_a3p_invitation():
+    from academy_convocations import publish
+    from academy_convocations.source import ROOT
+    from docxtpl import DocxTemplate
+    import pymupdf
+
+    template = ROOT / "templates_word/convocationa3p.docx"
+    with tempfile.TemporaryDirectory(prefix="a3p-invitation-check-") as work:
+        editable = Path(work) / "invitation.docx"
+        pdf = editable.with_suffix(".pdf")
+        source = DocxTemplate(template)
+        source.render({"nom_complet": "Camille EXEMPLE", "ville": "PUGET-SUR-ARGENS",
+                       "periode_formation": "du 08/03/2027 au 06/05/2027", "date_examen": "07/05/2027",
+                       "date_debut_formation": "08/03/2027", "date_jour": "01/02/2027"}, autoescape=True)
+        source.save(editable)
+        publish(Document(editable), template.name, "a3p", editable, pdf)
+        with pymupdf.open(pdf) as book:
+            rules = book[4]
+            left = rules.search_for("ATTITUDE & RESPECT")[0]
+            right = rules.search_for("TENUE ADAPTÉE EN COURS")[0]
+            require(left.y0 == right.y0 and right.x0 > left.x1 + 100, "Misaligned A3P training rules")
+            require(book[5].search_for("dortoir collectif") and book[6].search_for("VIE COLLECTIVE")
+                    and book[7].search_for("À MOINS DE 5 MINUTES") and book[8].search_for("COUCHAGE & HYGIÈNE"),
+                    "Missing A3P residential pages")
+    print("OK: APS reference rules and A3P accommodation in PDF and Word", flush=True)
+
+
 def main():
     check_linux_worker()
     check_images()
     check_office()
     check_training_invitation()
     check_aps_invitation()
+    check_a3p_invitation()
     print("Document converter checks passed.", flush=True)
 
 

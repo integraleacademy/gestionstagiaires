@@ -256,13 +256,4 @@ class Agenda:
         p.txt(L + 18, 500, "Autres jours", "Bar", 10.2, grid.MUTED)
         grid.holiday_mark(p, L + 117, 495, 3.5)
         p.txt(L + 128, 500, "Jour férié", "Bar", 10.2, grid.MUTED)
-        if any(e.kind == "period" for e in self.events):
-            p.txt(
-                L,
-                521,
-                "Les journées de présence figurent au planning individuel.",
-                "Bar",
-                10,
-                grid.MUTED,
-            )
         p.txt(R - 147, 521, "Sous réserve de modifications.", "BarB", 10.3, grid.MUTED)

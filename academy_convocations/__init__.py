@@ -3,7 +3,7 @@
 import re
 import unicodedata
 
-VERSION = "ligne-directe-calendriers-2027-2"
+VERSION = "modele-aps-regles-et-sejour-2027-1"
 
 
 def family(value):
@@ -32,7 +32,7 @@ def publish(
 ):
     from . import editable, flow, paris
     from .drawing import LayoutDoesNotFit
-    from .source import Source, use_puget_plan
+    from .source import Source, use_puget_plan, include_training_rules
     from .agenda import Agenda
 
     source = Source(document)
@@ -49,6 +49,8 @@ def publish(
     ).get(group, "FORMATION PROFESSIONNELLE")
     if template_name != "convocationaps.docx":
         use_puget_plan(source, template_name, site)
+    if template_name == "convocationformation.docx":
+        include_training_rules(source, group)
     if template_name == "convocationaps.docx":
         from . import aps
 
