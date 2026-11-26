@@ -8036,7 +8036,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
         "et de l’établissement qui fournit le véhicule, indiquez Intégrale Sécurité Formations.</p>"
         if theory_passed else ""
     )
-    subject = "Formation pratique Chauffeur VTC 🚘"
+    subject = "Convocation à la formation pratique Chauffeur VTC – Intégrale Academy"
     body = mail_layout(f"""
       <h2 style="margin:0 0 12px 0;color:#0f172a;">Convocation formation pratique</h2>
         <p style="margin:0 0 10px 0;">Bonjour {trainee_first_name},</p>
@@ -8061,8 +8061,9 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
           <li>conseils méthodologiques pour optimiser votre passage devant le jury.</li>
         </ul>
 
-        <p style="margin:0 0 10px 0;">Vous trouverez en pièce-jointe votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
+        <p style="margin:0 0 10px 0;">Vous trouverez en pièce jointe votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
         ⚠️ Il est impératif de présenter ce document le jour de l’examen : en son absence, le jury peut prononcer un ajournement.</p>
+        <p><a href="{training_convocations.PORTAL_URL}">Ouvrir mon espace stagiaire</a></p>
 
         <p style="margin:0 0 10px 0;">Nous restons à votre disposition si vous avez la moindre question.<br>
         À très bientôt pour la préparation finale ! 🚗</p>
@@ -40330,8 +40331,6 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         remote_end = str(_session_get(session_obj, "aps_remote_end", "") or remote_start).strip()
         in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
         in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
-    public_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
-    trainee_space_url = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire"
     date_start = str(_session_get(session_obj, "date_start", "")).strip()
     date_end = str(_session_get(session_obj, "date_end", "")).strip()
     exam_date = str(
@@ -40369,7 +40368,7 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "periode_presentiel": f"du {fr_date(in_person_start)} au {fr_date(in_person_end)}",
         "date_examen": fr_date(exam_date), "heure_examen": exam_time,
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
-        "lieu_formation": place, "lieu_examen": place, "espace_stagiaire_url": trainee_space_url,
+        "lieu_formation": place, "lieu_examen": place, "espace_stagiaire_url": training_convocations.PORTAL_URL,
         "modalites_suivi": "Suivi pédagogique et administratif assuré par l’équipe Intégrale Academy.",
         "date_ouverture": fr_date(remote_start),
         # Variables VTC.  Les alias permettent de choisir des noms explicites
@@ -40931,6 +40930,7 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
             "du véhicule à doubles commandes.</p>"
             "<p>Ce document accompagne votre convocation officielle de la CMA. "
             "Aucune formation pratique ou théorique n'est incluse dans votre formule.</p>"
+            f'<p><a href="{training_convocations.PORTAL_URL}">Ouvrir mon espace stagiaire</a></p>'
             "<p>Nous restons à votre disposition au 04 22 47 07 68.</p>"
         )
         return subject, body
@@ -40953,7 +40953,7 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
     subject = f"Convocation formation {short_label} - Intégrale Academy"
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
-    safe_space_url = html.escape(f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire", quote=True)
+    safe_space_url = html.escape(training_convocations.PORTAL_URL, quote=True)
     period_label = ""
     if date_start and date_end:
         period_label = f"du {html.escape(fr_date(date_start))} au {html.escape(fr_date(date_end))}"
@@ -40988,7 +40988,7 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);"><a href="{safe_space_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Accéder à mon espace stagiaire</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:15px;line-height:1.6;">En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com" style="color:#0b5ed7;text-decoration:underline;">ecole@integraleacademy.com</a>.</p>
           <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">À très bientôt,</p>
-        """, title=f"Votre convocation {short_label}", eyebrow="PRÉPAREZ VOTRE FORMATION", signature="team")
+        """, title=f"Votre convocation {short_label}", eyebrow="PRÉPAREZ VOTRE FORMATION", signature="team", show_funding_note=not afc)
     return subject, html_body
 
 

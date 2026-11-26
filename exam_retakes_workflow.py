@@ -10,6 +10,7 @@ from pypdf import PdfReader
 
 from exam_retakes import (CONVOCATION_VERSION, RetakeError, cents, components, convocation_confirmed, convocation_delivery_key, convocation_requested,
                           discount_label, exam_upcoming, line_items, money, now, today)
+from training_convocations import PORTAL_URL
 from exam_retakes_documents import build_convocation, email_content
 from manuals_commerce import read_invoice_link_payments, safe_payment_url
 
@@ -323,7 +324,7 @@ def send_confirmed_documents(host, store, row, target, portal, documents):
             files = [('Convocation-rattrapage-' + row['exam_date'] + '.pdf', path)]
             if not emails.get('documents', {}).get('sent_at'):
                 files.extend(documents)
-            receipt = send_email(host, store, row, 'convocation', portal, files, delivery_key=key)
+            receipt = send_email(host, store, row, 'convocation', PORTAL_URL, files, delivery_key=key)
         # Preserve the original confirmation and document checkpoints, including on restart.
         if row['total_cents'] and not emails.get('confirmed', {}).get('sent_at'):
             emails['confirmed'] = dict(receipt)

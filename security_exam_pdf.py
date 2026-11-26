@@ -12,13 +12,14 @@ from reportlab.lib import colors
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 
+from training_convocations import PORTAL_URL
 from ssiap_exam_pdf import (
     W, H, M, WIDTH, NAVY, TEAL, MUTED, LIGHT, GOLD, BOLD,
     candidate_portrait, finish, new_pdf, official_identity, paragraph,
     signature_assets,
 )
 
-STYLE_VERSION = "ssiap-2026-v1"
+STYLE_VERSION = "ssiap-2026-convocations-v2"
 CONTACT = {"contact_email": "ecole@integraleacademy.com", "contact_phone": "04 22 47 07 68"}
 ADDRESS = "54 chemin du Carreou · 83480 Puget-sur-Argens (Var, 83)"
 PROFILES = {
@@ -208,6 +209,8 @@ def _convocation(c, training, profile, context, root, assets, exam=False):
     paragraph(c, note, M, 295, size=9.5, leading=14)
     paragraph(c, "Nous vous prions d’agréer l’expression de nos salutations distinguées.",
               M, 250, size=9)
+    paragraph(c, PORTAL_URL, M, 22, WIDTH * .65, 7.5, TEAL)
+    c.linkURL(PORTAL_URL, (M, 10, M + pdfmetrics.stringWidth(PORTAL_URL, BOLD, 7.5), 25), relative=0)
     _signature(c, context["date_15_jours_avant_examen"] if exam else
                context["date_un_mois_avant_debut_formation"], assets)
 

@@ -1,0 +1,26 @@
+<section class="conv-wait" role="dialog" aria-modal="true" aria-label="Préparation de votre convocation">
+  <div class="conv-wait__wrap">
+    <div class="conv-wait__brand"><img src="{{ url_for('static', filename='parcours-alternance/logo.png') }}" alt="Intégrale Academy" width="160" height="48"></div>
+    <div class="conv-wait__card">
+      <div class="conv-wait__art" aria-hidden="true">
+        <span class="conv-wait__orbit"></span>
+        <div class="conv-wait__paper"><i></i><b></b><span></span><span></span><em></em></div>
+      </div>
+      <div class="conv-wait__body">
+        <h1 class="conv-wait__title" tabindex="-1">{% if preparation_error %}Préparation interrompue{% else %}Préparation de votre convocation{% endif %}</h1>
+        <p class="conv-wait__status" role="status" aria-live="polite"
+           {% if job %}id="preparation" data-job-id="{{ job.job_id }}"{% endif %}>{{ preparation_error or "Votre PDF s’ouvrira automatiquement dès qu’il sera prêt." }}</p>
+        <div class="conv-wait__progress" aria-hidden="true" {% if preparation_error %}hidden{% endif %}><span></span></div>
+        <div class="conv-wait__actions">
+          <a class="conv-wait__action" data-conv-retry {% if not parent_preview %}href="{{ request.full_path.rstrip('?') }}"{% endif %} {% if not preparation_error %}hidden{% endif %}>Réessayer</a>
+          {% if parent_preview %}
+          <button type="button" class="conv-wait__back" data-conv-close>Fermer l’aperçu</button>
+          {% else %}
+          <a class="conv-wait__back" data-conv-back href="{{ return_url }}">Retour</a>
+          <noscript><a class="conv-wait__action" href="{{ request.full_path.rstrip('?') }}">Actualiser</a></noscript>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

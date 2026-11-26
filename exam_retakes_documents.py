@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 import desp_paris_venue
+from training_convocations import PORTAL_URL
 
 from exam_retakes import date_label, discount_label, financial_totals, line_items, money
 from convention_design import REGISTRATION_LINES
@@ -158,12 +159,12 @@ def build_convocation(row):
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     font = retake_font()
-    navy, muted = colors.HexColor("#14283F"), colors.HexColor("#53687B")
+    navy, muted = colors.HexColor("#0C1A2F"), colors.HexColor("#506477")
     body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=10, leading=14, textColor=navy)
     title = ParagraphStyle("ConvocationTitle", parent=body, fontName=font+"-Bold", fontSize=25, leading=31)
     label = ParagraphStyle("ConvocationLabel", parent=body, fontSize=9, textColor=muted)
     strong = ParagraphStyle("ConvocationValue", parent=body, fontName=font+"-Bold")
-    heading = ParagraphStyle("ConvocationHeading", parent=strong, fontSize=12, leading=16,
+    heading = ParagraphStyle("ConvocationHeading", parent=strong, textColor=colors.HexColor("#09677B"), fontSize=12, leading=16,
                              spaceBefore=9, spaceAfter=4, keepWithNext=True)
 
     def line(value, style=body):
@@ -178,7 +179,9 @@ def build_convocation(row):
     panel = Table([[line(key, label), line(value, strong)] for key, value in details],
                   colWidths=[119, 363], hAlign="LEFT")
     panel.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F1F5FA")),
+        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.HexColor("#EDF4F6"), colors.white]),
+        ("LINEBELOW", (0, 0), (-1, -1), .5, colors.HexColor("#D5DFE5")),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#09677B")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
         ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
@@ -221,7 +224,7 @@ def build_convocation(row):
     if row.get("kind") == "DESP" and row.get("location") == desp_paris_venue.FULL_ADDRESS:
         from reportlab.platypus import Image, PageBreak
         story.extend([PageBreak(), line("Venir au centre de formation", title),
-                      line(desp_paris_venue.FULL_ADDRESS, strong), line(desp_paris_venue.ENTRANCE),
+                      line(desp_paris_venue.FULL_ADDRESS, strong),
                       Spacer(1, 12), Image(str(desp_paris_venue.MAP_PATH), width=480, height=255),
                       Spacer(1, 12), line(desp_paris_venue.PRIMARY_METRO, heading),
                       line(desp_paris_venue.WALK), line("Autres accès", heading),
@@ -229,6 +232,7 @@ def build_convocation(row):
                       line("Bus " + desp_paris_venue.BUS), line(desp_paris_venue.PARKING),
                       Spacer(1, 8), Paragraph('<link href="' + escape(desp_paris_venue.DIRECTIONS_URL)
                                              + '"><u>Ouvrir l’itinéraire dans Google Maps</u></link>', body)])
+    story.append(Paragraph(f'<link href="{PORTAL_URL}" color="#09677B"><u>{PORTAL_URL}</u></link>', label))
     out = BytesIO()
     frame = retake_page_frame(font, "CONVOCATION", row["id"][:12].upper())
     SimpleDocTemplate(out, pagesize=A4, rightMargin=48, leftMargin=48, topMargin=112, bottomMargin=52,

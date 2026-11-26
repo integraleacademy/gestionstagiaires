@@ -3,9 +3,10 @@ import hashlib
 import json
 from functools import wraps
 
-from flask import copy_current_request_context, current_app, g, jsonify, render_template, request, session
+from flask import copy_current_request_context, current_app, g, jsonify, render_template, request, session, url_for
 
 from maintenance_jobs import MaintenanceQueue
+from training_convocations import PORTAL_URL
 
 
 def browser_request():
@@ -61,6 +62,10 @@ def wait_page():
             response.close()
 
     job = runner.submit(scope, scope, prepare)
+    return_url = url_for("admin_sessions") if request.path.startswith("/admin/") else PORTAL_URL
+    headers = {"Cache-Control": "private, no-store"}
     if job is None:
-        return "Les convocations sont en cours de préparation. Réessayez dans un instant.", 429, {"Retry-After": "3"}
-    return render_template("convocation_preparation.html", job=job), 202, {"Cache-Control": "private, no-store"}
+        message = "D’autres convocations sont en cours de préparation. Vous pouvez réessayer dans quelques instants."
+        return render_template("convocation_preparation.html", job=None, preparation_error=message,
+                               return_url=return_url), 429, {**headers, "Retry-After": "3"}
+    return render_template("convocation_preparation.html", job=job, return_url=return_url), 202, headers
