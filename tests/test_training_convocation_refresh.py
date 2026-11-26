@@ -310,6 +310,8 @@ def test_browser_refreshes_issued_convocation_outside_request_and_preserves_down
     browser = {"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"}
     queued = case.client.get(URL + "?download=1", headers=browser)
     assert queued.status_code == 202
+    assert b'role="dialog"' in queued.data and b'data-convocation-wait' in queued.data
+    assert convocations.PORTAL_URL.encode() in queued.data
     assert entered.wait(5)
     job_id = re.search(rb'data-job-id="([0-9a-f]+)"', queued.data).group(1).decode()
     status = URL + "?preparation=" + job_id

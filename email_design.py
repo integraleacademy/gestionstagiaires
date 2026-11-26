@@ -99,7 +99,7 @@ def normalize_email_text_signature(content):
 
 def render_email(content, *, title="", eyebrow="VOTRE PARCOURS DE FORMATION",
                  subtitle="On avance avec vous.", preheader="", signature="team",
-                 logo_url="", footer_text="", show_logo=True):
+                 logo_url="", footer_text="", show_logo=True, show_funding_note=True):
     content = str(content or "")
     # A heading formerly displayed above the greeting now belongs in the hero.
     heading = re.match(r"\s*<h[12]\b[^>]*>(.*?)</h[12]>\s*", content, re.I | re.S)
@@ -124,5 +124,5 @@ def render_email(content, *, title="", eyebrow="VOTRE PARCOURS DE FORMATION",
         content=style_fragment(content), email_heading=title, email_eyebrow=eyebrow,
         email_subtitle=subtitle, email_preheader=preheader or title,
         email_signature=signature, email_logo=logo_url, email_show_logo=show_logo,
-        email_footer_note=footer_text, email_base_url=PUBLIC_ASSETS,
+        email_footer_note=footer_text, email_show_funding_note=show_funding_note, email_base_url=PUBLIC_ASSETS,
     )

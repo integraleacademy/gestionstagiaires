@@ -158,6 +158,7 @@ def test_all_dynamic_dates_and_correct_site_update_without_mutations(case):
     assert 'Votre accès au e-learning est ouvert.' in document[33].get_text()
     if city == 'paris':
         assert '34 rue Poissonnière' in document[17].get_text() and 'Grand Rex' in document[17].get_text()
+        assert 'bâtiment b' not in text.lower() and '1er étage' not in text.lower()
         assert 'Vinaigriers' not in text
     else:
         assert 'PUGET-SUR-ARGENS' in document[17].get_text()

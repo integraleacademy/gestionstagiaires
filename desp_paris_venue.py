@@ -14,7 +14,6 @@ CITY = "75002 Paris"
 LANDMARK = "à 50 mètres du Grand Rex"
 ADDRESS = f"{STREET} {CITY} - {LANDMARK}"
 FULL_ADDRESS = f"{NAME} {ADDRESS}"
-ENTRANCE = "Bâtiment B, 1er étage"
 WALK = ("À la sortie 1, longez le boulevard jusqu’au Grand Rex. Prenez la rue Poissonnière "
         "sur le côté du cinéma et continuez jusqu’au n° 34.")
 PRIMARY_METRO = "Bonne Nouvelle · lignes 8 et 9 · sortie 1 « Rue du Sentier »"
@@ -66,7 +65,7 @@ def document_context(training):
 
 
 def access_details():
-    return dict(name=NAME, street=STREET, city=CITY, landmark=LANDMARK, entrance=ENTRANCE,
+    return dict(name=NAME, street=STREET, city=CITY, landmark=LANDMARK,
                 walk=WALK, metro=PRIMARY_METRO, other_metro=OTHER_METROS, sentier=SENTIER,
                 bus=BUS, parking=PARKING, url=DIRECTIONS_URL, map_file=MAP_FILE)
 

@@ -10,6 +10,9 @@ from contextlib import contextmanager
 from pathlib import Path
 
 
+PORTAL_URL = "https://integraleconnect.com/espacestagiaire"
+
+
 def source_hash(context, template_path):
     # The issue date alone must not force a new conversion every day.
     values = {key: value for key, value in context.items() if key != "date_jour"}

@@ -15,10 +15,13 @@ import uuid
 
 from exam_retakes import money
 import vtc_offer_contracts
+from training_convocations import PORTAL_URL
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Cm, Pt
+from docx.shared import Pt, RGBColor
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 FULL = "full"
 PRACTICE = "practice"
@@ -120,22 +123,22 @@ def _contract_document(training, trainee, *, practice_slot=None, reference=None,
 
 
 def _examiner_document(training, trainee):
-    doc = Document()
-    section = doc.sections[0]
-    section.top_margin = Cm(1.7)
-    section.bottom_margin = Cm(1.6)
-    section.left_margin = Cm(2.0)
-    section.right_margin = Cm(2.0)
-    normal = doc.styles["Normal"]
-    normal.font.name = "Aptos"
-    normal.font.size = Pt(10)
-    normal.paragraph_format.space_after = Pt(6)
-
-    title = "DOCUMENT À PRÉSENTER AUX EXAMINATEURS LE JOUR DE VOTRE EXAMEN PRATIQUE"
-    heading = doc.add_heading(title, 0)
-    heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    for run in heading.runs:
-        run.font.size = Pt(15)
+    # Use the same stationery as the VTC convocation while keeping the vehicle-only wording.
+    doc = Document(Path(__file__).parent / "templates_word" / "convocationvtc.docx")
+    doc.element.body.clear_content()
+    for rel in list(doc.part.rels.values()):
+        if rel.reltype in (RT.IMAGE, RT.HYPERLINK):
+            doc.part.drop_rel(rel.rId)
+    doc.core_properties.title = "Prêt de véhicule pour l’examen pratique VTC"
+    title = doc.add_paragraph()
+    label = title.add_run("DOCUMENT À PRÉSENTER AUX EXAMINATEURS")
+    label.bold = True
+    label.font.size = Pt(9)
+    label.font.color.rgb = RGBColor.from_string("09677B")
+    heading = doc.add_paragraph().add_run("Prêt de véhicule pour l’examen pratique VTC")
+    heading.bold = True
+    heading.font.size = Pt(23)
+    heading.font.color.rgb = RGBColor.from_string("0C1A2F")
 
     _add(doc, SCHOOL, bold=True)
     _add(doc, SCHOOL_ADDRESS)
@@ -168,6 +171,14 @@ def _examiner_document(training, trainee):
          "utiles à l’examen, contactez directement l’établissement.")
     _add(doc, "Fait à Puget-sur-Argens, le " + dt.date.today().strftime("%d/%m/%Y") + ".")
     _add(doc, SCHOOL + " – Coordonnées : " + SCHOOL_CONTACT)
+    portal = doc.add_paragraph("Espace stagiaire · ")
+    link = OxmlElement("w:hyperlink")
+    link.set(qn("r:id"), doc.part.relate_to(PORTAL_URL, RT.HYPERLINK, is_external=True))
+    run = portal.add_run(PORTAL_URL)
+    run.font.color.rgb = RGBColor.from_string("09677B")
+    run.underline = True
+    link.append(run._r)
+    portal._p.append(link)
     return doc
 
 
@@ -222,7 +233,7 @@ def convention(host, training, trainee, session_id="", trainee_id="", *, output_
 
 def vehicle_hash(training, trainee):
     fields = {
-        "version": 2, "offer": offer(trainee),
+        "version": 3, "offer": offer(trainee),
         "identity": [trainee.get(k) for k in ("id", "first_name", "last_name", "vtc_exam_center", "vtc_practice_exam_date")],
         "exam_dates": [training.get("exam_practice_date"), training.get("exam_date")],
     }

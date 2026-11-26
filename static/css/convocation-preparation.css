@@ -1,0 +1,34 @@
+.conv-wait, .conv-wait * { box-sizing: border-box; }
+.conv-wait {
+  position: fixed; inset: 0; z-index: 1; overflow: auto; overscroll-behavior: contain;
+  display: grid; align-items: center; justify-items: center; padding: clamp(20px, 5vw, 64px);
+  background: radial-gradient(ellipse at 16% 11%, #233d51 0%, transparent 48%), #0c1a2f;
+  font: 400 16px/1.5 system-ui, sans-serif; color: #152a40; text-align: left; color-scheme: light;
+}
+.conv-wait [hidden] { display: none !important; }
+.conv-wait__wrap { width: min(100%, 470px); }
+.conv-wait__brand { margin: 0 0 17px; }
+.conv-wait__brand img { display: block; width: 160px; height: 48px; object-fit: contain; object-position: left; }
+.conv-wait__card { overflow: hidden; border: 1px solid #c4cfd6; border-radius: 24px; background: #fff; box-shadow: 0 26px 75px #030b1570; }
+.conv-wait__art { position: relative; height: clamp(115px, 19vh, 165px); overflow: hidden; display: grid; place-items: center; background: #e7f0f2; }
+.conv-wait__orbit { position: absolute; width: 130%; aspect-ratio: 1; border-radius: 50%; right: -45%; top: -235%; background: repeating-radial-gradient(circle,transparent 0 14px,#b5cbd1 15px,transparent 16px); }
+.conv-wait__paper { width: 76px; height: 94px; transform: rotate(-7deg); background: #fff; border: 1px solid #99adb9; border-radius: 6px; box-shadow: 7px 8px #c2d5d9; position: relative; padding: 12px 9px; }
+.conv-wait__paper i { display: block; height: 23px; background: #10233a; border-left: 3px solid #d9b767; }
+.conv-wait__paper b, .conv-wait__paper > span { display: block; height: 3px; margin: 6px 0 0; border-radius: 2px; background: #a9bac4; width: 88%; }
+.conv-wait__paper b { width: 50%; background: #337c86; margin-top: 10px; }
+.conv-wait__paper > span:last-of-type { width: 65%; }
+.conv-wait__paper em { position: absolute; bottom: 7px; right: 7px; width: 13px; height: 13px; border-radius: 50%; border: 2px solid #ccab67; }
+.conv-wait__body { padding: clamp(23px, 5vw, 38px); }
+.conv-wait .conv-wait__title { margin: 0; max-width: 16ch; font: 720 clamp(27px, 4.5vw, 37px)/1.08 system-ui, sans-serif; color: #0c1a2f; letter-spacing: -.047em; overflow-wrap: break-word; }
+.conv-wait .conv-wait__title:focus { outline: none; }
+.conv-wait .conv-wait__status { min-height: 2.9em; margin: 13px 0 0; font: 400 15px/1.5 system-ui,sans-serif; color: #4c5e6e; }
+.conv-wait__progress { overflow: hidden; margin: 18px 0 4px; height: 4px; border-radius: 9px; background: #dee8eb; }
+.conv-wait__progress > span { display: block; height: 100%; width: 38%; border-radius: inherit; background: #157587; animation: conv-wait-slide 2s ease-in-out infinite alternate; }
+@keyframes conv-wait-slide { from {transform: translateX(0)} to {transform: translateX(163%)} }
+.conv-wait__actions { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 18px; }
+.conv-wait .conv-wait__back, .conv-wait .conv-wait__action { display: inline-flex; min-height: 38px; align-items: center; border: 0; margin: 0; font: 650 14px/1.3 system-ui,sans-serif; cursor: pointer; }
+.conv-wait .conv-wait__back { background: transparent; color: #405767; text-decoration: underline; text-underline-offset: 4px; padding: 2px 0; }
+.conv-wait .conv-wait__action { background: #0d5666; color: #fff; border-radius: 8px; text-decoration: none; padding: 8px 14px; }
+.conv-wait a:focus-visible, .conv-wait button:focus-visible { outline: 3px solid #b97918; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .conv-wait__progress > span { animation: none; } }
+@media (max-height: 550px) { .conv-wait { padding: 14px; } .conv-wait__brand { margin-bottom: 8px; } .conv-wait__art { height: 75px; } .conv-wait__paper { transform: scale(.67) rotate(-7deg); align-self: start; margin-top: -10px; } .conv-wait__body { padding: 16px 24px; } }

@@ -414,6 +414,7 @@
     </div>
   </div>
 
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/convocation-preparation.css') }}">
   <div class="modal-backdrop convention-preview-backdrop" id="conventionPreviewModal" aria-hidden="true">
     <div class="modal convention-preview-modal" role="dialog" aria-modal="true" aria-labelledby="conventionPreviewTitle">
       <div class="convention-preview-modal__head">
@@ -433,6 +434,9 @@
             <strong>Prévisualisation en cours de chargement</strong>
             <small>Génération sécurisée du document PDF…</small>
           </div>
+        </div>
+        <div class="convocation-initial-wait" hidden>
+          {% with parent_preview=true, job=none, preparation_error=none %}{% include '_convocation_wait_panel.html' %}{% endwith %}
         </div>
         <iframe id="conventionPreviewFrame" class="convention-preview-modal__frame" title="Aperçu de la convention"></iframe>
       </div>
@@ -461,6 +465,16 @@
 
 
     .convention-preview-backdrop{background:rgba(15,23,42,.68);backdrop-filter:blur(9px);padding:12px;}
+    html:has(#conventionPreviewModal.show.is-convocation-preparing) { zoom: 1; }
+    .convocation-initial-wait[hidden] { display: none !important; }
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal__frame { transition: none; }
+    #conventionPreviewModal.is-convocation-preparing { position: fixed; inset: 0; margin: 0; padding: 0; }
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal { position: absolute; inset: 0; width: auto; height: auto; max-width: none !important; max-height: none !important; margin: 0; border: 0 !important; border-radius: 0 !important; transform: none; }
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal__head,
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal__actions,
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal__loader { display: none; }
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal__framewrap,
+    #conventionPreviewModal.is-convocation-preparing .convention-preview-modal__frame { padding: 0; margin: 0; border: 0; border-radius: 0; }
     .convention-preview-modal{width:calc(100vw - 24px);height:calc(100dvh - 24px);max-width:none;max-height:none;display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:26px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 30px 90px rgba(15,23,42,.36);}
     .convention-preview-modal__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:16px 22px 12px;border-bottom:1px solid #e2e8f0;background:linear-gradient(135deg,#eff6ff,#ffffff 58%,#ecfeff);}
     .convention-preview-modal__kicker{margin-bottom:6px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
@@ -794,6 +808,22 @@
         resolve(false);
         return;
       }
+      const initialWait = modal.querySelector(".convocation-initial-wait");
+      const waitClose = initialWait.querySelector("[data-conv-close]");
+      const opener = document.activeElement;
+      const convocation = new URL(url, location.href).pathname.includes("convocation");
+      modal.classList.toggle("is-convocation-preparing", convocation);
+      initialWait.hidden = !convocation;
+      const handlePreparation = event => {
+        if (!convocation || event.origin !== location.origin || event.source !== frame.contentWindow) return;
+        if (event.data?.convocationPreview === "close") { finish(); return; }
+        if (event.data?.convocationPreview === "waiting") {
+          modal.classList.add("is-convocation-preparing");
+          initialWait.hidden = true;
+        } else if (event.data?.convocationPreview === "ready") {
+          modal.classList.remove("is-convocation-preparing");
+        }
+      };
       const defaultTitle = title?.dataset.defaultText || title?.textContent || "Prévisualisation";
       const defaultDescription = description?.dataset.defaultText || description?.textContent || "Vérifiez le document avant de confirmer l’envoi.";
       if(title){
@@ -809,6 +839,10 @@
         closeButton.removeEventListener("click", finish);
         closeIcon.removeEventListener("click", finish);
         frame.removeEventListener("load", onFrameLoad);
+        window.removeEventListener("message", handlePreparation);
+        waitClose.removeEventListener("click", finish);
+        initialWait.hidden = true;
+        modal.classList.remove("is-convocation-preparing");
         frame.classList.remove("is-loaded");
         loader?.classList.remove("is-hidden");
         frame.removeAttribute("src");
@@ -816,9 +850,16 @@
         if(title){ title.textContent = defaultTitle; }
         if(description){ description.textContent = defaultDescription; }
         closeModal("conventionPreviewModal");
+        if (convocation && opener?.isConnected) opener.focus();
         resolve(true);
       };
       const onFrameLoad = ()=>{
+        if (convocation) {
+          initialWait.hidden = true;
+          let waiting = false;
+          try { waiting = frame.contentDocument?.documentElement?.hasAttribute("data-convocation-wait"); } catch {}
+          modal.classList.toggle("is-convocation-preparing", Boolean(waiting));
+        }
         frame.classList.add("is-loaded");
         loader?.classList.add("is-hidden");
       };
@@ -828,9 +869,13 @@
       closeButton.addEventListener("click", finish, {once:true});
       closeIcon.addEventListener("click", finish, {once:true});
       frame.addEventListener("load", onFrameLoad);
+      if (convocation) {
+        window.addEventListener("message", handlePreparation);
+        waitClose.addEventListener("click", finish, {once:true});
+      }
       frame.src = url;
       openModal("conventionPreviewModal");
-      closeButton.focus();
+      (convocation ? waitClose : closeButton).focus();
     });
   }
 

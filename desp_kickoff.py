@@ -17,7 +17,7 @@ import desp_calendar
 import desp_paris_venue as paris_venue
 
 ASSETS = Path(__file__).with_name('desp_kickoff_assets')
-VERSION = '20261126-paris-venue'
+VERSION = '20261126-paris-acces'
 DATE_FIELDS = ('date_start', 'date_end', 'dirigeant_remote_start', 'dirigeant_remote_end',
                'dirigeant_in_person_start', 'dirigeant_in_person_end', 'exam_date')
 CITIES = {'paris': 'Paris', 'puget': 'Puget-sur-Argens'}
@@ -118,7 +118,7 @@ def _paris_access_slide(doc, dates):
           46, 115, 18, color=desp_calendar.MUTED)
     label(paris_venue.NAME, 46, 183, 26, bold=True)
     label(paris_venue.STREET + '\n' + paris_venue.CITY, 46, 226, 23, bold=True)
-    label(paris_venue.ENTRANCE + '\n' + paris_venue.LANDMARK, 46, 296, 18)
+    label(paris_venue.LANDMARK.replace('à ', 'À ', 1), 46, 296, 18)
     label('Métro Bonne Nouvelle', 46, 371, 19, color=desp_calendar.GREEN, bold=True)
     label('Lignes 8 et 9 · Sortie 1\nRue du Sentier', 46, 400, 16)
     page.insert_image(fitz.Rect(375, 146, 922, 440), filename=str(paris_venue.MAP_PATH))
