@@ -68,17 +68,19 @@ def split_lines(value, font, size, width):
 
 
 class Book:
-    def __init__(self, ref, out, family="desp"):
+    def __init__(self, ref, out, family="desp", *, canvas=None):
         register_fonts()
         self.ref = ref
         self.W, self.H = landscape(A4)
-        self.c = Canvas(str(out), pagesize=(self.W, self.H), pageCompression=1)
-        self.c.setTitle("Convocation · Intégrale Academy")
-        self.c.setAuthor("Intégrale Academy")
+        self.c = canvas or Canvas(str(out), pagesize=(self.W, self.H), pageCompression=1)
+        if canvas is None:
+            self.c.setTitle("Convocation · Intégrale Academy")
+            self.c.setAuthor("Intégrale Academy")
         self.accent, self.light, self.ink, self.bright = PALETTES.get(
             family, PALETTES["other"]
         )
         self.n = 0
+        self.source_page = 0
         self.total = len(ref.pages)
         self.image_cache = {}
 
@@ -181,8 +183,8 @@ class Book:
         self.link(x, y, w, w, self.ref.maps)
 
     def signature(self, x, y, size=137):
-        self.img("signature.png", x, y + 9, 51)
-        self.img("cachet.png", x + 65, y, size)
+        self.img("signature.png", x, y + 2, 77)
+        self.img("cachet.png", x + 89, y, size)
 
     def footer(self):
         y = self.H - 60
@@ -217,7 +219,10 @@ class Book:
 
     def begin(self, cover=False, *, items=None, outline=None):
         self.n += 1
-        self.items = items if items is not None else self.ref.pages[self.n - 1]
+        if items is None:
+            items = self.ref.pages[self.source_page]
+            self.source_page += 1
+        self.items = items
         self.next = 0
         self.rect(0, 0, self.W, self.H, WHITE)
         h = (self.ref.header + ["", ""])[:2]
@@ -369,7 +374,7 @@ class Book:
         self.c.save()
 
 
-def standalone_panel(canvas, family, logo, brand_lines, kicker, title):
+def standalone_panel(canvas, family, logo, brand_lines, kicker, title, *, quality_box=(33, 12, 770)):
     """Sidebar used by standalone exam invitations, including dossier inserts."""
     register_fonts()
     color, _, _, bright = PALETTES.get(family, PALETTES["other"])
@@ -394,4 +399,11 @@ def standalone_panel(canvas, family, logo, brand_lines, kicker, title):
     for line in split_lines(title, "Cond", 26, 145):
         canvas.drawString(24, y, line)
         y -= 29
+    canvas.setFillColor(HexColor("#506477"))
+    x, baseline, width = quality_box
+    canvas.setFont("Bar", 8)
+    label = "Qualiopi · Actions de formation, actions de formation par apprentissage et actions permettant de faire valider les acquis de l’expérience (VAE)."
+    for line in split_lines(label, "Bar", 8, width):
+        canvas.drawString(x, baseline, line)
+        baseline -= 10
     canvas.restoreState()

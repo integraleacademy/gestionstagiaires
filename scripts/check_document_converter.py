@@ -128,18 +128,23 @@ def check_training_invitation():
             "convocation_session_complement": "",
         })
         source.save(editable)
-        publish(Document(editable), template.name, "sst", editable, pdf)
+        publish(Document(editable), template.name, "sst", editable, pdf,
+                calendar_rows=[{"kind": "period", "label": "Période de formation", "start": "2027-01-04", "end": "2027-01-05"}])
         with pymupdf.open(pdf) as book:
-            require(len(book) == 2 and all(page.rect.width > page.rect.height for page in book),
+            require(len(book) == 3 and all(page.rect.width > page.rect.height for page in book),
                     "Incorrect training invitation page layout")
-            require(all("Camille EXEMPLE" in page.get_text() for page in book), "Lost recipient")
+            require(all("Camille EXEMPLE" in book[i].get_text() for i in (0, 1)), "Lost recipient")
+            require(book[2].search_for("Janvier 2027") and all(page.search_for("(VAE)") for page in book),
+                    "Missing monthly calendar or Qualiopi VAE category")
+            require(book[1].search_for("Clément VAILLANT") and any(im[2:4] == (283, 158) for im in book[1].get_images()),
+                    "Missing director signature")
             require(any(link.get("uri") == PORTAL for page in book for link in page.get_links()),
                     "Lost trainee portal link")
         word = Document(editable)
         require(word.sections[0].page_width > word.sections[0].page_height
                 and word.element.xpath(".//w:framePr") and word.element.xpath(".//w:hyperlink"),
                 "Landscape Word invitation did not retain editable content and links")
-    print("OK: landscape training invitation PDF and editable Word", flush=True)
+    print("OK: course calendar, director signature and Qualiopi VAE - PDF and editable Word", flush=True)
 
 
 def check_aps_invitation():

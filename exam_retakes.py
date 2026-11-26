@@ -35,7 +35,7 @@ class RetakeError(ValueError):
     pass
 
 
-CONVOCATION_VERSION = 6
+CONVOCATION_VERSION = 7
 
 
 def now():

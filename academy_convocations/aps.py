@@ -108,8 +108,8 @@ def sign(p, idx, y):
     p.emit(idx + 1, L, y + 19, BW, "BarB", 13, TEXT)
     p.emit(idx + 2, L, y + 37, BW, "Bar", 10.8, MUTED)
     signature, seal = p.ref.blocks[p.n - 1][-1].pictures
-    p.bitmap(signature, L, y + 62, 57)
-    p.bitmap(seal, L + 71, y + 56, 137)
+    p.bitmap(signature, L, y + 57, 78)
+    p.bitmap(seal, L + 92, y + 56, 137)
 
 
 def letters(p, exam=False):
@@ -232,8 +232,8 @@ def rules(p):
     p.finish()
 
 
-def parking(p):
-    p.begin()
+def parking(p, items=None):
+    p.begin(items=items)
     p.side("parking")
     p.emit(2, L, 14, BW, "Cond", 27, TEXT)
     p.emit(3, L, 53, BW, "BarB", 12, TEXT)

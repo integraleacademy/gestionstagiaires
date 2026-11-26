@@ -69,13 +69,7 @@ class Schedule:
 
     def month_groups(self):
         dates = [d for d in (*self.remote, *self.centre, self.opening, self.exam) if d]
-        if not dates:
-            return [[]]
-        start, end = min(dates), max(dates)
-        first = start.year * 12 + start.month - 1
-        last = end.year * 12 + end.month - 1
-        months = [(n // 12, n % 12 + 1) for n in range(first, last + 1)]
-        return [months[i : i + 4] for i in range(0, len(months), 4)]
+        return month_groups(dates)
 
     def color(self, day):
         if day == self.exam:
@@ -91,6 +85,16 @@ class Schedule:
         if day == self.opening:
             return CENTRE
         return OFF
+
+
+def month_groups(dates):
+    if not dates:
+        return [[]]
+    start, end = min(dates), max(dates)
+    first = start.year * 12 + start.month - 1
+    last = end.year * 12 + end.month - 1
+    months = [(n // 12, n % 12 + 1) for n in range(first, last + 1)]
+    return [months[i : i + 4] for i in range(0, len(months), 4)]
 
 
 def rounded(p, x, y, width, height, fill, radius=4):
@@ -227,6 +231,11 @@ def page(p, schedule, months):
     p.emit(12, L, 510, BW - 155, "Bar", 10.2, MUTED)
     p.emit(13, R - 144, 510, 144, "BarB", 10.2, MUTED)
 
+    month_grids(p, months, schedule)
+    p.finish()
+
+
+def month_grids(p, months, schedule):
     columns = 2 if len(months) > 1 else 1
     gap = 17
     width = (BW - gap * (columns - 1)) / columns
@@ -235,4 +244,3 @@ def page(p, schedule, months):
         col, row = i % columns, i // columns
         y = (130 + 150 * row) if compact else 149
         grid(p, year, month, L + col * (width + gap), y, width, compact, schedule)
-    p.finish()

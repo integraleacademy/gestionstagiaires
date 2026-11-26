@@ -200,7 +200,8 @@ def _convocation(c, training, profile, context, root, assets, exam=False):
     standalone_panel(c, group, os.path.join(root, "static", "logo-integrale.png"),
                      ["INTÉGRALE ACADEMY", "Intégrale Sécurité Formations",
                       "54 chemin du Carreou · 83480 Puget-sur-Argens"],
-                     "Convocation officielle", "À L’EXAMEN" if exam else "EN FORMATION")
+                     "Convocation officielle", "À L’EXAMEN" if exam else "EN FORMATION",
+                     quality_box=(497, 38, 194))
 
     def write(text, top, font="Bar", size=11, color="#282320", x=216, space=590):
         style = ParagraphStyle("exam-invitation", fontName=font, fontSize=size, leading=size*1.24,
@@ -237,9 +238,21 @@ def _convocation(c, training, profile, context, root, assets, exam=False):
     y=write("Fait à Puget-sur-Argens, le " + date,y+15,size=10)
     write("Clément VAILLANT",y+8,"BarB",12)
     write("Directeur général Intégrale Academy",y+27,size=10)
-    for key,x,w in [("signature",600,58),("stamp",669,135)]:
-        c.drawImage(ImageReader(io.BytesIO(assets[key])),x,height-y-43,w,43,
+    for key,x,w in [("signature",216,79),("stamp",308,135)]:
+        c.drawImage(ImageReader(io.BytesIO(assets[key])),x,height-y-96,w,49,
                     preserveAspectRatio=True,anchor="c",mask="auto")
+    from academy_convocations.agenda import Agenda, iso
+    from academy_convocations.aps_calendar import grid
+    from academy_convocations.drawing import Book
+    from academy_convocations.source import puget_model
+    from datetime import date as calendar_date
+    appointment = iso(context["date_examen"] if exam else context["date_debut_formation"])
+    if appointment:
+        agenda = Agenda([dict(kind="exam" if exam else "centre", label="Votre rendez-vous", days=[appointment])])
+        day = calendar_date.fromisoformat(appointment)
+        sheet = Book(puget_model(), None, group, canvas=c)
+        grid(sheet, day.year, day.month, 554, max(365, min(y, 388)), 246, True, agenda)
+        sheet.txt(554, 530, "Sous réserve de modifications.", "Bar", 9.1, "#506477")
     write(PORTAL_URL,538,"BarB",9,accent,x=216)
     c.linkURL(PORTAL_URL,(216,height-552,216+pdfmetrics.stringWidth(PORTAL_URL,"BarB",9),height-536))
 

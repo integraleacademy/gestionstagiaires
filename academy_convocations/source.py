@@ -1,6 +1,7 @@
 """Read the personalized Word model in document order, including merged tables and links."""
 
 from dataclasses import dataclass
+from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 import re
@@ -55,6 +56,10 @@ class Block:
 class Source:
     def __init__(self, document):
         self.document = document
+        self.agenda = None
+        self.puget_parking = False
+        self.venue_stamp = None
+        self.course_label = "FORMATION PROFESSIONNELLE"
         self.links = {}
         self.blocks = [[]]
         for item in document.element.body:
@@ -126,3 +131,69 @@ class Source:
                 )
             )
         return Cell(texts, pictures)
+
+
+@lru_cache(maxsize=1)
+def puget_model():
+    from docx import Document
+
+    return Source(Document(ROOT / "templates_word" / "convocationaps.docx"))
+
+
+def use_puget_plan(source, template_name, site):
+    """Use the verified Puget plan only for the actual centre or its existing access page."""
+    from unicodedata import normalize
+
+    venue = normalize("NFKD", site or "").encode("ascii", "ignore").decode().lower()
+    words = " ".join(re.findall(r"[a-z0-9]+", venue))
+    local = words in {
+        "puget",
+        "puget sur argens",
+        "centre de puget sur argens",
+    } or bool(re.search(r"54 (?:chemin|ch) du carreou", words) and "puget" in words)
+    prior = bool(
+        source.blocks
+        and any(
+            pic.description.startswith("Schéma des parkings de Puget")
+            for block in source.blocks[-1]
+            for pic in block.pictures
+        )
+        and "PARKING" in " ".join(source.pages[-1][:2]).upper()
+    )
+    if template_name == "convocationformation.docx":
+        if local:
+            source.venue_stamp = puget_model().blocks[1][-1].pictures[-1]
+        elif "34 rue poissonniere" in words and "paris" in words:
+            path = ROOT / "templates_word" / "cachet-paris-2027.png"
+            with Image.open(path) as im:
+                source.venue_stamp = Picture(
+                    path.read_bytes(), "Cachet Intégrale Academy Paris", *im.size
+                )
+    if not prior and not (local and template_name == "convocationformation.docx"):
+        return
+    reference = puget_model()
+    position = len(source.pages) - int(prior)
+    source.blocks[position:] = [reference.blocks[-1]]
+    page = list(reference.pages[-1])
+    if prior:
+        page[3] = next(
+            (s for s in source.pages[-1] if s.startswith("Adresse")), page[3]
+        )
+    source.pages[position:] = [page]
+    source.links.update(
+        {s: reference.links[s] for s in reference.pages[-1] if s in reference.links}
+    )
+    source.maps = reference.maps
+    source.puget_parking = True
+
+
+def add_director_signature(document):
+    """Use the same director's signature and centre stamp as the signed training letters."""
+    from docx.shared import Pt
+
+    cell = document.add_table(rows=1, cols=1).cell(0, 0)
+    cell.paragraphs[0].add_run("Monsieur Clément VAILLANT")
+    cell.add_paragraph("Directeur général Intégrale Academy")
+    para = cell.add_paragraph()
+    for pic, width in zip(puget_model().blocks[1][-1].pictures, (77, 135)):
+        para.add_run().add_picture(BytesIO(pic.data), width=Pt(width))
