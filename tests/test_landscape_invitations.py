@@ -119,3 +119,76 @@ def test_generic_invitation_does_not_start_other_automations():
     assert config["manual_invitation"] and config["convocation_only"]
     assert not config["enabled"]
     assert not app._convention_triggers_convocation(course)
+
+
+def test_aps_cover_uses_session_phases_and_both_letters_sign_below_the_director(
+    tmp_path, monkeypatch
+):
+    # The phase dates deliberately differ from those of the January reference.
+    session = dict(
+        id="sample-september",
+        name="APS septembre",
+        training_type="APS",
+        date_start="2027-09-01",
+        date_end="2027-10-05",
+        exam_date="2027-10-06",
+        aps_remote_start="2027-09-01",
+        aps_remote_end="2027-09-13",
+        aps_in_person_start="2027-09-15",
+        aps_in_person_end="2027-10-05",
+        convocation_time="09h15",
+        exam_time="08h45",
+    )
+    trainee = dict(
+        id="sample",
+        first_name="Camille",
+        last_name="Exemple",
+        email="test@example.invalid",
+    )
+    monkeypatch.setattr(app, "APS_CONVOCATION_DIR", str(tmp_path))
+    with app.app.test_request_context("/"):
+        editable, path = app._generate_aps_convocation_files(session, trainee)
+    assert Document(editable).element.xpath('.//w:hyperlink[@w:anchor="Page7"]')
+    with pymupdf.open(path) as pdf:
+        assert len(pdf) == 7
+        cover = pdf[0].get_text()
+        expected = [
+            "Du 1er au 13 septembre 2027",
+            "Du 15 septembre au 5 octobre 2027",
+            "Le 6 octobre 2027 à 08h45",
+            "01/09/2027 à 09h15",
+        ]
+        assert all(value in cover for value in expected)
+        assert "01/09/2027 à 09h15" in pdf[1].get_text()
+        assert "06/10/2027 à 08h45" in pdf[3].get_text()
+        assert any(link.get("page") in (6, "7") for link in pdf[0].get_links())
+        for page in (pdf[1], pdf[3]):
+            (role,) = page.search_for("Directeur général Intégrale Academy")
+            seals = [
+                pymupdf.Rect(im["bbox"])
+                for im in page.get_image_info()
+                if (im["width"], im["height"]) in [(283, 158), (469, 159)]
+            ]
+            assert len(seals) == 2
+            for seal in seals:
+                assert role.y1 < seal.y0 < seal.y1 < page.rect.height - 60
+                assert role.x0 - 1 <= seal.x0 < role.x1
+        access = pdf[-1]
+        for label in [
+            "P1",
+            "Parking principal",
+            "P2",
+            "Parking secondaire",
+            "P3",
+            "Parking public",
+            "P4",
+            "aux formateurs",
+            "aux PMR",
+        ]:
+            assert access.search_for(label)
+        links = {link.get("uri", "") for link in access.get_links()}
+        assert any("54+chemin+du+Carreou" in link for link in links)
+        assert any(link.endswith("/parking-puget.svg") for link in links)
+        assert not any(
+            (im["width"], im["height"]) == (1385, 779) for im in access.get_image_info()
+        )

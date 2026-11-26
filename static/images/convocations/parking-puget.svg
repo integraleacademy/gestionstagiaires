@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="550" viewBox="35 89 1140 522" role="img" aria-labelledby="title desc">
+  <title id="title">Accès et parkings d’Intégrale Academy à Puget-sur-Argens</title>
+  <desc id="desc">Schéma de la zone du Carréou. Le centre se situe près du rond-point, à côté du P4 réservé aux formateurs et aux PMR. Le P3 public longe le boulevard. Le P1 principal se trouve derrière La Poissonnerie et le P2 secondaire du côté du chemin du Moulin.</desc>
+  <defs>
+    <pattern id="field" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(12)">
+      <rect width="12" height="12" fill="#e3eddf"/><path d="M2 0v12" stroke="#d5e3d3" stroke-width="2"/>
+    </pattern>
+    <pattern id="reserve" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(22)">
+      <rect width="8" height="8" fill="#fadce4"/><path d="M2 0v8" stroke="#dfa4b2" stroke-width="2"/>
+    </pattern>
+    <g id="site-roads" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M131 451 C227 445 283 451 375 464 L643 488 Q695 496 734 481 L764 246"/>
+      <path d="M340 177 L307 426 Q306 447 293 456"/>
+      <path d="M526 198 L490 467"/>
+    </g>
+    <g id="streets" fill="none" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M267 64 C247 115 232 167 220 203 L164 367 Q120 486 26 629"/>
+      <path d="M235 160 Q378 181 504 198 L974 258"/>
+      <path d="M673 66 Q658 158 652 218"/>
+      <path d="M1122 65 Q1060 161 994 248 M996 276 Q1085 329 1201 394 M975 283 Q917 365 886 478 L877 636"/>
+    </g>
+  </defs>
+  <rect x="35" y="89" width="1140" height="522" fill="#f4f2eb"/>
+  <path d="M25 77h224q-36 124-83 242l-41 101-100-4z" fill="#dce8dd"/>
+  <path d="M381 542q150-5 264 12l219 29v52H343z" fill="url(#field)"/>
+  <path d="M1018 303q80 49 166 77v245H912l11-134q24-111 95-188z" fill="#e9e6d8"/>
+  <path d="M1130 87h67v219l-108-67z" fill="#dce8dd"/>
+  <g fill="#dee2df" stroke="#c9d1ca" stroke-width="1.7" stroke-linejoin="round">
+    <path d="m282 91 86 3-9 36-81-11z m112-4 124 2-8 69-121-12z m145 8 94 1-8 35-93-9z m-6 43 88 8-4 44-92-12z"/>
+    <path d="m693 91 62 2-8 73-65-10z m77 0 55 1-10 53-50-8z m119 3 68 1-9 53-66-9z m82 2 58 2-17 44-46-7z"/>
+    <path d="m253 197 60 5-15 103-75-10z m-34 123 74 8-12 68-82-6z m-27 86 83 3-3 27-91-5z"/>
+    <path d="m360 208 105 15-7 38-105-15z m-5 54 113 13-11 40-108-12z m-11 56 127 14-15 71-125-14z m-10 82 30 4-2 24-31-4z m43 5 68 7-1 22-71-6z"/>
+    <path d="m553 223 89 11-7 36-87-12z m104 16 64 7-5 41-63-10z m-120 65 181 24-10 88-181-25z m-11 102 118 16-7 45-116-13z m137 27 39 4-3 33-41-5z"/>
+    <path d="m790 263 53 7-9 58-52-6z m-11 79 38 4-8 79-40-4z m-10 90 52 7-5 34-52-3z"/>
+    <path d="m850 258 61 9-4 33-61-9z m-24 115 47 7-12 71-46-6z"/>
+    <path d="m163 470 114 6-7 47-121-2z m141 8 95 11-7 34-94-9z m434 21 76 3-4 24-78-1z"/>
+  </g>
+  <use href="#site-roads" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#site-roads" stroke="#c8d1cf" stroke-width="19"/>
+  <use href="#site-roads" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#site-roads" stroke="#fffdf9" stroke-width="15"/>
+  <use href="#streets" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#streets" stroke="#c4cfcf" stroke-width="30"/>
+  <use href="#streets" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#streets" stroke="#fffefd" stroke-width="25"/>
+  <circle cx="986" cy="264" r="24" fill="#fffefd" stroke="#c4cfcf" stroke-width="2.5"/>
+  <circle cx="986" cy="264" r="10.5" fill="#cfdfcb" stroke="#b4c9b2" stroke-width="1.8"/>
+  <path d="M954 257 764 236 732 478 673 506 640 520" fill="none" stroke="white" stroke-width="8.5" stroke-linejoin="round"/>
+  <path d="M954 257 764 236 732 478 673 506 640 520" fill="none" stroke="#3564ac" stroke-width="4.3" stroke-dasharray="1 9" stroke-linecap="round" stroke-linejoin="round"/>
+  <g font-family="DejaVu Sans, Arial, sans-serif">
+    <g fill="#536575" font-size="17" font-weight="bold" stroke="#fffefa" stroke-width="4" paint-order="stroke" stroke-linejoin="round">
+      <text x="369" y="183" transform="rotate(7 369 183)">Boulevard Nello Serradori</text>
+      <text x="83" y="550" transform="rotate(-66 83 550)">Chemin du Moulin</text>
+      <text x="1006" y="286" transform="rotate(29 1006 286)">Chemin des Mûres</text>
+    </g>
+    <g stroke-width="2.8" stroke-linejoin="round">
+      <path d="m252 121 109 14-4 28-110-15z" fill="#ffe9c5" stroke="#b65816"/>
+      <path d="m564 501 118 12-6 60-117-10z" fill="#f9dd91" stroke="#966b10"/>
+      <path d="m856 216 105 14-3 17-105-13z" fill="#c4e5d8" stroke="#16765f"/>
+      <path d="m840 161 22 3-8 54-23-3z" fill="url(#reserve)" stroke="#ac4264"/>
+      <path d="m866 161 98 13-6 41-98-12z" fill="#d2e3fe" stroke="#224b85"/>
+    </g>
+    <g font-weight="bold" font-size="22" text-anchor="middle">
+      <rect x="281" y="121" width="50" height="31" rx="7" fill="#985019"/><text x="306" y="144" fill="white">P2</text>
+      <rect x="597" y="521" width="53" height="33" rx="7" fill="#755008"/><text x="623.5" y="545" fill="white">P1</text>
+      <rect x="889" y="211" width="49" height="30" rx="7" fill="#12624f"/><text x="913.5" y="233" fill="white">P3</text>
+      <path d="m825 180 16 4" stroke="#a43b5a" stroke-width="2.5"/>
+      <rect x="779" y="163" width="49" height="31" rx="7" fill="#a43b5a"/><text x="803.5" y="186" fill="white">P4</text>
+    </g>
+    <path d="M874 184 897 145" fill="none" stroke="#173c77" stroke-width="2.5"/>
+    <circle cx="874" cy="188" r="7.5" fill="#1d4ed8" stroke="white" stroke-width="3"/>
+    <rect x="855" y="104" width="237" height="41" rx="8" fill="#162f54"/>
+    <text x="973.5" y="132" text-anchor="middle" font-size="22" font-weight="bold" fill="white">Intégrale Academy</text>
+    <path d="m691 315 36-37" stroke="#626d72" stroke-width="2.3"/><circle cx="727" cy="278" r="4.3" fill="#56616a"/>
+    <rect x="529" y="309" width="176" height="34" rx="6" fill="#fafaf7" stroke="#b9c4c4" stroke-width="1.5"/>
+    <text x="617" y="332" fill="#3f5058" text-anchor="middle" font-size="19" font-weight="bold">La Poissonnerie</text>
+  </g>
+</svg>

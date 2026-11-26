@@ -33,7 +33,11 @@ def publish(document, template_name, group, docx_path, pdf_path):
     from .source import Source
 
     source = Source(document)
-    if template_name == "convocationdespparis_2027.docx":
+    if template_name == "convocationaps.docx":
+        from . import aps
+
+        aps.make(source, pdf_path)
+    elif template_name == "convocationdespparis_2027.docx":
         try:
             paris.make(source, pdf_path)
         except LayoutDoesNotFit:
