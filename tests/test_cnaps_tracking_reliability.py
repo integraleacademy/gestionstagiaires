@@ -17,6 +17,97 @@ def cnaps_data(monkeypatch):
     return data
 
 
+def test_monitor_recovers_pre_number_and_updates_the_session_snapshot(cnaps_data, monkeypatch):
+    student = {"id": "T1", "first_name": "Jane", "last_name": "Tést",
+               "birth_date": "02/03/1990", "email": "jane@example.invalid",
+               "pre_number": "2026-1234567-PRE-AB-0123456"}
+    cnaps_data["sessions"] = [{"id": "S1", "training_type": "APS", "trainees": [student]}]
+    raw = {"id": 123, "nom": "TEST", "prenom": "Jane", "date_naissance": "1990-03-02",
+           "email": "JANE@example.invalid", "created_at": "2026-11-01", "nub": "Dossier reçu via formulaire public"}
+    class Reply:
+        status_code = 200
+        headers = {"Content-Type": "application/json"}
+        url = "https://example.invalid/api/a-traiter"
+
+        def json(self):
+            return {"requests": [raw]}
+
+    monkeypatch.setenv("CNAPSV3_API_TOKEN", "test")
+    fetch = gestion_app.fetch_cnapsv3_tracking_requests
+    monkeypatch.setattr(gestion_app, "fetch_cnapsv3_tracking_requests", lambda: fetch(get_func=lambda *a, **k: Reply()))
+    queries = []
+    snapshot = {**ACTIVE, "checked_at": "2026-11-26T04:00:00Z"}
+    monkeypatch.setattr(gestion_app, "fetch_cnaps_public_annuaire", lambda name, nub: queries.append((name, nub)) or snapshot)
+    assert gestion_app.run_cnaps_public_annuaire_monitor()["checked"] == 1
+    assert queries == [("TEST", "0123456")]
+    assert gestion_app._cnaps_annuaire_snapshots(cnaps_data)("TEST", "0123456")["checked_at"] == snapshot["checked_at"]
+    assert cnaps_data["cnaps_public_annuaire_statuses"]["TRACKING|123"]["nub"] == "0123456"
+    assert gestion_app.app.jinja_env.globals["cnaps_trainee_nub"](student) == "0123456"
+
+
+def test_local_recovery_disambiguates_homonyms_with_identity_and_rejects_conflicts():
+    name = {"first_name": "Anne", "last_name": "Test"}
+    first = {**name, "birth_date": "1990-01-01", "nub": "0012345"}
+    second = {**name, "birth_date": "1992-02-02", "nub": "7654321"}
+    data = {"sessions": [{"id": "1", "trainees": [first, second]}]}
+    rows = [{**name, "birth_date": "01/01/1990"}, {**name, "birth_date": "1992-02-02"}, name,
+            {**name, "birth_date": "1993-01-01"}, {**name, "nub": "6543210"}]
+    resolve = gestion_app.enrich_cnaps_tracking_rows_with_enrollment
+    assert [r["nub"] for r in resolve(rows, data)] == ["0012345", "7654321", "", "", "6543210"]
+    first["pre_number"] = "PRE-083-2027-01-31-00007654321"
+    assert resolve([rows[0]], data)[0]["nub"] == ""
+    first["pre_number"] = ""
+    first["registration_cancelled"] = True
+    assert resolve([rows[0]], data)[0]["nub"] == ""
+
+
+def test_repeated_registration_and_manual_correction_for_one_dossier(cnaps_data):
+    name = {"last_name": "Test", "first_name": "Anne"}
+    row = {**name, "tracking_id": "101"}
+    cnaps_data["sessions"] = [{"id": sid, "trainees": [{**name, "nub": "0123456"}]} for sid in ("S1", "S2")]
+    resolve = gestion_app.enrich_cnaps_tracking_rows_with_enrollment
+    assert resolve([row], cnaps_data)[0]["nub"] == "0123456"
+
+    client = gestion_app.app.test_client()
+    with client.session_transaction() as session:
+        session.update(admin_logged_in=True, admin_role="admin")
+    assert client.post("/api/admin/cnaps-tracking/nub", json={**row, "nub": "0765432"}).status_code == 200
+    other = {**name, "tracking_id": "102"}
+    assert [r["nub"] for r in resolve([row, other], cnaps_data)] == ["0765432", ""]
+
+
+def test_name_only_history_does_not_fill_homonyms_or_contradictory_local_fields():
+    name = {"last_name": "Test", "first_name": "Anne"}
+    local = dict(name)
+    other = dict(name)
+    states = {"TRACKING|101": {**name, "nub": "0123456"}}
+    data = {"sessions": [{"trainees": [local]}, {"trainees": [other]}], "cnaps_public_annuaire_statuses": states}
+    hydrate = gestion_app._hydrate_missing_trainee_nubs_from_cnaps_tracking
+    hydrate([local], data)
+    assert "cnaps_tracking_nub" not in local
+    data["sessions"].pop()
+    states["TRACKING|102"] = {**name, "nub": ""}
+    hydrate([local], data)
+    assert "cnaps_tracking_nub" not in local
+    del states["TRACKING|102"]
+    local.update(pre_number="2026-1234567-PRE-AB-0123456", nub="0765432")
+    hydrate([local], data)
+    assert "cnaps_tracking_nub" not in local
+    del local["pre_number"], local["nub"]
+    hydrate([local], data)
+    assert local["cnaps_tracking_nub"] == "0123456"
+
+
+def test_missing_or_invalid_number_stays_editable_and_legacy_deletion_is_respected():
+    name = {"last_name": "Test", "first_name": "Anne"}
+    row = {**name, "nub": "Dossier reçu via formulaire public"}
+    data = {"sessions": [{"trainees": [{**name, "nub": "06 12 34 56 78"}]}]}
+    assert gestion_app.enrich_cnaps_tracking_rows_with_enrollment([row], data)[0]["nub"] == ""
+    data["sessions"][0]["trainees"][0]["nub"] = "0012345"
+    data["cnaps_tracking_deleted_keys"] = ["TEST|ANNE|DOSSIER RECU VIA FORMULAIRE PUBLIC"]
+    assert gestion_app.enrich_cnaps_tracking_rows_with_enrollment([row], data) == []
+
+
 def test_monitor_uses_manual_nub_and_skips_deleted_rows(cnaps_data, monkeypatch):
     row = {"tracking_id": "115", "last_name": "TEST", "first_name": "Jane", "nub": ""}
     deleted = {"tracking_id": "116", "last_name": "DELETED", "first_name": "Jane", "nub": "7654321"}

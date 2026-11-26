@@ -92,7 +92,7 @@ except ImportError:
     resource = None
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set, Callable
 from functools import lru_cache, wraps
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from zoneinfo import ZoneInfo
 from flask import session
 import werkzeug.security as werkzeug_security
@@ -6176,6 +6176,10 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
         }
         if tracking_id:
             normalized_row["tracking_id"] = tracking_id
+        for field, aliases in (("email", ("email",)), ("birth_date", ("date_naissance", "birth_date"))):
+            value = _cnapsv3_tracking_value(item, aliases)
+            if value:
+                normalized_row[field] = value
         rows.append(normalized_row)
     if use_cache:
         _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": None})
@@ -18219,23 +18223,24 @@ def api_admin_cnaps_tracking_nub():
     payload = request.get_json(silent=True) or {}
     last_name = str(payload.get("last_name") or "").strip()
     first_name = str(payload.get("first_name") or "").strip()
-    nub = re.sub(r"\D+", "", str(payload.get("nub") or ""))
+    nub = _cnaps_tracking_nub(payload.get("nub"))
     if not last_name or not first_name:
         return jsonify({"ok": False, "error": "missing_identity"}), 400
     if len(nub) != 7:
         return jsonify({"ok": False, "error": "invalid_nub", "message": "Le NUB doit comporter 7 chiffres."}), 400
 
-    data = load_data()
-    manual_nubs = data.setdefault("cnaps_tracking_manual_nubs", {})
-    if not isinstance(manual_nubs, dict):
-        manual_nubs = {}
-        data["cnaps_tracking_manual_nubs"] = manual_nubs
-    manual_nubs[_cnaps_tracking_manual_nub_key(last_name, first_name)] = nub
-    _append_activity_log(data, "cnaps_tracking_nub_updated", "cnaps_tracking", nub, details={
-        "last_name": last_name,
-        "first_name": first_name,
-    })
-    save_data(data)
+    tracking_id = str(payload.get("tracking_id") or "").strip()
+    key = f"TRACKING|{tracking_id}" if tracking_id else _cnaps_tracking_manual_nub_key(last_name, first_name)
+
+    def save_nub(data):
+        if not isinstance(data.get("cnaps_tracking_manual_nubs"), dict):
+            data["cnaps_tracking_manual_nubs"] = {}
+        data["cnaps_tracking_manual_nubs"][key] = nub
+        _append_activity_log(data, "cnaps_tracking_nub_updated", "cnaps_tracking", nub, details={
+            "last_name": last_name, "first_name": first_name, "tracking_id": tracking_id,
+        })
+
+    update_data(save_nub)
     return jsonify({"ok": True, "nub": nub})
 
 
@@ -18267,21 +18272,77 @@ def _cnaps_tracking_manual_nubs(data: Dict[str, Any]) -> Dict[str, str]:
     if not isinstance(raw, dict):
         return {}
     return {
-        str(key): re.sub(r"\D+", "", str(nub))
-        for key, nub in raw.items()
-        if len(re.sub(r"\D+", "", str(nub))) == 7
+        str(key): nub for key, value in raw.items() if (nub := _cnaps_tracking_nub(value))
     }
 
 
 def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
     raw = data.get("cnaps_tracking_deleted_keys")
-    return {str(key) for key in raw if str(key).strip()} if isinstance(raw, list) else set()
+    keys = {str(key) for key in raw if str(key).strip()} if isinstance(raw, list) else set()
+    # Older tombstones can refer to a formatted NUB or the public-form comment.
+    for key in tuple(keys):
+        name, separator, value = key.rpartition("|")
+        if separator:
+            keys.add(name + "|" + _cnaps_tracking_nub(value))
+    return keys
+
+
+def _cnaps_tracking_nub(value: Any) -> str:
+    raw = str(value or "").strip()
+    match = re.fullmatch(r"(?:NUB\s*[:=-]?\s*)?([0-9](?:[\s-]*[0-9]){6})", raw, re.I)
+    if match:
+        return re.sub(r"\D", "", match[1])
+    if _is_valid_pre_car(raw):
+        return extract_nub_from_pre_car(raw)
+    return ""
+
+
+def _cnaps_trainee_nubs(trainee: Dict[str, Any]) -> Set[str]:
+    return {
+        nub for field in ("pre_number", "nub", "cnaps_nub", "cnaps_tracking_nub")
+        if (nub := _cnaps_tracking_nub(trainee.get(field)))
+    }
+
+
+def _cnaps_trainee_nub(trainee: Dict[str, Any]) -> str:
+    numbers = _cnaps_trainee_nubs(trainee)
+    return numbers.pop() if len(numbers) == 1 else ""
+
+
+app.jinja_env.globals["cnaps_trainee_nub"] = _cnaps_trainee_nub
+
+
+def _cnaps_matching_enrollments(row, candidates, unique_request, nub):
+    """Select registrations compatible with the dossier before using their number."""
+    email = str(row.get("email") or "").strip().casefold()
+    birth = _birth_to_ddmmyyyy(row.get("birth_date") or "")
+    matches = []
+    compatible = []
+    for trainee, enrollment in candidates:
+        local_email = str(trainee.get("email") or "").strip().casefold()
+        local_births = _public_trainee_birth_dates(trainee)
+        if email and local_email and email != local_email:
+            continue
+        if birth and local_births and birth not in local_births:
+            continue
+        number = _cnaps_trainee_nub(trainee)
+        compatible.append((number, enrollment))
+        if (email and email == local_email) or (birth and birth in local_births) or (nub and nub == number):
+            matches.append((number, enrollment))
+    if matches:
+        return matches
+    if unique_request and len(compatible) == len(candidates):
+        numbers = {number for number, _ in compatible}
+        if len(compatible) == 1 or (len(numbers) == 1 and "" not in numbers):
+            return compatible
+    return []
 
 
 def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
     deleted_keys = _cnaps_tracking_deleted_keys(data)
     manual_nubs = _cnaps_tracking_manual_nubs(data)
-    enrolled_by_name: Dict[Tuple[str, str], Dict[str, str]] = {}
+    request_counts = Counter(_cnaps_tracking_match_key(r.get("last_name"), r.get("first_name")) for r in rows or [])
+    enrolled_by_name = {}
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
             continue
@@ -18289,9 +18350,9 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
         training_type = _session_get(sess, "training_type", "")
         for trainee in _registered_trainees(sess):
             key = _cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name"))
-            if not all(key) or key in enrolled_by_name:
+            if not all(key):
                 continue
-            enrolled_by_name[key] = {
+            enrollment = {
                 "session_id": str(sess.get("id") or ""),
                 "session_name": session_name,
                 "training_type": training_type,
@@ -18299,18 +18360,27 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
                 "date_end": str(_session_get(sess, "date_end", "") or ""),
                 "trainee_id": str(trainee.get("id") or ""),
             }
+            enrolled_by_name.setdefault(key, []).append((trainee, enrollment))
 
     enriched: List[Dict[str, Any]] = []
     for row in rows or []:
         item = dict(row)
-        manual_nub = manual_nubs.get(_cnaps_tracking_manual_nub_key(item.get("last_name"), item.get("first_name")))
-        if manual_nub:
-            item["nub"] = manual_nub
-        if _cnaps_tracking_delete_key(item.get("last_name"), item.get("first_name"), item.get("nub")) in deleted_keys:
+        key = _cnaps_tracking_match_key(item.get("last_name"), item.get("first_name"))
+        candidates = enrolled_by_name.get(key, [])
+        unique_request = request_counts[key] == 1
+        manual_nub = manual_nubs.get(f"TRACKING|{item.get('tracking_id') or ''}")
+        if not manual_nub and unique_request and len(candidates) <= 1:
+            manual_nub = manual_nubs.get("|".join(key))
+        nub = manual_nub or _cnaps_tracking_nub(item.get("nub"))
+        if "|".join((*key, nub)) in deleted_keys:
             continue
-        match = enrolled_by_name.get(_cnaps_tracking_match_key(item.get("last_name"), item.get("first_name")))
-        item["is_enrolled"] = bool(match)
-        item["enrollment"] = match or {}
+        matches = _cnaps_matching_enrollments(item, candidates, unique_request, nub)
+        numbers = {number for number, _ in matches}
+        item["nub"] = nub or (numbers.pop() if len(numbers) == 1 else "")
+        if "|".join((*key, item["nub"])) in deleted_keys:
+            continue
+        item["is_enrolled"] = bool(matches)
+        item["enrollment"] = matches[0][1] if matches else {}
         enriched.append(item)
     return enriched
 
@@ -18318,29 +18388,38 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
 
 
 def _cnaps_tracking_nub_by_name(rows: List[Dict[str, Any]]) -> Dict[Tuple[str, str], str]:
-    nub_by_name: Dict[Tuple[str, str], str] = {}
+    numbers_by_name = {}
     for row in rows or []:
         key = _cnaps_tracking_match_key(row.get("last_name"), row.get("first_name"))
-        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))
-        if not all(key) or not nub or key in nub_by_name:
-            continue
-        nub_by_name[key] = nub[-7:] if len(nub) >= 7 else nub
-    return nub_by_name
+        nub = _cnaps_tracking_nub(row.get("nub"))
+        if all(key):
+            numbers_by_name.setdefault(key, set()).add(nub)
+    return {key: next(iter(numbers)) for key, numbers in numbers_by_name.items() if len(numbers) == 1 and "" not in numbers}
 
 
 def _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees, data):
     # Use the monitor's durable results and local corrections, even after a restart.
+    missing = [t for t in _registered_trainees(trainees) if not _cnaps_trainee_nubs(t)]
+    if not missing:
+        return
+    counts = Counter(
+        _cnaps_tracking_match_key(t.get("last_name"), t.get("first_name"))
+        for session in data.get("sessions", []) or []
+        if not session.get("archived") and not _is_wedof_leads_session(session)
+        for t in _registered_trainees(session)
+    )
     statuses = data.get("cnaps_public_annuaire_statuses")
     rows = statuses.values() if isinstance(statuses, dict) else ()
     nub_by_name = _cnaps_tracking_nub_by_name(row for row in rows if isinstance(row, dict))
     manual = _cnaps_tracking_manual_nubs(data)
-    for trainee in trainees:
-        if extract_nub_from_pre_car(trainee.get("pre_number") or trainee.get("cnaps_tracking_nub") or ""):
-            continue
+    for trainee in missing:
         key = _cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name"))
+        if not all(key) or counts[key] != 1:
+            continue
         nub = manual.get("|".join(key)) or nub_by_name.get(key)
-        if nub and all(key):
+        if nub:
             trainee["cnaps_tracking_nub"] = nub
+
 
 def _cash_amount_value(raw_value: Any) -> float:
     try:

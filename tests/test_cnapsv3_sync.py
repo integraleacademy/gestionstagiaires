@@ -1908,7 +1908,7 @@ class CnapsTrackingTests(unittest.TestCase):
         gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
             "last_name": "DOE",
             "first_name": "Jane",
-            "nub": "NUB123",
+            "nub": "0123456",
             "cnaps_status": "ACCEPTE",
         }], None)
         try:
@@ -1949,7 +1949,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("rowMatchesCnapsFilter", html)
         self.assertIn("updateCnapsStatusChangeTile", html)
         self.assertIn("DOE", html)
-        self.assertIn("NUB123", html)
+        self.assertIn("0123456", html)
 
     def test_tracking_page_displays_taj_warning_for_ten_day_empty_status(self):
         client = gestion_app.app.test_client()
@@ -2128,8 +2128,8 @@ class CnapsTrackingTests(unittest.TestCase):
         saved = []
         original_load = gestion_app.load_data
         original_save = gestion_app.save_data
-        gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        gestion_app.load_data = lambda **kwargs: data
+        gestion_app.save_data = lambda payload, **kwargs: saved.append(payload.copy())
         try:
             response = client.post("/api/admin/cnaps-tracking/nub", json={
                 "last_name": "Doe", "first_name": "Jane", "nub": "1234567",
