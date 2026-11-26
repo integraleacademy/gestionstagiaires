@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="550" viewBox="35 89 1140 522" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="835" viewBox="35 -18 1140 793" role="img" aria-labelledby="title desc">
   <title id="title">Accès et parkings d’Intégrale Academy à Puget-sur-Argens</title>
   <desc id="desc">Schéma de la zone du Carréou. Le centre se situe près du rond-point, à côté du P4 réservé aux formateurs et aux PMR. Le P3 public longe le boulevard. Le P1 principal se trouve derrière La Poissonnerie et le P2 secondaire du côté du chemin du Moulin.</desc>
   <defs>
+    <clipPath id="map-frame"><rect x="35" y="89" width="1140" height="522"/></clipPath>
     <pattern id="field" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(12)">
       <rect width="12" height="12" fill="#e3eddf"/><path d="M2 0v12" stroke="#d5e3d3" stroke-width="2"/>
     </pattern>
@@ -20,6 +21,14 @@
       <path d="M1122 65 Q1060 161 994 248 M996 276 Q1085 329 1201 394 M975 283 Q917 365 886 478 L877 636"/>
     </g>
   </defs>
+  <rect x="35" y="-18" width="1140" height="793" fill="#fff"/>
+  <g font-family="DejaVu Sans, Arial, sans-serif">
+    <text x="66" y="12" font-size="14" font-weight="bold" letter-spacing="1.5" fill="#1d4ed8">INTÉGRALE ACADEMY</text>
+    <text x="64" y="61" font-size="43" font-weight="bold" fill="#18283d">Plan d’accès et parkings</text>
+    <text x="1143" y="30" text-anchor="end" font-size="20" font-weight="bold" fill="#18283d">54 chemin du Carreou</text>
+    <text x="1143" y="58" text-anchor="end" font-size="18" fill="#536575">83480 Puget-sur-Argens</text>
+  </g>
+  <g clip-path="url(#map-frame)">
   <rect x="35" y="89" width="1140" height="522" fill="#f4f2eb"/>
   <path d="M25 77h224q-36 124-83 242l-41 101-100-4z" fill="#dce8dd"/>
   <path d="M381 542q150-5 264 12l219 29v52H343z" fill="url(#field)"/>
@@ -70,5 +79,27 @@
     <path d="m691 315 36-37" stroke="#626d72" stroke-width="2.3"/><circle cx="727" cy="278" r="4.3" fill="#56616a"/>
     <rect x="529" y="309" width="176" height="34" rx="6" fill="#fafaf7" stroke="#b9c4c4" stroke-width="1.5"/>
     <text x="617" y="332" fill="#3f5058" text-anchor="middle" font-size="19" font-weight="bold">La Poissonnerie</text>
+  </g>
+  </g>
+  <g font-family="DejaVu Sans, Arial, sans-serif" font-size="18" fill="#19283a">
+    <line x1="65" y1="636" x2="110" y2="636" stroke="#3564ac" stroke-width="4" stroke-dasharray="1 8" stroke-linecap="round"/>
+    <text x="123" y="642" font-size="16" fill="#425469">Accès au parking principal</text>
+    <text x="1143" y="642" text-anchor="end" font-size="15" fill="#536575">Schéma de repérage · Non à l’échelle</text>
+    <line x1="65" y1="656" x2="1143" y2="656" stroke="#cdd8e2"/>
+    <rect x="65" y="681" width="49" height="34" rx="7" fill="#755008"/>
+    <rect x="324" y="681" width="49" height="34" rx="7" fill="#985019"/>
+    <rect x="594" y="681" width="49" height="34" rx="7" fill="#12624f"/>
+    <rect x="840" y="681" width="49" height="34" rx="7" fill="#a43b5a"/>
+    <g fill="white" text-anchor="middle" font-size="21" font-weight="bold">
+      <text x="89.5" y="706">P1</text><text x="348.5" y="706">P2</text>
+      <text x="618.5" y="706">P3</text><text x="864.5" y="706">P4</text>
+    </g>
+    <g font-weight="bold">
+      <text x="125" y="705">Parking principal</text>
+      <text x="384" y="705">Parking secondaire</text>
+      <text x="654" y="705">Parking public</text>
+      <text x="900" y="699">Réservé aux formateurs</text>
+      <text x="900" y="725">et aux PMR</text>
+    </g>
   </g>
 </svg>
