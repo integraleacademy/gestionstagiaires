@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<script src="{{ url_for('static', filename='js/cnaps-card.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cnaps-card.js', v='20261126-nub') }}"></script>
 <style>
 #despKickoffDialog {width:min(680px,calc(100vw - 24px))}
 #despKickoffDialog .session-kickoff-actions {padding:20px 24px}
@@ -719,22 +719,24 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}
         {% set card_pro_nub = cnaps_trainee_nub(t) %}
         <td class="col-card-pro-followup">
-          {% if card_pro_nub %}
-            {% set snapshot = cnaps_annuaire_snapshot(t.last_name, card_pro_nub) %}
+          {% if card_pro_nub or can_resolve_cnaps_nub %}
+            {% set snapshot = cnaps_annuaire_snapshot(t.last_name, card_pro_nub) if card_pro_nub else {} %}
             <div class="card-pro-followup"
                  data-card-pro-followup
                  data-nom="{{ t.last_name or '' }}"
                  data-nub="{{ card_pro_nub }}"
+                 {% if not card_pro_nub %}data-nub-url="{{ url_for('api_session_trainee_cnaps_nub', session_id=session.id, trainee_id=t.id) }}"{% endif %}
                  data-prenom="{{ t.first_name or '' }}"
-                 data-cnaps-snapshot="{{ snapshot.result|tojson|forceescape }}"
+                 data-cnaps-snapshot="{{ snapshot.get('result')|tojson|forceescape }}"
                  data-cnaps-checked-at="{{ snapshot.checked_at or '' }}">
-              <div class="card-pro-result" data-card-pro-result>Aucune vérification enregistrée</div>
+              <strong class="card-pro-nub" data-card-pro-nub>{% if card_pro_nub %}NUB : {{ card_pro_nub }}{% else %}Recherche du NUB…{% endif %}</strong>
+              <div class="card-pro-result" data-card-pro-result>{% if card_pro_nub %}Aucune vérification enregistrée{% endif %}</div>
               <small data-card-pro-date></small>
               <small aria-live="polite" data-card-pro-message></small>
               <button type="button" class="mini-btn" data-card-pro-refresh>Actualiser</button>
             </div>
           {% else %}
-            <span class="muted">NUB manquant{% if t.cnaps_tracking_nub %} (Suivi CNAPS indisponible){% endif %}</span>
+            <span class="muted">NUB manquant</span>
           {% endif %}
         </td>
         {% endif %}
@@ -1414,6 +1416,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   font-size:11px;
   line-height:1.15;
 }
+.card-pro-nub{display:block;margin-bottom:4px;font-variant-numeric:tabular-nums;}
 .card-pro-followup .muted{
   grid-column:1 / -1;
   font-size:10px;

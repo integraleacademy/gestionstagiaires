@@ -1,5 +1,7 @@
 from sheet_assets import with_sheet_assets
+import time
 import unittest
+from unittest.mock import patch
 
 import app as gestion_app
 
@@ -187,7 +189,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-card-pro-refresh', html)
         self.assertIn('data-cnaps-snapshot="null"', html)
         self.assertIn("Aucune vérification enregistrée", html)
-        self.assertNotIn("NUB : <strong>1050370</strong>", html)
+        self.assertIn('data-card-pro-nub>NUB : 1050370</strong>', html)
         self.assertNotIn("Nom : <strong>NONVTC</strong>", html)
         self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
         self.assertIn('["autorisation préalable - agent de protection physique des personnes", "AP A3P"]', html)
@@ -219,6 +221,67 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-nub="1050370"', html)
         self.assertEqual(trainee["cnaps_tracking_nub"], "1050370")
         self.assertNotIn("NUB manquant", html)
+
+    def test_visible_nub_uses_an_existing_number_despite_an_incomplete_pre(self):
+        trainee = self.data["sessions"][2]["trainees"][0]
+        trainee.update(pre_number="En attente", cnaps_nub="0123456")
+        html = self.client.get("/admin/sessions/S-APS/trainees").get_data(as_text=True)
+        self.assertIn('data-card-pro-nub>NUB : 0123456</strong>', html)
+        self.assertNotIn('data-nub-url=', html)
+
+    def test_empty_local_record_can_read_source_nub_before_any_title_exists(self):
+        url = "/api/sessions/S-APS/stagiaires/T-APS/cnaps-nub"
+        for path in ("/admin/sessions/S-APS/trainees", "/admin/sessions/S-APS/stagiaires/T-APS"):
+            html = self.client.get(path).get_data(as_text=True)
+            self.assertIn(f'data-nub-url="{url}"', html)
+        source_row = {"nom": "Nonvtc", "prenom": "Noa", "email": "noa@example.test",
+                      "nub": "0123456", "statut_cnaps": "TRANSMIS"}
+        with patch.object(gestion_app.cnaps_tracking_source, "fetch_tracking_requests", return_value=[source_row]), \
+             patch.object(gestion_app, "fetch_cnaps_public_annuaire", side_effect=AssertionError("unexpected title check")):
+            response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["nub"], "0123456")
+        self.assertIsNone(response.json["snapshot"]["result"])
+
+    def test_conflicting_source_numbers_are_not_assigned_to_a_trainee(self):
+        rows = [{"nom": "Nonvtc", "prenom": "Noa", "nub": nub} for nub in ("0123456", "0765432")]
+        with patch.object(gestion_app.cnaps_tracking_source, "fetch_tracking_requests", return_value=rows):
+            response = self.client.get("/api/sessions/S-APS/stagiaires/T-APS/cnaps-nub")
+        self.assertEqual(response.status_code, 409)
+        self.assertNotIn("nub", response.json)
+
+    def test_deferred_nub_lookup_returns_the_saved_empty_directory_result(self):
+        stamp = "2026-10-04T08:00:00Z"
+        self.data["cnaps_public_annuaire_statuses"] = {"NONVTC|0123456": {
+            "checked_at": stamp, "result": {"check_status": "success", "active_titles": [], "checked_at": stamp}
+        }}
+        row = {"nom": "Nonvtc", "prenom": "Noa", "email": "noa@example.test", "nub": "0123456"}
+        with patch.object(gestion_app.cnaps_tracking_source, "fetch_tracking_requests", return_value=[row]):
+            response = self.client.get("/api/sessions/S-APS/stagiaires/T-APS/cnaps-nub",
+                                       headers={"Prefer": "respond-async"})
+            deadline = time.monotonic() + 5
+            while response.status_code == 202 and time.monotonic() < deadline:
+                time.sleep(0.02)
+                response = self.client.get(response.json["status_url"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["nub"], "0123456")
+        self.assertEqual(response.json["snapshot"]["result"]["active_titles"], [])
+        self.assertEqual(response.json["snapshot"]["checked_at"], stamp)
+
+    def test_one_source_record_cannot_supply_two_namesakes_without_a_matching_identity(self):
+        training = self.data["sessions"][2]
+        training["trainees"].append(dict(training["trainees"][0], id="ANOTHER", email="other@example.test"))
+        row = {"nom": "Nonvtc", "prenom": "Noa", "nub": "0123456"}
+        with patch.object(gestion_app.cnaps_tracking_source, "fetch_tracking_requests", return_value=[row]):
+            response = self.client.get("/api/sessions/S-APS/stagiaires/T-APS/cnaps-nub")
+        self.assertEqual(response.status_code, 409)
+
+    def test_partner_session_does_not_query_the_academy_nub_source(self):
+        self.data["sessions"][2]["partner_id"] = "external-partner"
+        with patch.object(gestion_app.cnaps_tracking_source, "fetch_tracking_requests") as fetch:
+            response = self.client.get("/api/sessions/S-APS/stagiaires/T-APS/cnaps-nub")
+        self.assertEqual(response.status_code, 404)
+        fetch.assert_not_called()
 
     def test_aps_admin_trainees_never_infers_an_active_title_from_an_identity(self):
         trainee = self.data["sessions"][2]["trainees"][0]

@@ -84,6 +84,32 @@ test('list, trainee and ADEF cards start external work only on demand and share 
   assert.equal(button.disabled,false);
   assert.match(message.textContent,/Actualisation impossible/);
 });
+test('an upstream NUB is visible without any title and survives a failed title check', async () => {
+  const context = runtime();
+  const number = {}, result = {}, message = {}, date = {};
+  const button = {addEventListener(event, handler) { this.click = handler; }};
+  const elements = {
+    '[data-card-pro-refresh]': button, '[data-card-pro-message]': message,
+    '[data-card-pro-date]': date, '[data-card-pro-nub]': number,
+    '[data-card-pro-result], [data-trainee-card-pro-result]': result
+  };
+  const box = {dataset: {nub: '', nubUrl: '/source', nom: 'TEST'}, querySelector: selector => elements[selector]};
+  let calls = 0;
+  context.window.cnapsRead = async url => {
+    calls++;
+    if (url !== '/source') throw new Error('directory unavailable');
+    return {ok: true, json: async () => ({ok: true, nub: '0123456', snapshot: {result: null}})};
+  };
+  const wait = context.window.cnapsCards.bind(box, () => assert.fail('No title to render'));
+  await wait();
+  assert.equal(calls, 1);
+  assert.equal(number.textContent, 'NUB : 0123456');
+  assert.equal(result.textContent, 'Aucune vérification enregistrée');
+  button.click();
+  await wait();
+  assert.equal(number.textContent, 'NUB : 0123456');
+  assert.match(message.textContent, /Actualisation impossible/);
+});
 test('visible manually requested dossiers have priority over hidden requests',async()=>{
   const context=runtime(),pending=[],order=[];
   context.window.cnapsRead=url=>{
