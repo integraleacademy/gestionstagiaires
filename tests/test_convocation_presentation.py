@@ -3,6 +3,9 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
+from docx import Document
+from docx.oxml.ns import qn
+from docx.shared import Cm
 from lxml import etree
 
 import app
@@ -10,6 +13,29 @@ from training_convocations import PORTAL_URL
 
 
 TEMPLATES = Path(app.app.root_path) / "templates_word"
+
+
+@pytest.mark.parametrize("template", sorted(TEMPLATES.glob("convocation*.docx")), ids=lambda path: path.stem)
+def test_official_logo_repeats_in_the_header_of_every_invitation(template):
+    doc = Document(template)
+    assert not doc.settings.odd_and_even_pages_header_footer
+    for section in doc.sections:
+        assert not section.different_first_page_header_footer
+        header = section.header
+        drawing, = header._element.xpath('.//wp:inline[wp:docPr[@descr="Logo officiel Intégrale Academy"]]')
+        assert int(drawing.xpath('./wp:extent')[0].get('cx')) >= Cm(4)
+        reference = drawing.xpath('.//a:blip')[0].get(qn('r:embed'))
+        assert header.part.related_parts[reference].content_type == 'image/png'
+
+
+def test_both_paris_letters_print_the_current_stamp():
+    doc = Document(TEMPLATES / 'convocationdespparis_2027.docx')
+    stamp = (TEMPLATES.parent / 'static/images/convocations/cachet-paris-2027.png').read_bytes()
+    drawings = doc.element.xpath('.//wp:inline[wp:docPr[contains(@descr, "Cachet Intégrale Academy Paris")]]')
+    assert len(drawings) == 2
+    for drawing in drawings:
+        ref = drawing.xpath('.//a:blip')[0].get(qn('r:embed'))
+        assert doc.part.related_parts[ref].blob == stamp
 
 
 @pytest.mark.parametrize("template", sorted(TEMPLATES.glob("convocation*.docx")), ids=lambda path: path.stem)

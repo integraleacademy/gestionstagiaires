@@ -156,11 +156,11 @@ def build_convocation(row):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     font = retake_font()
     navy, muted = colors.HexColor("#0C1A2F"), colors.HexColor("#506477")
-    body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=10, leading=14, textColor=navy)
+    body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=10.5, leading=15, textColor=navy)
     title = ParagraphStyle("ConvocationTitle", parent=body, fontName=font+"-Bold", fontSize=25, leading=31)
     label = ParagraphStyle("ConvocationLabel", parent=body, fontSize=9, textColor=muted)
     strong = ParagraphStyle("ConvocationValue", parent=body, fontName=font+"-Bold")
@@ -183,10 +183,15 @@ def build_convocation(row):
         ("LINEBELOW", (0, 0), (-1, -1), .5, colors.HexColor("#D5DFE5")),
         ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#09677B")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
-    story = [line("Convocation à l’examen", title), line("Session de rattrapage", strong), Spacer(1, 10),
+    artwork = Path(__file__).parent / "static/images/convocations/certification.png"
+    banner = Table([[[line("Session de rattrapage", heading), line("Convocation à l’examen", title)],
+                     Image(str(artwork), width=92, height=48)]], colWidths=[380, 102], hAlign="LEFT")
+    banner.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    story = [banner, Spacer(1, 15),
              line("Bonjour " + person["first_name"] + ","),
              line("Conformément à votre convention de rattrapage, vous êtes attendu(e) à la nouvelle session ci-dessous."),
              Spacer(1, 8), panel]
@@ -222,7 +227,6 @@ def build_convocation(row):
     story.extend([Spacer(1, 7), line("En cas de question ou d’empêchement, contactez l’équipe au "
                   "04 22 47 07 68 ou à ecole@integraleacademy.com."), Spacer(1, 6), line("L’équipe Intégrale Academy", strong)])
     if row.get("kind") == "DESP" and row.get("location") == desp_paris_venue.FULL_ADDRESS:
-        from reportlab.platypus import Image, PageBreak
         story.extend([PageBreak(), line("Venir au centre de formation", title),
                       line(desp_paris_venue.FULL_ADDRESS, strong),
                       Spacer(1, 12), Image(str(desp_paris_venue.MAP_PATH), width=480, height=255),

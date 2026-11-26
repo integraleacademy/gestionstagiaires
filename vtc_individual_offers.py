@@ -18,7 +18,7 @@ import vtc_offer_contracts
 from training_convocations import PORTAL_URL
 
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.shared import Cm, Pt, RGBColor
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -135,7 +135,14 @@ def _examiner_document(training, trainee):
     label.bold = True
     label.font.size = Pt(9)
     label.font.color.rgb = RGBColor.from_string("09677B")
-    heading = doc.add_paragraph().add_run("Prêt de véhicule pour l’examen pratique VTC")
+    banner = doc.add_table(rows=1, cols=2)
+    banner.autofit = False
+    text, art = banner.rows[0].cells
+    banner.columns[0].width = text.width = Cm(12.6)
+    banner.columns[1].width = art.width = Cm(4.8)
+    artwork = Path(__file__).parent / "static/images/convocations/vehicule.png"
+    art.paragraphs[0].add_run().add_picture(str(artwork), width=Cm(4.1))
+    heading = text.paragraphs[0].add_run("Prêt de véhicule pour l’examen pratique VTC")
     heading.bold = True
     heading.font.size = Pt(23)
     heading.font.color.rgb = RGBColor.from_string("0C1A2F")
@@ -233,7 +240,7 @@ def convention(host, training, trainee, session_id="", trainee_id="", *, output_
 
 def vehicle_hash(training, trainee):
     fields = {
-        "version": 3, "offer": offer(trainee),
+        "version": 4, "offer": offer(trainee),
         "identity": [trainee.get(k) for k in ("id", "first_name", "last_name", "vtc_exam_center", "vtc_practice_exam_date")],
         "exam_dates": [training.get("exam_practice_date"), training.get("exam_date")],
     }
