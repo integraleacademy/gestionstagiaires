@@ -18065,7 +18065,10 @@ def admin_sessions():
 
     if not ended_cards_only:
         status_order = {"ongoing": 0, "upcoming": 1, "ended": 2}
-        out_sessions.sort(key=lambda card: status_order[card["status_key"]])
+        out_sessions.sort(key=lambda card: (
+            status_order[card["status_key"]],
+            _parse_iso_date(card.get("date_start")) or datetime.date.max,
+        ))
 
     _log_memory_stage("ADMIN_SESSIONS_BEFORE_RENDER", admin_sessions_started_at, request.path)
     prepared_at = time.monotonic()
