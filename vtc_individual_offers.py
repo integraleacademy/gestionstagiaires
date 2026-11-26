@@ -15,6 +15,7 @@ import uuid
 
 from exam_retakes import money
 import vtc_offer_contracts
+import academy_convocations
 from training_convocations import PORTAL_URL
 
 from docx import Document
@@ -240,7 +241,7 @@ def convention(host, training, trainee, session_id="", trainee_id="", *, output_
 
 def vehicle_hash(training, trainee):
     fields = {
-        "version": 5, "offer": offer(trainee),
+        "version": academy_convocations.VERSION, "offer": offer(trainee),
         "identity": [trainee.get(k) for k in ("id", "first_name", "last_name", "vtc_exam_center", "vtc_practice_exam_date")],
         "exam_dates": [training.get("exam_practice_date"), training.get("exam_date")],
     }
@@ -250,4 +251,13 @@ def vehicle_hash(training, trainee):
 def examiner_document(host, training, trainee, output_dir, base):
     if not is_vtc(training) or not vehicle(trainee):
         raise ValueError("Attestation réservée à la formule prêt du véhicule uniquement.")
-    return write_pdf(host, _examiner_document(training, trainee), output_dir, base)
+    folder = Path(output_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".vtc-convocation-", dir=folder) as stage:
+        editable = Path(stage) / (base + ".docx")
+        printed = editable.with_suffix(".pdf")
+        academy_convocations.publish(_examiner_document(training, trainee), "vtc-vehicule",
+                                     "vtc", editable, printed)
+        editable.replace(folder / editable.name)
+        printed.replace(folder / printed.name)
+    return str(folder / (base + ".docx")), str(folder / (base + ".pdf"))

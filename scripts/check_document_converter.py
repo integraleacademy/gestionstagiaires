@@ -110,10 +110,43 @@ for family in (socket.AF_INET, socket.AF_INET6):
     print("OK: Linux worker blocks IPv4 and IPv6 sockets", flush=True)
 
 
+def check_training_invitation():
+    from academy_convocations import publish
+    from academy_convocations.source import PORTAL, ROOT
+    from docxtpl import DocxTemplate
+    import pymupdf
+
+    template = ROOT / "templates_word/convocationformation.docx"
+    with tempfile.TemporaryDirectory(prefix="training-invitation-check-") as work:
+        editable = Path(work) / "invitation.docx"
+        pdf = editable.with_suffix(".pdf")
+        source = DocxTemplate(template)
+        source.render({
+            "convocation_intitule": "SST", "formation_nom": "SST",
+            "nom_complet": "Camille EXEMPLE", "periode_formation": "du 04/01/2027 au 05/01/2027",
+            "convocation_site": "Centre de formation", "convocation_examen": "",
+            "convocation_session_complement": "",
+        })
+        source.save(editable)
+        publish(Document(editable), template.name, "sst", editable, pdf)
+        with pymupdf.open(pdf) as book:
+            require(len(book) == 2 and all(page.rect.width > page.rect.height for page in book),
+                    "Incorrect training invitation page layout")
+            require(all("Camille EXEMPLE" in page.get_text() for page in book), "Lost recipient")
+            require(any(link.get("uri") == PORTAL for page in book for link in page.get_links()),
+                    "Lost trainee portal link")
+        word = Document(editable)
+        require(word.sections[0].page_width > word.sections[0].page_height
+                and word.element.xpath(".//w:framePr") and word.element.xpath(".//w:hyperlink"),
+                "Landscape Word invitation did not retain editable content and links")
+    print("OK: landscape training invitation PDF and editable Word", flush=True)
+
+
 def main():
     check_linux_worker()
     check_images()
     check_office()
+    check_training_invitation()
     print("Document converter checks passed.", flush=True)
 
 

@@ -1,4 +1,6 @@
 """Keep issued training convocations in sync with their current source data."""
+from academy_convocations import VERSION as LAYOUT_VERSION
+
 import copy
 import fcntl
 import hashlib
@@ -17,6 +19,7 @@ def source_hash(context, template_path):
     # The issue date alone must not force a new conversion every day.
     values = {key: value for key, value in context.items() if key != "date_jour"}
     digest = hashlib.sha256(json.dumps(values, sort_keys=True, ensure_ascii=False).encode("utf-8"))
+    digest.update(LAYOUT_VERSION.encode())
     digest.update(Path(template_path).read_bytes())
     return digest.hexdigest()
 

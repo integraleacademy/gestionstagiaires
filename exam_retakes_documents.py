@@ -162,17 +162,22 @@ def exam_appointment(row):
 
 def build_convocation(row):
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
+    from academy_convocations import family
+    from academy_convocations.drawing import PALETTES, register_fonts, standalone_panel
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-    font = retake_font()
-    navy, muted = colors.HexColor("#0C1A2F"), colors.HexColor("#506477")
+    register_fonts()
+    group = family(row["kind"])
+    accent, tint, ink, _ = PALETTES[group]
+    font = "Bar"
+    navy, muted = colors.HexColor(ink), colors.HexColor("#506477")
     body = ParagraphStyle("ConvocationBody", fontName=font, fontSize=10.5, leading=15, textColor=navy)
-    title = ParagraphStyle("ConvocationTitle", parent=body, fontName=font+"-Bold", fontSize=25, leading=31)
+    title = ParagraphStyle("ConvocationTitle", parent=body, fontName="Cond", fontSize=25, leading=31)
     label = ParagraphStyle("ConvocationLabel", parent=body, fontSize=9, textColor=muted)
-    strong = ParagraphStyle("ConvocationValue", parent=body, fontName=font+"-Bold")
-    heading = ParagraphStyle("ConvocationHeading", parent=strong, textColor=colors.HexColor("#09677B"), fontSize=12, leading=16,
+    strong = ParagraphStyle("ConvocationValue", parent=body, fontName="BarB")
+    heading = ParagraphStyle("ConvocationHeading", parent=strong, textColor=colors.HexColor(accent), fontSize=12, leading=16,
                              spaceBefore=9, spaceAfter=4, keepWithNext=True)
 
     def line(value, style=body):
@@ -187,9 +192,9 @@ def build_convocation(row):
     panel = Table([[line(key, label), line(value, strong)] for key, value in details],
                   colWidths=[119, 363], hAlign="LEFT")
     panel.setStyle(TableStyle([
-        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.HexColor("#EDF4F6"), colors.white]),
+        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.HexColor(tint), colors.white]),
         ("LINEBELOW", (0, 0), (-1, -1), .5, colors.HexColor("#D5DFE5")),
-        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#09677B")),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor(accent)),
         ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
         ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 8),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
@@ -237,17 +242,27 @@ def build_convocation(row):
     if row.get("kind") == "DESP" and row.get("location") == desp_paris_venue.FULL_ADDRESS:
         story.extend([PageBreak(), line("Venir au centre de formation", title),
                       line(desp_paris_venue.FULL_ADDRESS, strong),
-                      Spacer(1, 12), Image(str(desp_paris_venue.MAP_PATH), width=480, height=255),
+                      Spacer(1, 12), Image(str(desp_paris_venue.MAP_PATH), width=390, height=207),
                       Spacer(1, 12), line(desp_paris_venue.PRIMARY_METRO, heading),
                       line(desp_paris_venue.WALK), line("Autres accès", heading),
                       line(desp_paris_venue.OTHER_METROS), line(desp_paris_venue.SENTIER),
                       line("Bus " + desp_paris_venue.BUS), line(desp_paris_venue.PARKING),
                       Spacer(1, 8), Paragraph('<link href="' + escape(desp_paris_venue.DIRECTIONS_URL)
                                              + '"><u>Ouvrir l’itinéraire dans Google Maps</u></link>', body)])
-    story.append(Paragraph(f'<link href="{PORTAL_URL}" color="#09677B"><u>{PORTAL_URL}</u></link>', label))
+    story.append(Paragraph(f'<link href="{PORTAL_URL}" color="{accent}"><u>{PORTAL_URL}</u></link>', label))
     out = BytesIO()
-    frame = retake_page_frame(font, "CONVOCATION", row["id"][:12].upper())
-    SimpleDocTemplate(out, pagesize=A4, rightMargin=48, leftMargin=48, topMargin=112, bottomMargin=52,
+    def frame(canvas, doc):
+        standout = "CONVOCATION " + row["id"][:12].upper()
+        standalone_panel(canvas, group, Path(__file__).parent / 'static/logo-integrale.png',
+                         [], "VOTRE RATTRAPAGE", standout)
+        canvas.saveState()
+        canvas.setStrokeColor(colors.HexColor("#DECEC1"))
+        canvas.line(33,53,doc.pagesize[0]-33,53)
+        canvas.setFont("Bar",9);canvas.setFillColor(navy)
+        canvas.drawString(33,32,"Intégrale Academy - 04 22 47 07 68 - ecole@integraleacademy.com")
+        canvas.drawRightString(doc.pagesize[0]-33,32,"Page "+str(doc.page))
+        canvas.restoreState()
+    SimpleDocTemplate(out, pagesize=landscape(A4), leftMargin=210, rightMargin=31, topMargin=20, bottomMargin=65,
                       title="Convocation à l’examen de rattrapage - "+full_name, author="Intégrale Academy",
                       invariant=1).build(story, onFirstPage=frame, onLaterPages=frame)
     return out.getvalue()
