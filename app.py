@@ -62,6 +62,7 @@ import convocation_preview
 import training_convocations
 import convocation_jobs
 import cnaps_read_jobs
+import bts_cnaps_tracking_api as cnaps_tracking_source
 import afc_documents
 import afc_enrolments
 import afc_training_mail
@@ -18339,10 +18340,7 @@ def _cnaps_matching_enrollments(row, candidates, unique_request, nub):
     return []
 
 
-def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    deleted_keys = _cnaps_tracking_deleted_keys(data)
-    manual_nubs = _cnaps_tracking_manual_nubs(data)
-    request_counts = Counter(_cnaps_tracking_match_key(r.get("last_name"), r.get("first_name")) for r in rows or [])
+def _cnaps_enrollments_by_name(data):
     enrolled_by_name = {}
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
@@ -18362,7 +18360,14 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
                 "trainee_id": str(trainee.get("id") or ""),
             }
             enrolled_by_name.setdefault(key, []).append((trainee, enrollment))
+    return enrolled_by_name
 
+
+def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    deleted_keys = _cnaps_tracking_deleted_keys(data)
+    manual_nubs = _cnaps_tracking_manual_nubs(data)
+    request_counts = Counter(_cnaps_tracking_match_key(r.get("last_name"), r.get("first_name")) for r in rows or [])
+    enrolled_by_name = _cnaps_enrollments_by_name(data)
     enriched: List[Dict[str, Any]] = []
     for row in rows or []:
         item = dict(row)
@@ -18420,6 +18425,69 @@ def _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees, data):
         nub = manual.get("|".join(key)) or nub_by_name.get(key)
         if nub:
             trainee["cnaps_tracking_nub"] = nub
+
+
+def _session_allows_cnaps_nub_lookup(training):
+    return (not _is_partner_data_scope_session()
+            and training.get("partner_id") in (None, "", INTEGRALE_PARTNER_ID)
+            and bool(re.search(r"\b(?:APS|A3P)\b", _automation_training_text(training))))
+
+
+@app.get("/api/sessions/<session_id>/stagiaires/<trainee_id>/cnaps-nub")
+@admin_login_required
+def api_session_trainee_cnaps_nub(session_id, trainee_id):
+    data = load_data()
+    training, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not trainee or not _session_allows_cnaps_nub_lookup(training):
+        abort(404)
+    candidate = {
+        "nom": trainee.get("last_name"), "prenom": trainee.get("first_name"), "email": trainee.get("email"),
+        "date_naissance": trainee.get("birth_date") or trainee.get("date_naissance"),
+    }
+    if not candidate["nom"] or not candidate["prenom"]:
+        return jsonify(ok=False, error="Identité incomplète"), 422
+    local_nub = _cnaps_trainee_nub(trainee)
+    if local_nub:
+        return jsonify(ok=True, nub=local_nub, snapshot=_cnaps_annuaire_snapshots(data)(candidate["nom"], local_nub))
+    if _cnaps_trainee_nubs(trainee):
+        return jsonify(ok=False, error="Plusieurs NUB figurent sur cette fiche."), 409
+
+    def read_source():
+        try:
+            rows = cnaps_tracking_source.fetch_tracking_requests(candidate)
+            row, _ = cnaps_tracking_source.select_tracking_match(candidate, rows)
+        except cnaps_tracking_source.TrackingError as error:
+            return jsonify(ok=False, error=str(error)), error.status
+        if row is None:
+            return jsonify(ok=True, nub="", snapshot=None)
+        latest = load_data()
+        name = _cnaps_tracking_match_key(candidate["nom"], candidate["prenom"])
+        registrations = _cnaps_enrollments_by_name(latest).get(name, [])
+        def is_target(enrollment):
+            return enrollment["session_id"] == session_id and enrollment["trainee_id"] == trainee_id
+
+        # Keep the same identity checks as the general tracking table. Include the
+        # requested registration even when it belongs to an archived session.
+        if not any(is_target(e) for _, e in registrations):
+            current_training, _, current = _find_session_trainee(latest, session_id, trainee_id)
+            if not current or not _session_allows_cnaps_nub_lookup(current_training):
+                abort(404)
+            if _cnaps_tracking_match_key(current.get("last_name"), current.get("first_name")) != name:
+                return jsonify(ok=False, error="L’identité du stagiaire a changé."), 409
+            registrations.append((current, {"session_id": session_id, "trainee_id": trainee_id}))
+        manual = _cnaps_tracking_manual_nubs(latest)
+        nub = manual.get(f"TRACKING|{row.get('id') or ''}") or _cnaps_tracking_nub(row.get("nub"))
+        matches = _cnaps_matching_enrollments(
+            {"email": row.get("email"), "birth_date": row.get("date_naissance")},
+            registrations, len(rows) == 1, nub)
+        if not any(is_target(e) for _, e in matches):
+            return jsonify(ok=False, error="L’identité du dossier CNAPS doit être vérifiée."), 409
+        snapshot = _cnaps_annuaire_snapshots(latest)(candidate["nom"], nub) if nub else None
+        return jsonify(ok=True, nub=nub, snapshot=snapshot)
+
+    if cnaps_read_jobs.requested():
+        return cnaps_read_jobs.defer(sys.modules[__name__], (session_id, trainee_id, *candidate.values()), read_source)
+    return read_source()
 
 
 def _cash_amount_value(raw_value: Any) -> float:
@@ -26120,6 +26188,7 @@ def admin_trainees(session_id: str):
         "admin_trainees.html",
         edof_prefill=edof_prefill, edof_prefill_error=edof_prefill_error,
         cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
+        can_resolve_cnaps_nub=_session_allows_cnaps_nub_lookup(s),
         exam_retakes=exam_retakes.roster(sys.modules[__name__], session_id),
         afc_training_dates={t.get("id"): afc_schedule.participation_period(s, t) for t in trainees} if afc_schedule.enabled(s) else {},
         afc_hours_supported=afc_enrolments.supported(sys.modules[__name__], s),
@@ -41481,6 +41550,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     html_page = render_template(
         "admin_trainee.html",
         cnaps_annuaire_snapshot=_cnaps_annuaire_snapshots(data),
+        can_resolve_cnaps_nub=_session_allows_cnaps_nub_lookup(s),
         desp_project=desp_jury_projects.view(sys.modules[__name__], s, t),
         session={**session_view, "ssiap_pathways": s.get("ssiap_pathways")},
         ssiap_supported=ssiap_pathways.supported(s),
