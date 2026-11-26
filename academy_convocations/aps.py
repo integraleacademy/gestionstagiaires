@@ -33,46 +33,66 @@ def fitted(p, index, x, y, width, height, face, size, color=TEXT):
     return y + used
 
 
-def cover(p):
-    p.begin(True)
+def cover(p, *, items=None, calendar_page=4, vae=False):
+    """Shared first page, using the same hierarchy and coordinates for APS and DESP."""
+    p.begin(True, items=items)
     p.emit(0, 34, 101, 355, "BarB", 10, p.bright)
     p.emit(1, 29, 122, 370, "Cond", 59, WHITE)
-    p.emit(2, 29, 178, 370, "Cond", 74, p.bright)
-    p.emit(3, 34, 258, 368, "Bar", 16, WHITE)
-    p.emit(4, 34, 283, 365, "Bar", 10.5, "#DAE8F8")
-    p.emit(5, 34, 310, 353, "BarB", 9, p.bright)
-    fitted(p, 6, 34, 325, 368, 30, "BarB", 16.3, WHITE)
+    fitted(p, 2, 29, 178, 370, 75, "Cond", 74, p.bright)
+    fitted(p, 3, 34, 258, 368, 44 if vae else 24, "Bar", 16, WHITE)
+    if not vae:
+        p.emit(p.next, 34, 283, 365, "Bar", 10.5, "#DAE8F8")
+    p.emit(p.next, 34, 310, 353, "BarB", 9, p.bright)
+    fitted(p, p.next, 34, 325, 368, 30, "BarB", 16.3, WHITE)
 
     x = 455
-    p.emit(7, x, 22, 340, "BarB", 9, BLUE)
-    p.emit(8, x, 37, 350, "Bar", 11.4, MUTED)
-    p.emit(9, x, 55, 305, "Cond", 31)
-    p.icon("calendar", R - 26, 58, 24, BLUE)
-    p.link(x, 52, R - x, 39, "#p4")
+    p.emit(p.next, x, 22, 340, "BarB", 9, p.accent)
+    p.emit(p.next, x, 37, 350, "Bar", 11.4, MUTED)
+    p.emit(p.next, x, 55, 305, "Cond", 31)
+    p.icon("calendar", R - 26, 58, 24, p.accent)
+    if calendar_page:
+        p.link(x, 52, R - x, 39, f"#p{calendar_page}")
     p.line(x, 98, R, 98, "#BBCBE0", 0.9)
-    for index, icon, y in [
-        (10, "laptop", 113),
-        (12, "building", 194),
-        (14, "badge", 275),
-    ]:
-        p.icon(icon, x + 1, y + 10, 26, BLUE)
-        p.emit(index, x + 44, y, 302, "BarB", 12, BLUE)
-        fitted(p, index + 1, x + 44, y + 20, 304, 37, "Cond", 25)
-        if index != 14:
+
+    icons = ["laptop", "building", "badge"]
+    if vae:
+        icons = ["calendar", "badge"] if "Jury VAE" in p.items else ["calendar"]
+    for n, icon in enumerate(icons):
+        y = 113 + n * 81
+        p.icon(icon, x + 1, y + 10, 26, p.accent)
+        p.emit(p.next, x + 44, y, 302, "BarB", 12, p.accent)
+        fitted(p, p.next, x + 44, y + 20, 304, 37, "Cond", 25)
+        if n < len(icons) - 1:
             p.line(x, y + 66, R, y + 66, RULE)
 
     p.line(34, 359, R, 359, RULE)
-    p.line(397, 389, 397, 483, RULE)
-    p.icon("clock", 34, 386, 21, BLUE)
-    p.emit(16, 65, 389, 314, "BarB", 10, BLUE)
-    fitted(p, 17, 34, 413, 350, 37, "Cond", 27.5)
-    p.emit(18, 34, 458, 350, "Bar", 12, MUTED)
-    p.icon("pin", 427, 386, 21, BLUE)
-    p.emit(19, 459, 389, 340, "BarB", 10, BLUE)
-    p.emit(20, 427, 415, 372, "BarB", 15, TEXT, 19)
-    p.emit(21, 34, 490, 340, "BarB", 10.5, MUTED)
-    p.printed_link(22, 34, 506, 355, p.ref.portal, 10.6)
-    p.printed_link(23, 427, 502, 376, f"#p{p.total}", 11.5)
+    if vae:
+        has_site = p.items[p.next] == "LIEU DE FORMATION"
+        if has_site:
+            p.line(397, 389, 397, 483, RULE)
+            p.icon("pin", 34, 386, 21, p.accent)
+            p.emit(p.next, 65, 389, 314, "BarB", 10, p.accent)
+            fitted(p, p.next, 34, 415, 350, 67, "BarB", 15, TEXT)
+        x = 427 if has_site else 34
+        p.icon("laptop", x, 386, 21, p.accent)
+        p.emit(p.next, x + 32, 389, 324, "BarB", 10.5, p.accent)
+        p.printed_link(p.next, x, 417, 365, p.ref.portal, 11)
+        if p.ref.puget_parking:
+            p.printed_link(p.next, 34, 502, 350, f"#p{p.total}", 11.5)
+    else:
+        p.line(397, 389, 397, 483, RULE)
+        p.icon("clock", 34, 386, 21, p.accent)
+        p.emit(p.next, 65, 389, 314, "BarB", 10, p.accent)
+        fitted(p, p.next, 34, 413, 350, 37, "Cond", 27.5)
+        p.emit(p.next, 34, 458, 350, "Bar", 12, MUTED)
+        p.icon("pin", 427, 386, 21, p.accent)
+        p.emit(p.next, 459, 389, 340, "BarB", 10, p.accent)
+        p.emit(p.next, 427, 415, 372, "BarB", 15, TEXT, 19)
+        if p.items[p.next].startswith("Métro "):
+            p.emit(p.next, 427, 468, 375, "Bar", 10.3, MUTED)
+        p.emit(p.next, 34, 490, 340, "BarB", 10.5, MUTED)
+        p.printed_link(p.next, 34, 506, 355, p.ref.portal, 10.6)
+        p.printed_link(p.next, 427, 502, 376, f"#p{p.total}", 11.5)
     p.finish()
 
 

@@ -417,7 +417,13 @@ def cover(p, blocks, calendar_number=None):
 
 def render(ref, out, family):
     p = Book(ref, out, family)
-    standard = len(ref.blocks[0][0].text) >= 3 and len(ref.blocks[0]) >= 4
+    phase_cover = family in {"desp", "vae"} and any(
+        title in ref.pages[0]
+        for title in ("Vos dates de formation", "Vos dates de parcours")
+    )
+    standard = phase_cover or (
+        len(ref.blocks[0][0].text) >= 3 and len(ref.blocks[0]) >= 4
+    )
     sections = list(enumerate(ref.blocks))[int(standard) :]
     if ref.puget_parking:
         sections = sections[:-1]
@@ -428,8 +434,19 @@ def render(ref, out, family):
     plans = before + after
     agenda_pages = ref.agenda.groups if ref.agenda else []
     p.total = len(plans) + int(standard) + len(agenda_pages) + int(ref.puget_parking)
-    if standard:
-        cover(p, ref.blocks[0], len(before) + 2 if agenda_pages else None)
+    calendar_number = len(before) + 2 if agenda_pages else None
+    if phase_cover:
+        cover_items = ref.pages[0]
+        if family == "vae" and ref.puget_parking:
+            cover_items = [*cover_items, f"Voir le plan des parkings en page {p.total}"]
+        aps.cover(
+            p,
+            items=cover_items,
+            calendar_page=calendar_number or (3 if family == "desp" else None),
+            vae=family == "vae",
+        )
+    elif standard:
+        cover(p, ref.blocks[0], calendar_number)
     for index in range(len(plans) + 1):
         if index == len(before):
             for months in agenda_pages:

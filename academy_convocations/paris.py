@@ -1,29 +1,18 @@
 """Approved DESP Paris layout. Every printed paragraph comes from its personalized source."""
 
-from .aps import documents, fitted, rules
+from .aps import cover, documents, fitted, rules
 from .drawing import (
     Book,
     BW,
     CREAM,
-    EMPH,
     INK,
     L,
     MUTED,
     ORANGE,
     R,
-    WHITE,
     LayoutDoesNotFit,
     split_lines,
 )
-
-
-def cover_left(p):
-    p.emit(0, 34, 106, 350, "BarB", 10, EMPH)
-    p.emit(1, 30, 135, 368, "Cond", 57, WHITE)
-    p.emit(2, 30, 187, 365, "Cond", 66, EMPH)
-    p.emit(3, 34, 267, 360, "Bar", 16, WHITE, 19)
-    p.emit(4, 34, 306, 350, "BarB", 9.3, EMPH)
-    p.emit(5, 34, 321, 360, "BarB", 15.5, WHITE)
 
 
 def recipient(p, i, top=32):
@@ -48,36 +37,6 @@ def authority(p, first, y):
     p.emit(first + 1, L, y + 15, BW, "BarB", 12.5)
     p.emit(first + 2, L, y + 31, BW, "Bar", 10, INK)
     p.signature(L, y + 46, 135)
-
-
-def cover(p):
-    p.begin(True)
-    if len(p.items) < 6 or len(split_lines(p.items[5], "BarB", 15.5, 360)) > 1:
-        raise LayoutDoesNotFit("Nom sur plusieurs lignes")
-    cover_left(p)
-    x = 456
-    for label, value, y, size in [
-        (6, 7, 32, 23.5),
-        (8, 9, 111, 21.6),
-        (10, 11, 219, 17.9),
-    ]:
-        p.icon({6: "calendar", 8: "laptop", 10: "pin"}[label], x, y - 2, 16, ORANGE)
-        p.emit(label, x + 25, y, 326, "BarB", 9.8, ORANGE)
-        p.emit(value, x, y + 18, 351, "Cond", size, INK, size * 1.13)
-        if label != 10:
-            pos = y + (61 if label == 6 else 90)
-            p.line(x, pos, 808, pos)
-    p.emit(12, x, 299, 352, "Bar", 10.6, MUTED, 13.6)
-    p.link(x, 235, 348, 98, f"#p{p.total}")
-    p.line(34, 359, 808, 359)
-    p.emit(13, 34, 386, 439, "BarB", 10, ORANGE)
-    p.emit(14, 34, 412, 455, "BarB", 15.2)
-    p.line(515, 385, 515, 480)
-    p.emit(15, 539, 388, 268, "BarB", 14.6)
-    p.printed_link(16, 539, 416, 268, p.ref.portal, 10.4)
-    if p.ref.agenda:
-        p.ref.agenda.cover(p, 4)
-    p.finish()
 
 
 def letter_fields(p, first, top, *, exam=False):
@@ -189,8 +148,9 @@ def access(p):
 def make(ref, out):
     p = Book(ref, out)
     p.total += len(ref.agenda.groups) if ref.agenda else 0
-    for page in [cover, letter, calendar]:
-        page(p)
+    cover(p, calendar_page=4 if ref.agenda else 3)
+    letter(p)
+    calendar(p)
     if ref.agenda:
         for months in ref.agenda.groups:
             ref.agenda.page(p, months, ref.course_label)
