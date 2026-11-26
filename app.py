@@ -40386,7 +40386,8 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         or (_session_get(session_obj, "exam_practice_date", "") if str(config.get("slug") or "") == "vtc" else "")
         or (in_person_end if is_dirigeant else "")
     ).strip()
-    convocation_time = str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30"
+    default_opening_time = "09h00" if config.get("slug") == "desp_paris" else "08h30"
+    convocation_time = str(_session_get(session_obj, "convocation_time") or session_obj.get("heure_convocation") or "").strip() or default_opening_time
     exam_time = str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00"
     place = f"{APS_CONVOCATION_CENTER_NAME} - {APS_CONVOCATION_CENTER_ADDRESS} - {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}"
     practice_training_date = str(
@@ -40433,6 +40434,26 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
             aps_distance_longue=_quick_summary_period(remote_start, remote_end),
             aps_centre_longue=_quick_summary_period(in_person_start, in_person_end),
             aps_examen_long=_quick_summary_date(exam_date),
+        )
+    if is_dirigeant:
+        from academy_convocations.agenda import desp_periods, iso
+
+        distance, centre = desp_periods(session_obj, date_start, date_end)
+        context.update(
+            desp_distance_longue=_quick_summary_period(*distance) or "Dates à confirmer",
+            desp_centre_longue=_quick_summary_period(*centre) or "Dates à confirmer",
+            desp_examen_long=_quick_summary_date(iso(exam_date)),
+        )
+        for key, bounds in (("periode_elearning", distance), ("periode_presentiel", centre)):
+            if not all(bounds):
+                context[key] = _quick_summary_period(*bounds) or "Dates à confirmer"
+    elif config.get("slug") == "vae":
+        from academy_convocations.agenda import iso
+
+        jury = _quick_summary_date(iso(_session_get(session_obj, "exam_date")))
+        context.update(
+            vae_periode_longue=_quick_summary_period(iso(date_start), iso(date_end)),
+            vae_jury_long=f"Le {jury}" if jury else "",
         )
     if desp_paris_venue.applies(session_obj):
         context.update(desp_paris_venue.document_context(session_obj))

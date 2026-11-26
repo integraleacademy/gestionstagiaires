@@ -190,6 +190,50 @@ def check_aps_invitation():
     print("OK: APS monthly calendar, cover dates and Puget parking map", flush=True)
 
 
+def check_desp_invitation():
+    from academy_convocations import publish
+    from academy_convocations.source import ROOT
+    from desp_paris_venue import FULL_ADDRESS, access_details
+    from docxtpl import DocxTemplate
+    import pymupdf
+
+    context = {
+        "nom_complet": "Camille EXEMPLE", "ville": "PARIS", "code_postal": "75002",
+        "periode_formation": "du 04/01/2027 au 18/02/2027", "date_ouverture": "04/01/2027",
+        "heure_convocation": "09h00", "date_examen": "19/02/2027", "heure_examen": "08h15",
+        "date_jour": "16/12/2026", "periode_elearning": "du 04/01/2027 au 05/02/2027",
+        "periode_presentiel": "du 08/02/2027 au 18/02/2027",
+        "desp_distance_longue": "du 4 janvier au 5 février 2027",
+        "desp_centre_longue": "du 8 au 18 février 2027", "desp_examen_long": "19 février 2027",
+        "lieu_formation": FULL_ADDRESS, "lieu_examen": FULL_ADDRESS,
+        **{"acces_" + key: value for key, value in access_details().items()},
+    }
+    rows = [
+        dict(kind="remote", label="Formation à distance", start="2027-01-04", end="2027-02-05"),
+        dict(kind="centre", label="Au centre de formation", start="2027-02-08", end="2027-02-18"),
+        dict(kind="exam", label="Examen DESP", days=["2027-02-19"], time="08h15"),
+    ]
+    dates = ["Du 4 janvier au 5 février 2027", "Du 8 au 18 février 2027", "Le 19 février 2027 à 08h15"]
+    with tempfile.TemporaryDirectory(prefix="desp-cover-check-") as work:
+        for template_name in ("convocationdespparis_2027.docx", "convocationdesp.docx"):
+            editable = Path(work) / template_name
+            pdf = editable.with_suffix(".pdf")
+            source = DocxTemplate(ROOT / "templates_word" / template_name)
+            source.render(context, autoescape=True)
+            source.save(editable)
+            publish(Document(editable), template_name, "desp", editable, pdf, calendar_rows=rows)
+            with pymupdf.open(pdf) as book:
+                for value, y in zip(dates, (133, 214, 295)):
+                    rects = book[0].search_for(value)
+                    require(len(rects) == 1 and abs(rects[0].x0 - 499) < 1
+                            and abs(rects[0].y0 - y) < 1 and rects[0].height > 25,
+                            f"DESP date missing from its APS cover row: {template_name} / {value}")
+                require(book[3].search_for("19/02/2027 · 08h15"), "Missing DESP monthly calendar")
+            words = Document(editable).element.xpath(".//w:t/text()")
+            require(all(date in words for date in dates), "Missing DESP cover dates in editable Word")
+    print("OK: DESP covers show remote, onsite and exam dates in the APS layout", flush=True)
+
+
 def check_a3p_invitation():
     from academy_convocations import publish
     from academy_convocations.source import ROOT
@@ -223,6 +267,7 @@ def main():
     check_office()
     check_training_invitation()
     check_aps_invitation()
+    check_desp_invitation()
     check_a3p_invitation()
     print("Document converter checks passed.", flush=True)
 

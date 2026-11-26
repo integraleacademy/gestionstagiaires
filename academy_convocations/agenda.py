@@ -6,7 +6,7 @@ from datetime import date
 from training_days import is_aps_working_day
 
 from . import aps_calendar as grid
-from .drawing import BW, L, R, WHITE
+from .drawing import BW, L, R
 
 PERIOD = ("#E3E6F2", "#344560")
 SST = ("#C9EBDD", "#19513F")
@@ -29,6 +29,17 @@ def iso(value):
         return date.fromisoformat(value).isoformat()
     except (ValueError, TypeError):
         return ""
+
+
+def desp_periods(training, first, last):
+    """Read each actual phase. A single known boundary can still appear on the cover."""
+    remote_start = iso(training.get("dirigeant_remote_start"))
+    remote_end = iso(training.get("dirigeant_remote_end"))
+    centre_start = iso(training.get("dirigeant_in_person_start"))
+    centre_end = iso(training.get("dirigeant_in_person_end"))
+    remote = (remote_start or (iso(first) if remote_end else ""), remote_end)
+    centre = (centre_start, centre_end or (iso(last) if centre_start else ""))
+    return tuple(("", "") if a and b and a > b else (a, b) for a, b in (remote, centre))
 
 
 def entries(training, trainee, context, slug):
@@ -87,18 +98,9 @@ def entries(training, trainee, context, slug):
             ],
         )
     elif slug.startswith("desp_"):
-        period(
-            "remote",
-            "Formation à distance",
-            training.get("dirigeant_remote_start"),
-            training.get("dirigeant_remote_end"),
-        )
-        period(
-            "centre",
-            "Au centre de formation",
-            training.get("dirigeant_in_person_start"),
-            training.get("dirigeant_in_person_end"),
-        )
+        remote, centre = desp_periods(training, first, last)
+        period("remote", "Formation à distance", *remote)
+        period("centre", "Au centre de formation", *centre)
         if not rows:
             period("period", "Période de formation", first, last)
         paris = slug == "desp_paris"
@@ -106,9 +108,9 @@ def entries(training, trainee, context, slug):
             "opening",
             "Lancement sur Zoom" if paris else "Accueil au centre",
             [context.get("date_ouverture")],
-            "09h00" if paris else "08h30",
+            context.get("heure_convocation") or ("09h00" if paris else "08h30"),
         )
-        days("exam", "Examen DESP", [exam], "08h00")
+        days("exam", "Examen DESP", [exam], context.get("heure_examen") or "08h00")
     elif slug == "afc":
         period("period", "Période individuelle AFC", first, last)
         days(

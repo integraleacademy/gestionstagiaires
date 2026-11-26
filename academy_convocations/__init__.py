@@ -3,7 +3,7 @@
 import re
 import unicodedata
 
-VERSION = "modele-aps-regles-et-sejour-2027-1"
+VERSION = "modele-aps-couverture-desp-2027-1"
 
 
 def family(value):
