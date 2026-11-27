@@ -144,6 +144,17 @@ def entries(training, trainee, context, slug):
             [exam],
             "08h00" if slug == "a3p" else "",
         )
+    # Cover, calendar and personalised letters draw from the same examinations.
+    letters = context.get("convocations_examens")
+    if letters is not None:
+        rows = [r for r in rows if r["kind"] != "exam"]
+        for letter in letters:
+            label = letter["label"]
+            if letter["kind"] == "jury":
+                label = "Jury VAE"
+            elif letter["kind"] != "cma":
+                label = "Examen " + label
+            days("exam", label, [letter["day"]], letter["time"])
     return rows
 
 

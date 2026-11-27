@@ -3,7 +3,7 @@
 import re
 import unicodedata
 
-VERSION = "modele-aps-couverture-desp-2027-1"
+VERSION = "convocations-examens-2027-1"
 
 
 def family(value):
@@ -28,9 +28,10 @@ def family(value):
 
 
 def publish(
-    document, template_name, group, docx_path, pdf_path, *, calendar_rows=None, site=""
+    document, template_name, group, docx_path, pdf_path, *, calendar_rows=None, site="", exams=None, recipient=""
 ):
     from . import editable, flow, paris
+    from .exams import add_pages
     from .drawing import LayoutDoesNotFit
     from .source import Source, use_puget_plan, include_training_rules
     from .agenda import Agenda
@@ -51,6 +52,7 @@ def publish(
         use_puget_plan(source, template_name, site)
     if template_name == "convocationformation.docx":
         include_training_rules(source, group)
+    add_pages(source, exams, recipient)
     if template_name == "convocationaps.docx":
         from . import aps
 
