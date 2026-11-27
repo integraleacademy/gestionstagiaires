@@ -6,6 +6,8 @@ import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
 
+import ssiap_qualifications as qualifications
+
 
 MAINTENANCE = {
     "recyclage": {
@@ -88,9 +90,12 @@ def enabled(training):
 
 
 def settings(training):
-    return {**DEFAULTS, **scheduled_defaults(training),
+    result = {**DEFAULTS, **scheduled_defaults(training),
             **{key + "_price": spec["price"] for key, spec in MAINTENANCE.items()},
             **(training.get("ssiap_pathways") or {})}
+    if qualifications.level(training) in qualifications.COURSES:
+        result["ssiap_hours"] = qualifications.initial_hours(training, (training.get("ssiap_pathways") or {}).get("ssiap_hours"))
+    return result
 
 
 def number(value, label, *, optional=False):
@@ -175,6 +180,10 @@ def resolve(training, trainee, *, strict=False):
     choice = selected(trainee)
     if not enabled(training) and not (choice in MAINTENANCE and level_one(training)):
         return None
+    # A standalone refresher or combined APS session already has its own course and dates.
+    label = " ".join(str(training.get(k) or "") for k in ("training_type", "type_formation", "name", "nom"))
+    if choice not in MAINTENANCE and (qualifications.maintenance(training) or qualifications.combined_aps_ssiap(label)):
+        return None
     config = settings(training)
     if strict:
         validate_choice(training, choice)
@@ -192,9 +201,11 @@ def resolve(training, trainee, *, strict=False):
     start, end = group_period(training)
     all_dates = [d for d in [start, end, *dates] if d]
     total = Decimal(config["ssiap_hours"]) + (Decimal(config["sst_hours"]) if with_sst else 0)
+    level = qualifications.level(training)
+    course_title = qualifications.title(level) if level in qualifications.COURSES else "Agent de sécurité incendie SSIAP 1"
     return {
         **config, "choice": choice, "label": CHOICES.get(choice, CHOICES["ssiap"]),
-        "title": "Agent de sécurité incendie SSIAP 1" + (" + Sauveteur secouriste du travail (SST)" if with_sst else ""),
+        "title": course_title + (" + Sauveteur secouriste du travail (SST)" if with_sst else ""),
         "with_sst": with_sst, "sst_dates": dates,
         "ssiap_start": start, "ssiap_end": end,
         "date_start": min(all_dates) if all_dates else "", "date_end": max(all_dates) if all_dates else "",
@@ -219,7 +230,7 @@ def document_context(training, trainee, fr_date):
         return {}
     ssiap_period = f"du {fr_date(path['ssiap_start'])} au {fr_date(path['ssiap_end'])}"
     sst_dates = " et ".join(fr_date(d) for d in path["sst_dates"])
-    detail = f"SSIAP 1 : {ssiap_period} — {path['ssiap_hours']} h"
+    detail = f"SSIAP {qualifications.level(training)} : {ssiap_period} — {path['ssiap_hours']} h"
     if path["with_sst"]:
         detail += f"\nSST : {sst_dates} — {path['sst_hours']} h"
     context = {

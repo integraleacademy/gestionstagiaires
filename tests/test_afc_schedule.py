@@ -175,7 +175,10 @@ def test_documents_use_individual_dates_and_both_exams_without_mutation(training
         import shutil
         out = tmp_path / name
         shutil.copyfile(Path("templates_word") / name, out)
-        app._replace_docx_xml_placeholders(str(out), values)
+        if name.startswith("convention"):
+            app._replace_docx_xml_placeholders(str(out), values)
+        else:
+            app._render_docx_with_python_template(str(Path("templates_word") / name), str(out), values)
         paragraphs = list(app._iter_docx_paragraphs(Document(out)))
         text = "\n".join(p.text for p in paragraphs)
         for date in ("23/11/2026", "16/02/2027", "21/12/2026"):

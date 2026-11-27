@@ -129,6 +129,7 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 import ssiap_pathways
+import ssiap_qualifications
 import manuals_shop
 import public_document_checks as trainee_checks
 from akto_bts import (
@@ -9475,6 +9476,8 @@ def _trainee_start_date(session_obj, trainee):
 
 
 def _ssiap_document_template(session_obj, trainee, kind, fallback):
+    if kind == "convention" and _automation_document_config(session_obj).get("convention_template") == "conventionssiap_encadrement.docx":
+        return fallback(session_obj)
     if kind == "convocation" and _automation_document_config(session_obj).get("convocation_template") == "convocationformation.docx":
         return fallback(session_obj)
     path = ssiap_pathways.resolve(session_obj, trainee, strict=True)
@@ -36141,8 +36144,13 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
             return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": convocation}
         return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
-        invitation = "convocationformation.docx" if re.search(r"SSIAP\s*[- ]?[23]\b", text) else "convocationssiap.docx"
-        return {"enabled": True, "slug": "ssiap", "label": "agent de sécurité incendie SSIAP 1", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": invitation}
+        level = ssiap_qualifications.level(session_obj)
+        advanced = level in ssiap_qualifications.COURSES
+        combined = ssiap_qualifications.combined_aps_ssiap(text)
+        invitation = "convocationformation.docx" if advanced or combined or ssiap_qualifications.maintenance(session_obj) else "convocationssiap.docx"
+        label = ssiap_qualifications.title(level) if advanced else ("APS + SSIAP 1" if combined else "agent de sécurité incendie SSIAP 1")
+        return {"enabled": True, "slug": "ssiap", "label": label,
+                "convention_template": "conventionssiap_encadrement.docx" if advanced else "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": invitation}
     if text.startswith("APS") or " APS" in text:
         invitation = "convocationformation.docx" if academy_convocations.family(text) == "mac_aps" else "convocationaps.docx"
         return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": invitation}
@@ -40353,6 +40361,10 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
     ]
+    if config.get("slug") == "ssiap" and not ssiap_qualifications.combined_aps_ssiap(_automation_training_text(session_obj)):
+        ssiap_exam_day = session_obj.get("ssiap_exam_date") or ((session_obj.get("ssiap_exam") or {}).get("config") or {}).get("date")
+        if ssiap_exam_day and not ssiap_pathways.short_course(trainee):
+            session_obj["exam_date"] = ssiap_exam_day
     if (not is_dirigeant and config.get("convocation_template") != "convocationformation.docx"
             and str(config.get("slug") or "") != "vtc" and not ssiap_pathways.short_course(trainee)):
         required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
@@ -40468,11 +40480,23 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
     context.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
     if config.get("convocation_template") == "convocationformation.docx":
         title = str(_session_get(session_obj, "training_type", "") or training_name).strip()
+        if config.get("slug") == "ssiap":
+            if ssiap_qualifications.maintenance(session_obj):
+                context["date_examen"] = ""
+                title = training_name
+            elif ssiap_qualifications.combined_aps_ssiap(_automation_training_text(session_obj)):
+                title = "APS + SSIAP 1"
+            elif ssiap_qualifications.level(session_obj) in (2, 3):
+                title = f"SSIAP {ssiap_qualifications.level(session_obj)}"
         context.update(convocation_intitule=title, convocation_session_complement=training_name if title.casefold() != training_name.casefold() else "",
                        convocation_site=str(session_obj.get("training_location") or session_obj.get("crm_center")
                                            or session_obj.get("centre") or session_obj.get("center") or "").strip(),
-                       convocation_examen=fr_date(_session_get(session_obj, "exam_date", "")))
+                       convocation_examen=context["date_examen"])
     context["convocation_famille"] = academy_convocations.family(_automation_training_text(session_obj))
+    from academy_convocations.exams import invitations
+    context["convocations_examens"] = invitations(session_obj, trainee, context, config, fr_date)
+    if context["convocations_examens"] == []:
+        context["convocation_examen"] = ""
     from academy_convocations.agenda import entries
     context["calendrier_session"] = json.dumps(entries(session_obj, trainee, context, config.get("slug") or ""), ensure_ascii=False)
     return context
@@ -40602,7 +40626,8 @@ def _render_aps_convocation_pair(template_path: str, context: Dict[str, Any], ba
             from docx import Document
             academy_convocations.publish(Document(staged_docx), template_name, context["convocation_famille"],
                                          staged_docx, staged_pdf, calendar_rows=json.loads(context["calendrier_session"]),
-                                         site=context.get("convocation_site", ""))
+                                         site=context.get("convocation_site", ""), exams=context.get("convocations_examens"),
+                                         recipient=context.get("nom_complet", ""))
         else:
             command = [_find_libreoffice_binary(), "-env:UserInstallation=" + Path(staging, "profile").as_uri(),
                        "--headless", "--convert-to", "pdf", "--outdir", staging, staged_docx]
@@ -40821,8 +40846,10 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     formation_name = _first_non_empty(trainee.get("formation_nom"), trainee.get("training_name"), _session_get(session_obj, "name", ""), training_type, default="APS")
     training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"), _session_get(session_obj, "training_price", ""), default=str(default_training_price(training_type) or 1650))
     pathway = ssiap_pathways.resolve(session_obj, trainee)
-    if pathway:
-        training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"), pathway["price"])
+    higher_ssiap = _automation_document_config(session_obj).get("convention_template") == "conventionssiap_encadrement.docx"
+    if pathway or higher_ssiap:
+        training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"),
+                                          pathway["price"] if pathway else "", session_obj.get("training_price"))
         if training_price == "":
             raise ValueError("Renseignez le tarif de ce stagiaire avant de générer sa convention.")
     cpf_amount = _first_non_empty(trainee.get("cpf_amount"), trainee.get("montant_cpf"), default="0")
@@ -40897,6 +40924,13 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     if _automation_document_config(session_obj).get("slug") == "desp_paris":
         replacements.update(desp_paris_venue.document_context(session_obj))
     replacements.update(ssiap_pathways.document_context(session_obj, trainee, fr_date))
+    if higher_ssiap:
+        replacements.update(ssiap_qualifications.contract_terms(session_obj, trainee, pathway, fr_date))
+        if replacements["lieu_formation"] == "À préciser":
+            venue = session_obj.get("training_location") or session_obj.get("crm_center") or ""
+            replacements["lieu_formation"] = (ssiap_pathways.PUGET_VENUE if not venue or re.search(r"puget|azur", venue, re.I) else venue)
+        if not pathway:
+            replacements["detail_parcours"] = "Formation en présentiel " + periode + "."
     replacements.update(afc_schedule.document_context(session_obj, trainee, fr_date, strict=True))
     return {key: str(replacements.get(key) or "") for key in replacements}
 
